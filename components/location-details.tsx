@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
 import { toast } from "@/components/ui/use-toast"
+import { ZonesSection } from "@/components/zones-section"
 
 interface LocationDetailsProps {
   id: string
@@ -247,6 +248,7 @@ export function LocationDetails({ id }: LocationDetailsProps) {
           )}
         </CardContent>
       </Card>
+      <ZonesSection locationId={id} />
     </div>
   )
 } 
