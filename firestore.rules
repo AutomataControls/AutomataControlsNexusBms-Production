@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Common functions for rules
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        'admin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles;
+    }
+
+    function isDevOps() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        'devops' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles;
+    }
+    
+    function isOwnerOrAdmin(userId) {
+      return isSignedIn() && (request.auth.uid == userId || isAdmin() || isDevOps());
+    }
+    
+    // Default rule - deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone signed in can read user profiles
+      allow read: if isSignedIn();
+      // Allow creation of first admin user, then only admins and devops can create/delete users
+      allow create: if isSignedIn() || !exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow delete: if isAdmin() || isDevOps();
+      // Users can update their own profile, admins can update anyone
+      allow update: if isOwnerOrAdmin(userId);
+    }
+    
+    // Locations collection
+    match /locations/{locationId} {
+      // Authenticated users can read locations
+      allow read: if isSignedIn();
+      // Only admins and devops can create/update/delete locations
+      allow create, update, delete: if isAdmin() || isDevOps();
+    }
+    
+    // Equipment collection
+    match /equipment/{equipmentId} {
+      // Authenticated users can read equipment
+      allow read: if isSignedIn();
+      // Only admins and devops can create/update/delete equipment
+      allow create, update, delete: if isAdmin() || isDevOps();
+    }
+    
+    // Alarms collection
+    match /alarms/{alarmId} {
+      // Authenticated users can read alarms
+      allow read: if isSignedIn();
+      // Only admins and devops can create/update/delete alarms
+      allow create, update, delete: if isAdmin() || isDevOps();
+    }
+    
+    // Metrics collection
+    match /metrics/{metricId} {
+      // Authenticated users can read metrics
+      allow read: if isSignedIn();
+      // Only admins and devops can create metrics
+      allow create: if isAdmin() || isDevOps();
+      // No one can update or delete metrics (historical data)
+      allow update, delete: if false;
+    }
+    
+    // System config collection
+    match /system_config/{configId} {
+      // Authenticated users can read system config
+      allow read: if isSignedIn();
+      // Only admins and devops can create/update/delete system config
+      allow create, update, delete: if isAdmin() || isDevOps();
+    }
+  }
+} 
