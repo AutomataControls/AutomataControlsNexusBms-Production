@@ -3,34 +3,34 @@ import Image from "next/image"
 
 export default function Home() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
-      <div className="text-center">
-        {/* Logo Image */}
-        <div className="flex justify-center mb-6">
-          <div className="rounded-full overflow-hidden w-16 h-16 flex items-center justify-center">
-            <Image src="/neural-loader.png" alt="Automata Controls Logo" width={64} height={64} priority />
+    <main className="flex items-center justify-center min-h-screen bg-white">
+      <div className="text-center space-y-6">
+        <div className="flex justify-center">
+          <div className="rounded-full overflow-hidden w-24 h-24 flex items-center justify-center bg-white shadow-lg">
+            <Image src="/neural-loader.png" alt="Automata Controls Logo" width={80} height={80} priority className="object-contain" />
           </div>
         </div>
 
-        {/* Title with Cinzel font */}
-        <h1 className="font-cinzel text-teal-400 text-3xl font-bold mb-2">
-          AUTOMATA CONTROLS BMS
-        </h1>
+        <div className="space-y-2">
+          <h1 className="font-cinzel text-[2.5rem] font-bold text-teal-400 tracking-wide">
+            AUTOMATA CONTROLS BMS
+          </h1>
 
-        {/* Subtitle */}
-        <p className="text-orange-300 mb-8">
-          Building Management System
-        </p>
+          <p className="text-orange-300 text-lg">
+            Building Management System
+          </p>
+        </div>
 
-        {/* Login Button */}
-        <a
-          href="/login"
-          className="bg-teal-400 text-white px-4 py-2 rounded-md font-medium hover:bg-teal-500 transition-colors"
-        >
-          Go to Login
-        </a>
+        <div>
+          <a
+            href="/login"
+            className="inline-block bg-teal-400 text-white px-6 py-3 rounded-lg font-medium hover:bg-teal-500 transition-colors text-lg"
+          >
+            Go to Login
+          </a>
+        </div>
       </div>
-    </div>
+    </main>
   )
 }
 
