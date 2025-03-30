@@ -13,39 +13,19 @@ export default function Home() {
         </div>
 
         {/* Title with Cinzel font */}
-        <h1
-          style={{
-            fontFamily: "var(--font-cinzel)",
-            color: "#2dd4bf",
-            fontSize: "1.875rem",
-            fontWeight: "bold",
-            marginBottom: "0.5rem",
-          }}
-        >
-          Automata Controls BMS
+        <h1 className="font-cinzel text-teal-400 text-3xl font-bold mb-2">
+          AUTOMATA CONTROLS BMS
         </h1>
 
         {/* Subtitle */}
-        <p
-          style={{
-            color: "#fdba74",
-            marginBottom: "2rem",
-          }}
-        >
+        <p className="text-orange-300 mb-8">
           Building Management System
         </p>
 
         {/* Login Button */}
         <a
           href="/login"
-          style={{
-            backgroundColor: "#2dd4bf",
-            color: "white",
-            padding: "0.5rem 1rem",
-            borderRadius: "0.375rem",
-            textDecoration: "none",
-            fontWeight: "500",
-          }}
+          className="bg-teal-400 text-white px-4 py-2 rounded-md font-medium hover:bg-teal-500 transition-colors"
         >
           Go to Login
         </a>
