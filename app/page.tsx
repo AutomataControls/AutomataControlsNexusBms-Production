@@ -5,17 +5,30 @@ import { useEffect } from "react"
 
 export default function Home() {
   useEffect(() => {
+    console.log("Page component mounted");
+
+    // Check if CSS variables are defined
+    const rootStyles = getComputedStyle(document.documentElement);
+    console.log("CSS Variables:", {
+      fontCinzel: rootStyles.getPropertyValue('--font-cinzel'),
+      fontSans: rootStyles.getPropertyValue('--font-sans')
+    });
+
     // Log computed styles to check font application
-    const title = document.querySelector('h1')
+    const title = document.querySelector('h1');
     if (title) {
-      const styles = window.getComputedStyle(title)
+      const styles = window.getComputedStyle(title);
       console.log('Title styles:', {
         fontFamily: styles.fontFamily,
         fontSize: styles.fontSize,
         fontWeight: styles.fontWeight
-      })
+      });
+    } else {
+      console.log("Title element not found");
     }
-  }, [])
+  }, []);
+
+  console.log("Rendering Home component");
 
   return (
     <main className="flex items-center justify-center min-h-screen bg-white">
@@ -25,20 +38,17 @@ export default function Home() {
             <Image src="/neural-loader.png" alt="Automata Controls Logo" width={80} height={80} priority className="object-contain" />
           </div>
         </div>
-
         <div className="space-y-2">
-          <h1 
-            className="font-cinzel text-[2.5rem] font-bold text-teal-400 tracking-wide"
-            style={{ fontFamily: "var(--font-cinzel)" }}
+          <h1
+            className="text-[2.5rem] font-bold text-teal-400 tracking-wide"
+            style={{ fontFamily: "var(--font-cinzel), serif" }}
           >
             AUTOMATA CONTROLS BMS
           </h1>
-
           <p className="text-orange-300 text-lg">
             Building Management System
           </p>
         </div>
-
         <div>
           <a
             href="/login"
@@ -51,4 +61,3 @@ export default function Home() {
     </main>
   )
 }
-
