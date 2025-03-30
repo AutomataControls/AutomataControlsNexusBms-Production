@@ -1,40 +1,56 @@
-// page.tsx
+export const dynamic = "force-dynamic"
+import Image from "next/image"
+
 export default function Home() {
   return (
-    <div style={{ 
-      display: "flex", 
-      justifyContent: "center", 
-      alignItems: "center",
-      flexDirection: "column",
-      height: "100vh",
-      background: "linear-gradient(to bottom, #eff6ff, #ffffff)",
-      fontFamily: "Arial, sans-serif"
-    }}>
-      <h1 style={{ 
-        color: "#14b8a6", 
-        fontSize: "24px",
-        marginBottom: "16px"
-      }}>
-        Automata Controls BMS
-      </h1>
-      <p style={{ 
-        color: "#fdba74",
-        marginBottom: "24px"
-      }}>
-        Building Management System
-      </p>
-      <a 
-        href="/login" 
-        style={{
-          backgroundColor: "#2dd4bf",
-          color: "white",
-          padding: "8px 16px",
-          borderRadius: "6px",
-          textDecoration: "none"
-        }}
-      >
-        Go to Login
-      </a>
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className="text-center">
+        {/* Logo Image */}
+        <div className="flex justify-center mb-6">
+          <div className="rounded-full overflow-hidden w-16 h-16 flex items-center justify-center">
+            <Image src="/neural-loader.png" alt="Automata Controls Logo" width={64} height={64} priority />
+          </div>
+        </div>
+
+        {/* Title with Cinzel font */}
+        <h1
+          style={{
+            fontFamily: "var(--font-cinzel)",
+            color: "#2dd4bf",
+            fontSize: "1.875rem",
+            fontWeight: "bold",
+            marginBottom: "0.5rem",
+          }}
+        >
+          Automata Controls BMS
+        </h1>
+
+        {/* Subtitle */}
+        <p
+          style={{
+            color: "#fdba74",
+            marginBottom: "2rem",
+          }}
+        >
+          Building Management System
+        </p>
+
+        {/* Login Button */}
+        <a
+          href="/login"
+          style={{
+            backgroundColor: "#2dd4bf",
+            color: "white",
+            padding: "0.5rem 1rem",
+            borderRadius: "0.375rem",
+            textDecoration: "none",
+            fontWeight: "500",
+          }}
+        >
+          Go to Login
+        </a>
+      </div>
     </div>
-  );
+  )
 }
+
