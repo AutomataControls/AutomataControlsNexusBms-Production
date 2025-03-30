@@ -123,6 +123,7 @@ const config = {
       fontFamily: {
         sans: ["var(--font-sans)"],
         cazi: ["var(--font-cazi)"],
+        cinzel: ["Cinzel", "serif"],
       },
     },
   },
