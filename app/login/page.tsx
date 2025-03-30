@@ -328,7 +328,7 @@ export default function LoginPage() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                {/* Google sign-in section - temporarily disabled
+                {/* Google sign-in section - enabled */}
                 <div className="w-full space-y-4">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -366,8 +366,7 @@ export default function LoginPage() {
                       Continue with Google
                     </Button>
                   </div>
-                </div>
-                */}
+                </div>                
               </CardFooter>
             </form>
           </Tabs>
