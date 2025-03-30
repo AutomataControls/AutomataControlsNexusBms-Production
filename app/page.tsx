@@ -1,7 +1,22 @@
+"use client"
 export const dynamic = "force-dynamic"
 import Image from "next/image"
+import { useEffect } from "react"
 
 export default function Home() {
+  useEffect(() => {
+    // Log computed styles to check font application
+    const title = document.querySelector('h1')
+    if (title) {
+      const styles = window.getComputedStyle(title)
+      console.log('Title styles:', {
+        fontFamily: styles.fontFamily,
+        fontSize: styles.fontSize,
+        fontWeight: styles.fontWeight
+      })
+    }
+  }, [])
+
   return (
     <main className="flex items-center justify-center min-h-screen bg-white">
       <div className="text-center space-y-6">
@@ -12,7 +27,10 @@ export default function Home() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="font-cinzel text-[2.5rem] font-bold text-teal-400 tracking-wide">
+          <h1 
+            className="font-cinzel text-[2.5rem] font-bold text-teal-400 tracking-wide"
+            style={{ fontFamily: "var(--font-cinzel)" }}
+          >
             AUTOMATA CONTROLS BMS
           </h1>
 
