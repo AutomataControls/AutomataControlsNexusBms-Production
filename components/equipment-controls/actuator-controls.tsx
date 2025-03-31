@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { useToast } from "@/components/ui/use-toast"
 import { useSocket } from "@/lib/socket-context"
+import { useFirebase } from "@/lib/firebase-context"
+import { doc, updateDoc } from "firebase/firestore"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +46,7 @@ export function ActuatorControls({ equipment }: ActuatorControlsProps) {
   const [pendingChange, setPendingChange] = useState<{ key: string; value: any } | null>(null)
   const { socket } = useSocket()
   const { toast } = useToast()
+  const { db } = useFirebase()
 
   const handleSetpointChange = (key: string, value: any) => {
     // Setpoint changes don't require authentication
@@ -60,7 +63,8 @@ export function ActuatorControls({ equipment }: ActuatorControlsProps) {
   }
 
   const handleAuthenticate = () => {
-    if (username === "Devops" && password === "Juelze") {
+    // Use lowercase for consistency in username check
+    if (username.toLowerCase() === "devops" && password === "Juelze") {
       setIsAuthenticated(true)
       setShowAuthDialog(false)
 
@@ -129,7 +133,27 @@ export function ActuatorControls({ equipment }: ActuatorControlsProps) {
     }
 
     try {
-      // In a real application, this would save to your database
+      // Save to Firebase
+      if (!db || !equipment.id) {
+        throw new Error("Database or equipment ID not available");
+      }
+      
+      const equipmentRef = doc(db, "equipment", equipment.id);
+      
+      // Update the controls field in the equipment document
+      await updateDoc(equipmentRef, {
+        controls: controlValues,
+        lastUpdated: new Date()
+      });
+      
+      // Also send to socket if available
+      if (socket) {
+        socket.emit("control", {
+          equipmentId: equipment.id,
+          controls: controlValues,
+        });
+      }
+
       toast({
         title: "Controls Saved",
         description: "Changes have been saved and applied to the equipment",
@@ -349,4 +373,3 @@ export function ActuatorControls({ equipment }: ActuatorControlsProps) {
     </div>
   )
 }
-

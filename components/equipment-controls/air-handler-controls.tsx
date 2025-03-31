@@ -9,6 +9,9 @@ import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { useToast } from "@/components/ui/use-toast"
 import { useSocket } from "@/lib/socket-context"
+import { useFirebase } from "@/lib/firebase-context"
+import { useAuth } from "@/lib/auth-context"
+import { doc, updateDoc } from "firebase/firestore"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   AlertDialog,
@@ -42,9 +45,12 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
   const [username, setUsername] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [showAuthDialog, setShowAuthDialog] = useState<boolean>(false)
+  const [loginError, setLoginError] = useState<string>("")
   const [pendingChange, setPendingChange] = useState<{ key: string; value: any } | null>(null)
   const { socket } = useSocket()
   const { toast } = useToast()
+  const { db } = useFirebase()
+  const { loginWithUsername } = useAuth()
 
   const handleSetpointChange = (key: string, value: any) => {
     // Setpoint changes don't require authentication
@@ -60,8 +66,13 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
     }
   }
 
-  const handleAuthenticate = () => {
-    if (username === "DevOps" && password === "Juelz2") {
+  const handleAuthenticate = async () => {
+    setLoginError("")
+    
+    try {
+      // Use the authentication system instead of hardcoded credentials
+      await loginWithUsername(username, password)
+      
       setIsAuthenticated(true)
       setShowAuthDialog(false)
 
@@ -79,7 +90,9 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
         description: "You can now modify equipment controls",
         className: "bg-teal-50 border-teal-200",
       })
-    } else {
+    } catch (error) {
+      console.error("Authentication error:", error)
+      setLoginError("Invalid username or password")
       toast({
         title: "Authentication Failed",
         description: "Invalid username or password",
@@ -130,7 +143,27 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
     }
 
     try {
-      // In a real application, this would save to your database
+      // Save to Firebase
+      if (!db || !equipment.id) {
+        throw new Error("Database or equipment ID not available");
+      }
+      
+      const equipmentRef = doc(db, "equipment", equipment.id);
+      
+      // Update the controls field in the equipment document
+      await updateDoc(equipmentRef, {
+        controls: controlValues,
+        lastUpdated: new Date()
+      });
+      
+      // Also send to socket if available
+      if (socket) {
+        socket.emit("control", {
+          equipmentId: equipment.id,
+          controls: controlValues,
+        });
+      }
+
       toast({
         title: "Controls Saved",
         description: "Changes have been saved and applied to the equipment",
@@ -414,16 +447,20 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
                 placeholder="Enter your password"
               />
             </div>
+            {loginError && (
+              <div className="text-red-500 text-sm">
+                {loginError}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAuthenticate}>Authenticate</Button>
+            <Button onClick={handleAuthenticate}>Login</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
-

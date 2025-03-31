@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { useFirebase } from "@/lib/firebase-context"
 import { Settings } from "lucide-react"
+import { doc, getDoc } from "firebase/firestore" // Added Firebase v9 imports
 
 export default function ControlsContent() {
   const searchParams = useSearchParams()
@@ -28,10 +29,16 @@ export default function ControlsContent() {
       try {
         // If we have specific equipment selected
         if (locationId && equipmentId) {
-          const locationDoc = await db.collection("locations").doc(locationId).get()
-          const equipmentDoc = await db.collection("equipment").doc(equipmentId).get()
+          // Create document references
+          const locationRef = doc(db, "locations", locationId)
+          const equipmentRef = doc(db, "equipment", equipmentId)
+          
+          // Get documents
+          const locationDoc = await getDoc(locationRef)
+          const equipmentDoc = await getDoc(equipmentRef)
 
-          if (locationDoc.exists && equipmentDoc.exists) {
+          // Check if documents exist
+          if (locationDoc.exists() && equipmentDoc.exists()) {
             setLocation({ id: locationDoc.id, ...locationDoc.data() })
             setEquipment({ id: equipmentDoc.id, ...equipmentDoc.data() })
           }
@@ -106,4 +113,3 @@ export default function ControlsContent() {
     </div>
   )
 }
-

@@ -30,7 +30,10 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useFirebase } from "@/lib/firebase-context"
+import { useAuth } from "@/lib/auth-context"
 import { Thermometer, Fan, Flame } from "lucide-react"
+import { GreenhouseVisualization } from "@/components/greenhouse/greenhouse-visualization"
+import { collection, query, where, getDocs } from "firebase/firestore"
 
 interface GreenhouseControlsProps {
   equipment: any
@@ -41,14 +44,23 @@ export function GreenhouseControls({ equipment }: GreenhouseControlsProps) {
     ...equipment.controls,
   })
   const [greenhouseEquipment, setGreenhouseEquipment] = useState<any[]>([])
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [username, setUsername] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [showAuthDialog, setShowAuthDialog] = useState<boolean>(false)
   const [pendingChange, setPendingChange] = useState<{ key: string; value: any } | null>(null)
+  const [loginError, setLoginError] = useState<string>("")
+  
   const { socket } = useSocket()
   const { toast } = useToast()
   const { db } = useFirebase()
+  const { user, loginWithUsername } = useAuth()
+
+  // Check if user is authorized to modify controls
+  const isAuthorized = () => {
+    if (!user) return false;
+    // Check if user has admin role or technician role
+    return user.roles.some(role => ['admin', 'technician', 'engineer'].includes(role.toLowerCase()));
+  }
 
   // Fetch all greenhouse equipment
   useEffect(() => {
@@ -56,8 +68,9 @@ export function GreenhouseControls({ equipment }: GreenhouseControlsProps) {
       if (!db || !equipment.locationId) return
 
       try {
-        const equipmentRef = db.collection("equipment").where("locationId", "==", equipment.locationId)
-        const snapshot = await equipmentRef.get()
+        const equipmentCollection = collection(db, "equipment")
+        const equipmentQuery = query(equipmentCollection, where("locationId", "==", equipment.locationId))
+        const snapshot = await getDocs(equipmentQuery)
 
         const equipmentData = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -103,46 +116,60 @@ export function GreenhouseControls({ equipment }: GreenhouseControlsProps) {
       })
     } else {
       // For other controls, require authentication
-      setPendingChange({ key, value })
-      setShowAuthDialog(true)
+      if (isAuthorized()) {
+        // User is already authenticated
+        setControlValues({
+          ...controlValues,
+          [key]: value,
+        })
+      } else {
+        // Need to authenticate
+        setPendingChange({ key, value })
+        setShowAuthDialog(true)
+      }
     }
   }
 
-  const handleAuthenticate = () => {
-    if (username === "Devops" && password === "Juelze") {
-      setIsAuthenticated(true)
-      setShowAuthDialog(false)
-
+  const handleAuthenticate = async () => {
+    setLoginError("");
+    
+    try {
+      await loginWithUsername(username, password);
+      setShowAuthDialog(false);
+      
       // Apply the pending change if there is one
       if (pendingChange) {
         setControlValues({
           ...controlValues,
           [pendingChange.key]: pendingChange.value,
-        })
-        setPendingChange(null)
+        });
+        setPendingChange(null);
       }
-
+      
       toast({
         title: "Authentication Successful",
         description: "You can now modify equipment controls",
         className: "bg-teal-50 border-teal-200",
-      })
-    } else {
+      });
+    } catch (error) {
+      console.error("Authentication error:", error);
+      setLoginError("Invalid username or password");
       toast({
         title: "Authentication Failed",
         description: "Invalid username or password",
         variant: "destructive",
-      })
+      });
     }
   }
 
   const handleApply = () => {
-    if (!isAuthenticated && Object.keys(controlValues).some((key) => !key.toLowerCase().includes("setpoint"))) {
+    if (!isAuthorized() && Object.keys(controlValues).some((key) => !key.toLowerCase().includes("setpoint"))) {
       toast({
         title: "Authentication Required",
-        description: "Please authenticate to apply changes to controls other than setpoints",
+        description: "Please login to apply changes to controls other than setpoints",
         variant: "destructive",
       })
+      setShowAuthDialog(true);
       return
     }
 
@@ -168,12 +195,13 @@ export function GreenhouseControls({ equipment }: GreenhouseControlsProps) {
   }
 
   const handleSave = async () => {
-    if (!isAuthenticated && Object.keys(controlValues).some((key) => !key.toLowerCase().includes("setpoint"))) {
+    if (!isAuthorized() && Object.keys(controlValues).some((key) => !key.toLowerCase().includes("setpoint"))) {
       toast({
         title: "Authentication Required",
-        description: "Please authenticate to save changes to controls other than setpoints",
+        description: "Please login to save changes to controls other than setpoints",
         variant: "destructive",
       })
+      setShowAuthDialog(true);
       return
     }
 
@@ -196,13 +224,43 @@ export function GreenhouseControls({ equipment }: GreenhouseControlsProps) {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="climate">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="visualization">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="visualization">Visualization</TabsTrigger>
           <TabsTrigger value="climate">Climate</TabsTrigger>
           <TabsTrigger value="ventilation">Ventilation</TabsTrigger>
           <TabsTrigger value="heating">Heating</TabsTrigger>
           <TabsTrigger value="sensors">Sensors</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="visualization" className="space-y-4 pt-4">
+          <GreenhouseVisualization
+            controls={controlValues}
+            sensorData={{
+              temperature: {
+                avg:
+                  greenhouseEquipment
+                    .filter((eq) => eq.type === "temperature sensor")
+                    .reduce((sum, sensor) => sum + (sensor.currentValue || 0), 0) /
+                  Math.max(1, greenhouseEquipment.filter((eq) => eq.type === "temperature sensor").length),
+                values: greenhouseEquipment
+                  .filter((eq) => eq.type === "temperature sensor")
+                  .map((sensor) => sensor.currentValue || 0),
+              },
+              humidity: {
+                avg:
+                  greenhouseEquipment
+                    .filter((eq) => eq.type === "humidity sensor")
+                    .reduce((sum, sensor) => sum + (sensor.currentValue || 0), 0) /
+                  Math.max(1, greenhouseEquipment.filter((eq) => eq.type === "humidity sensor").length),
+                values: greenhouseEquipment
+                  .filter((eq) => eq.type === "humidity sensor")
+                  .map((sensor) => sensor.currentValue || 0),
+              },
+              uvIndex: greenhouseEquipment.find((eq) => eq.type === "uv sensor")?.currentValue || 0,
+            }}
+          />
+        </TabsContent>
 
         <TabsContent value="climate" className="space-y-4 pt-4">
           <Card>
@@ -725,7 +783,7 @@ export function GreenhouseControls({ equipment }: GreenhouseControlsProps) {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Authentication Required</DialogTitle>
-            <DialogDescription>Please authenticate to modify equipment controls other than setpoints</DialogDescription>
+            <DialogDescription>Please login to modify equipment controls other than setpoints</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -751,16 +809,20 @@ export function GreenhouseControls({ equipment }: GreenhouseControlsProps) {
                 className="col-span-3"
               />
             </div>
+            {loginError && (
+              <div className="col-span-4 text-center text-red-500 text-sm">
+                {loginError}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAuthenticate}>Authenticate</Button>
+            <Button onClick={handleAuthenticate}>Login</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
-
