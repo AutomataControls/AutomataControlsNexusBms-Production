@@ -10,6 +10,7 @@ import { Settings, ArrowLeft, Thermometer, Droplets, Sun, Fan, Flame } from "luc
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GreenhouseControls } from "@/components/equipment-controls/greenhouse-controls"
 import { GreenhouseAnalytics } from "@/components/greenhouse/greenhouse-analytics"
+import { GreenhouseVisualization } from "@/components/greenhouse/greenhouse-visualization"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 
@@ -185,6 +186,9 @@ export function GreenhouseOverview({ id }: { id: string }) {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 pt-4">
+          {/* Add the Greenhouse Visualization component */}
+          <GreenhouseVisualization controls={greenhouse.controls} sensorData={sensorData} />
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
