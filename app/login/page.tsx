@@ -40,6 +40,9 @@ export default function LoginPage() {
   const { user, loginWithEmail, loginWithUsername, loginWithGoogle } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  
+  // Debug log for rendering
+  console.log("Login component rendering with method:", loginMethod);
 
   // Modified user check to prevent redirect loops
   useEffect(() => {
@@ -55,6 +58,9 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Debug log for login attempt
+    console.log("Login button clicked with method:", loginMethod, "email:", email, "username:", username);
+    
     try {
       if (loginMethod === "email") {
         await loginWithEmail(email, password)
@@ -74,6 +80,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
+      console.log("Google login button clicked");
       // This will redirect to Google authentication
       await loginWithGoogle()
       // The redirect will happen, code after this won't execute immediately
@@ -154,7 +161,7 @@ export default function LoginPage() {
         <Card className="w-full bg-gray-800 border-gray-700">
           <CardHeader className="space-y-4">
             <div className="flex items-center justify-center mb-6">
-              <Image src="/neural-loader.png" alt="Automata Controls Logo" width={150} height={150} className="mr-6" />
+              <Image src="/neural-loader.png" alt="Automata Controls Logo" width={150} height={150} className="mr-6" priority />
               <div>
                 <h1 className="font-cinzel text-4xl text-orange-300">Automata Controls</h1>
                 <h2 className="text-2xl text-teal-200">Building Management System</h2>
@@ -163,7 +170,15 @@ export default function LoginPage() {
             <CardTitle className="text-3xl text-amber-200/70 text-center">Login</CardTitle>
             <CardDescription className="text-lg text-teal-200/80 text-center">Enter your credentials to access the system</CardDescription>
           </CardHeader>
-          <Tabs value={loginMethod} onValueChange={(value) => setLoginMethod(value as "email" | "username")} className="w-full">
+          <Tabs 
+            value={loginMethod} 
+            onValueChange={(value) => {
+              console.log("Tab clicked:", value);
+              setLoginMethod(value as "email" | "username");
+              console.log("Login method after change:", value);
+            }} 
+            className="w-full"
+          >
             <TabsList className="grid w-full grid-cols-2 h-10 mb-4 bg-gray-700">
               <TabsTrigger
                 value="email"
@@ -366,7 +381,27 @@ export default function LoginPage() {
                       Continue with Google
                     </Button>
                   </div>
-                </div>                
+                </div>
+
+                {/* Test button for direct auth testing */}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    console.log("Test auth directly");
+                    if (loginMethod === "email") {
+                      loginWithEmail(email, password)
+                        .then(() => console.log("Email login success"))
+                        .catch(err => console.error("Test email login failed:", err));
+                    } else {
+                      loginWithUsername(username, password)
+                        .then(() => console.log("Username login success"))
+                        .catch(err => console.error("Test username login failed:", err));
+                    }
+                  }}
+                  className="mt-2 bg-red-500 hover:bg-red-600"
+                >
+                  Test Auth
+                </Button>
               </CardFooter>
             </form>
           </Tabs>

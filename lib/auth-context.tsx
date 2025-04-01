@@ -44,12 +44,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const handleRedirectResult = async () => {
       try {
         // Check for redirect result when the component mounts
+        console.log("Checking for Google redirect result");
         const result = await getRedirectResult(auth)
         if (result) {
+          console.log("Google redirect result found:", result);
           const firebaseUser = result.user
           // Get additional user data from Firestore
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
           if (!userDoc.exists()) {
+            console.log("Creating new user document for Google sign-in");
             // Create new user document for Google sign-in
             await setDoc(doc(db, "users", firebaseUser.uid), {
               username: firebaseUser.email,
@@ -67,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             roles: ["user"]
           }
 
+          console.log("Setting user state after Google sign-in");
           setUser({
             id: firebaseUser.uid,
             username: userData.username || firebaseUser.email || "",
@@ -74,6 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: firebaseUser.email || "",
             roles: userData.roles || ["user"],
           })
+        } else {
+          console.log("No Google redirect result found");
         }
       } catch (error) {
         console.error("Google redirect result error:", error)
@@ -83,12 +89,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     handleRedirectResult()
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("Auth state changed:", firebaseUser ? "User logged in" : "No user");
       if (firebaseUser) {
         try {
           // Get additional user data from Firestore
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
           if (userDoc.exists()) {
             const userData = userDoc.data()
+            console.log("User document found in Firestore");
             setUser({
               id: firebaseUser.uid,
               username: userData.username || firebaseUser.email || "",
@@ -97,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               roles: userData.roles || ["user"],
             })
           } else {
+            console.log("Creating new user document");
             // Create a new user document if it doesn't exist
             const username = firebaseUser.email.split('@')[0] // Use part before @ as username
             await setDoc(doc(db, "users", firebaseUser.uid), {
@@ -128,9 +137,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [db])
 
   const loginWithEmail = async (email: string, password: string) => {
+    console.log("Attempting email login with:", email);
     try {
       const userCredential = await signInWithEmail(auth, email, password)
       const firebaseUser = userCredential.user
+      console.log("Email login successful for:", firebaseUser.email);
 
       // Get additional user data from Firestore
       const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
@@ -169,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const loginWithUsername = async (username: string, password: string) => {
+    console.log("Attempting username login with:", username);
     try {
       // First, find the user by username in Firestore
       const usersRef = collection(db, "users")
@@ -176,10 +188,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const querySnapshot = await getDocs(q)
 
       if (querySnapshot.empty) {
+        console.error("Username login failed: User not found");
         throw new Error("User not found")
       }
 
       const userData = querySnapshot.docs[0].data()
+      console.log("Username found, proceeding with email login using:", userData.email);
 
       // Now login with the associated email
       return loginWithEmail(userData.email, password)
@@ -193,25 +207,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       
-      // Use the current domain for redirect
+      // Use the login page as the redirect URL
       const redirectUri = typeof window !== 'undefined' 
-        ? `${window.location.protocol}//${window.location.host}/__/auth/handler` 
-        : 'https://neuralbms.automatacontrols.com/__/auth/handler';
+        ? `${window.location.protocol}//${window.location.host}/login` 
+        : 'https://neuralbms.automatacontrols.com/login';
       
       console.log("Google Auth redirect URI:", redirectUri);
+      console.log("Google Auth provider:", provider);
       
       // Configure Firebase auth settings
       auth.useDeviceLanguage();
       
       // Add parameters to the auth provider
       provider.setCustomParameters({
-        prompt: 'select_account',
-        redirect_uri: redirectUri
+        prompt: 'select_account'
+        // The redirect_uri is handled by Firebase automatically,
+        // specifying it manually can cause issues
       });
       
-      // Use redirect for the auth flow
-      console.log("Starting Google sign-in redirect...");
-      await signInWithRedirect(auth, provider);
+      // Try sign-in with popup first as it's more reliable
+      try {
+        console.log("Attempting Google sign-in with popup...");
+        const result = await signInWithPopup(auth, provider);
+        console.log("Google sign-in with popup successful");
+        return result;
+      } catch (popupError) {
+        console.warn("Popup sign-in failed, falling back to redirect:", popupError);
+        // Fall back to redirect if popup fails
+        console.log("Starting Google sign-in redirect...");
+        await signInWithRedirect(auth, provider);
+      }
       
       return null;
     } catch (error) {
@@ -225,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      console.log("Logging out user");
       await signOut(auth)
       setUser(null)
     } catch (error) {
