@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { collection, query, orderBy, limit, startAfter, getDocs } from "firebase/firestore"
 
 // Number of locations to load per page
-const LOCATIONS_PER_PAGE = 6
+const LOCATIONS_PER_PAGE = 9
 
 export default function DashboardContent() {
   const [locations, setLocations] = useState<any[]>([])
