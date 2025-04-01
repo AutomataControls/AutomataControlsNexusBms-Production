@@ -33,7 +33,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <div className="container mx-auto max-w-6xl px-4 flex-1 flex flex-col items-center" style={{ paddingLeft: "480px" }}>
+      <div className="container mx-auto max-w-6xl px-4 flex-1 flex flex-col items-center" style={{ paddingLeft: "860px" }}>
         <div className="flex-1 flex items-center justify-center -mt-24">
           <div className="text-center">
             <div className="mb-12 flex justify-center">
@@ -86,7 +86,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <div className="container mx-auto max-w-6xl px-4 bg-transparent relative z-10" style={{ paddingLeft: "480px" }}>
+      <div className="container mx-auto max-w-6xl px-4 bg-transparent relative z-10" style={{ paddingLeft: "860px" }}>
         <div className="bg-transparent [&>footer]:bg-transparent [&>footer]:border-0 [&_span.text-amber-200\/90]:text-gray-300">
           <AppFooter />
         </div>
