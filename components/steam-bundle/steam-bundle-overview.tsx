@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SteamBundleControls } from "@/components/equipment-controls/steam-bundle-controls"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { SteamBundleVisualization } from "@/components/steam-bundle"
+import { SteamBundleVisualization } from "@/components/steam-bundle/steam-bundle-visualization"
 
 export function SteamBundleOverview({ id }: { id: string }) {
   const [steamBundle, setSteamBundle] = useState<any>(null)
