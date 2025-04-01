@@ -1,7 +1,6 @@
 "use client"
 import { Suspense, use } from "react"
 import { ZoneDetails } from "@/components/zone-details"
-
 interface ZonePageProps {
     params: {
         id: string
