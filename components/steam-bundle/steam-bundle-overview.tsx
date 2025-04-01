@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { useFirebase } from "@/lib/firebase-context"
 import { useSocket } from "@/lib/socket-context"
-import { Settings, ArrowLeft, Gauge, Thermometer, Droplets } from "lucide-react"
+import { Settings, ArrowLeft, Gauge, Thermometer, Droplets, Eye } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SteamBundleControls } from "@/components/equipment-controls/steam-bundle-controls"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { SteamBundleVisualization } from "@/components/steam-bundle"
 
 export function SteamBundleOverview({ id }: { id: string }) {
   const [steamBundle, setSteamBundle] = useState<any>(null)
@@ -114,6 +115,8 @@ export function SteamBundleOverview({ id }: { id: string }) {
   const valves = relatedEquipment.filter((eq) => eq.type === "valve" || eq.type === "actuator")
   const valve13 = valves.find((v) => v.name.includes("1/3"))
   const valve23 = valves.find((v) => v.name.includes("2/3"))
+  const valve33 = valves.find((v) => v.name.includes("3/3"))
+  const valve43 = valves.find((v) => v.name.includes("4/3"))
 
   // Find differential pressure sensor
   const diffPressureSensor = relatedEquipment.find(
@@ -123,6 +126,54 @@ export function SteamBundleOverview({ id }: { id: string }) {
   )
 
   const controls = steamBundle.controls || {}
+
+  // Prepare visualization controls from the data
+  const visualizationControls = {
+    systemEnable: controls.systemEnable || false,
+    operationMode: controls.operationMode || "auto",
+    pressureSetpoint: controls.pressureSetpoint || 30,
+    temperatureSetpoint: controls.temperatureSetpoint || 180,
+    differentialPressureSetpoint: controls.differentialPressureSetpoint || 5,
+
+    // Valves for HX-1
+    valve13Enable: controls.valve13Enable || false,
+    valve13Position: controls.valve13Position || 0,
+    valve13Mode: controls.valve13Mode || "auto",
+    valve23Enable: controls.valve23Enable || false,
+    valve23Position: controls.valve23Position || 0,
+    valve23Mode: controls.valve23Mode || "auto",
+
+    // Valves for HX-2
+    valve33Enable: controls.valve33Enable || false,
+    valve33Position: controls.valve33Position || 0,
+    valve33Mode: controls.valve33Mode || "auto",
+    valve43Enable: controls.valve43Enable || false,
+    valve43Position: controls.valve43Position || 0,
+    valve43Mode: controls.valve43Mode || "auto",
+
+    valveControlStrategy: controls.valveControlStrategy || "sequential",
+
+    // Pumps
+    pump1Enable: controls.pump1Enable || false,
+    pump1Speed: controls.pump1Speed || 0,
+    pump1Mode: controls.pump1Mode || "auto",
+    pump1Status: controls.pump1Status || "stopped",
+    pump1IsLead: controls.pump1IsLead || true,
+    pump2Enable: controls.pump2Enable || false,
+    pump2Speed: controls.pump2Speed || 0,
+    pump2Mode: controls.pump2Mode || "auto",
+    pump2Status: controls.pump2Status || "stopped",
+    pumpControlMode: controls.pumpControlMode || "auto",
+    leadLagAutoChangeover: controls.leadLagAutoChangeover || true,
+  }
+
+  // Prepare sensor data for visualization
+  const visualizationSensorData = {
+    temperature: controls.temperature || 70,
+    pressure: controls.pressure || diffPressureSensor?.currentValue || 0,
+    differentialPressure: controls.differentialPressure || 0,
+    flow: controls.flow || 0,
+  }
 
   return (
     <div className="space-y-6">
@@ -140,8 +191,12 @@ export function SteamBundleOverview({ id }: { id: string }) {
       </div>
 
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="visualization">
+            <Eye className="mr-2 h-4 w-4" />
+            Visualization
+          </TabsTrigger>
           <TabsTrigger value="controls">Controls</TabsTrigger>
         </TabsList>
 
@@ -364,6 +419,18 @@ export function SteamBundleOverview({ id }: { id: string }) {
                   <span className="font-medium">{controls.differentialPressureSetpoint || 5} PSI</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="visualization" className="pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Steam Bundle Visualization</CardTitle>
+              <CardDescription>Interactive 3D visualization of the steam bundle system</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SteamBundleVisualization controls={visualizationControls} sensorData={visualizationSensorData} />
             </CardContent>
           </Card>
         </TabsContent>
