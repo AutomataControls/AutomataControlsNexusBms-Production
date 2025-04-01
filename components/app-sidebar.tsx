@@ -30,6 +30,7 @@ export function AppSidebar() {
     const [equipment, setEquipment] = useState<any[]>([])
     const [equipmentTypes, setEquipmentTypes] = useState<string[]>([])
     const [loading, setLoading] = useState(true)
+    const [sidebarInitialized, setSidebarInitialized] = useState(false)
     const { db, fetchCachedData } = useFirebase()
     const { user, logout } = useAuth()
     const router = useRouter()
@@ -112,8 +113,14 @@ export function AppSidebar() {
 
     // Initial data loading
     useEffect(() => {
-        fetchLocations()
-    }, [fetchLocations])
+        console.log("AppSidebar - Initial render with user:", user?.id)
+        if (user) {
+            fetchLocations().then(() => {
+                setSidebarInitialized(true)
+                console.log("AppSidebar - Sidebar initialized")
+            })
+        }
+    }, [fetchLocations, user])
 
     // Load equipment when location changes
     useEffect(() => {
@@ -205,6 +212,32 @@ export function AppSidebar() {
             )
         })
     }, [loading, selectedLocation, equipmentTypes, equipment, pathname, getEquipmentIcon, activeClass, hoverClass])
+
+    // Show a skeleton sidebar while initializing
+    if (!sidebarInitialized) {
+        return (
+            <Sidebar className="bg-[#f8fcfa] h-full">
+                <SidebarHeader className="p-4 bg-[#f8fcfa] border-b border-gray-200">
+                    {user && (
+                        <div className="mb-3 pb-2 border-b border-gray-100">
+                            <p className="text-sm text-teal-600">Welcome,</p>
+                            <p className="font-medium text-orange-500">{user.name || user.username}</p>
+                        </div>
+                    )}
+                    <Skeleton className="h-9 w-full rounded-md" />
+                </SidebarHeader>
+                <SidebarContent className="bg-[#f8fcfa]">
+                    <div className="p-4 space-y-4">
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                    </div>
+                </SidebarContent>
+            </Sidebar>
+        )
+    }
 
     return (
         <Sidebar className="bg-[#f8fcfa] h-full">
