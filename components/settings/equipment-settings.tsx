@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { validateEquipment, type Equipment } from "@/lib/validation"
+import { validateEquipment } from "@/lib/validation"
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore"
 
 const EQUIPMENT_TYPES = [
@@ -207,22 +207,38 @@ const EQUIPMENT_THRESHOLDS = {
   },
 }
 
+// Helper function to generate default system name based on equipment type
+const getDefaultSystemName = (equipmentType) => {
+  switch(equipmentType) {
+    case "Air Handler": return "AHU-1";
+    case "Boiler": return "Boilers";
+    case "Chiller": return "Chiller";
+    case "DOAS": return "DOAS-1";
+    case "Fan Coil": return "FanCoil1";
+    case "Greenhouse": return "Greenhouse";
+    case "Steam Bundle": return "SteamBundle";
+    default: return equipmentType.replace(/\s+/g, '');
+  }
+};
+
+// Function to normalize location name for Firebase path
+const normalizeLocationName = (name) => {
+  if (!name) return "";
+  return name.replace(/\s+/g, '').replace(/&/g, 'And');
+};
+
+// Equipment interface
 interface Equipment {
   id: string
   name: string
   type: string
   locationId: string
-  mqttConfig: {
-    ip: string
-    port: number
-    username: string
-    password: string
-    topics: {
-      metrics: string
-      status: string
-      control: string
-    }
+  ipAddress?: string
+  firebasePath: {
+    location: string  // Exact location name in Firebase RTDB
+    system: string    // Exact system name in Firebase RTDB
   }
+  zone?: string     // Optional zone field for applicable equipment types
   thresholds: {
     [thresholdType: string]: {
       [measurement: string]: {
@@ -230,7 +246,10 @@ interface Equipment {
         max: number
       }
     }
-  }
+  },
+  status?: string
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export function EquipmentSettings() {
@@ -243,17 +262,12 @@ export function EquipmentSettings() {
     name: "",
     type: "",
     locationId: "",
-    mqttConfig: {
-      ip: "localhost",
-      port: 1883,
-      username: "",
-      password: "",
-      topics: {
-        metrics: "metrics",
-        status: "status",
-        control: "control",
-      },
+    ipAddress: "",
+    firebasePath: {
+      location: "",
+      system: ""
     },
+    zone: "",
     thresholds: {},
   })
   const [editEquipment, setEditEquipment] = useState<Equipment | null>(null)
@@ -272,7 +286,7 @@ export function EquipmentSettings() {
           id: doc.id,
           ...doc.data(),
         }))
-        console.log("Fetched locations for equipment settings:", locationData) // Debug log
+        console.log("Fetched locations for equipment settings:", locationData) 
         setLocations(locationData)
       } catch (error) {
         console.error("Error fetching locations:", error)
@@ -318,40 +332,55 @@ export function EquipmentSettings() {
 
     setIsLoading(true)
     try {
-      // Validate equipment data before saving
-      const validationResult = validateEquipment({
-        ...newEquipment,
-        status: "offline",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      if (!validationResult.success) {
-        validationResult.errors.forEach((error) => {
-          toast({
-            title: "Validation Error",
-            description: error.message,
-            variant: "destructive",
-          })
+      // Ensure Firebase path is properly set
+      let equipmentData = { ...newEquipment };
+      
+      // Make sure required fields are present
+      if (!equipmentData.name || !equipmentData.type || !equipmentData.locationId) {
+        toast({
+          title: "Validation Error",
+          description: "Name, type, and location are required fields",
+          variant: "destructive",
         })
+        setIsLoading(false)
         return
       }
 
-      // Add the new equipment to the database
-      const equipmentCollection = collection(db, "equipment")
-      const docRef = await addDoc(equipmentCollection, {
-        ...validationResult.data,
+      // Double-check that firebasePath is correctly populated
+      const selectedLocation = locations.find(loc => loc.id === equipmentData.locationId);
+      if (selectedLocation) {
+        const locationName = normalizeLocationName(selectedLocation.name);
+        equipmentData = {
+          ...equipmentData,
+          firebasePath: {
+            location: locationName || '',
+            system: equipmentData.type === 'Air Handler' ? 'AHU-1' : getDefaultSystemName(equipmentData.type || '')
+          }
+        };
+      }
+
+      // Add status and timestamps
+      equipmentData = {
+        ...equipmentData,
+        status: "offline",
         createdAt: new Date(),
         updatedAt: new Date(),
-      })
+      }
+
+      console.log("Saving equipment to Firestore:", equipmentData)
+
+      // Add the new equipment directly to the database
+      const equipmentCollection = collection(db, "equipment")
+      const docRef = await addDoc(equipmentCollection, equipmentData)
+
+      console.log("Successfully saved equipment with ID:", docRef.id)
 
       // Add the new equipment to the local state
       setEquipment([
         ...equipment,
         {
           id: docRef.id,
-          ...validationResult.data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          ...equipmentData,
         } as Equipment,
       ])
 
@@ -360,17 +389,12 @@ export function EquipmentSettings() {
         name: "",
         type: "",
         locationId: "",
-        mqttConfig: {
-          ip: "localhost",
-          port: 1883,
-          username: "",
-          password: "",
-          topics: {
-            metrics: "metrics",
-            status: "status",
-            control: "control",
-          },
+        ipAddress: "",
+        firebasePath: {
+          location: "",
+          system: ""
         },
+        zone: "",
         thresholds: {},
       })
 
@@ -386,7 +410,7 @@ export function EquipmentSettings() {
       console.error("Error adding equipment:", error)
       toast({
         title: "Error",
-        description: "Failed to add equipment. Please check your permissions.",
+        description: `Failed to add equipment: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       })
     } finally {
@@ -397,31 +421,54 @@ export function EquipmentSettings() {
   const handleEditEquipment = async () => {
     if (!db || !editEquipment) return
 
-    // Validate equipment data before saving
-    const validationResult = validateEquipment(editEquipment)
-    if (!validationResult.success) {
-      validationResult.errors.forEach((error) => {
+    setIsLoading(true)
+    
+    try {
+      // Make sure required fields are present
+      if (!editEquipment.name || !editEquipment.type || !editEquipment.locationId) {
         toast({
           title: "Validation Error",
-          description: error.message,
+          description: "Name, type, and location are required fields",
           variant: "destructive",
         })
-      })
-      return
-    }
+        setIsLoading(false)
+        return
+      }
 
-    try {
+      // Ensure firebasePath is properly set
+      let equipmentData = { ...editEquipment };
+      
+      // Double-check that firebasePath is correctly populated
+      const selectedLocation = locations.find(loc => loc.id === equipmentData.locationId);
+      if (selectedLocation) {
+        const locationName = normalizeLocationName(selectedLocation.name);
+        equipmentData = {
+          ...equipmentData,
+          firebasePath: {
+            location: locationName || '',
+            system: equipmentData.firebasePath?.system || getDefaultSystemName(equipmentData.type)
+          }
+        };
+      }
+
+      // Add updatedAt timestamp
+      equipmentData = {
+        ...equipmentData,
+        updatedAt: new Date(),
+      }
+
+      console.log("Updating equipment in Firestore:", equipmentData)
+
       // Update the equipment in the database
       const equipmentDoc = doc(db, "equipment", editEquipment.id)
-      await updateDoc(equipmentDoc, {
-        ...validationResult.data,
-        updatedAt: new Date(),
-      })
+      await updateDoc(equipmentDoc, equipmentData)
+
+      console.log("Successfully updated equipment with ID:", editEquipment.id)
 
       // Update the equipment in the local state
       setEquipment(
         equipment.map((item) =>
-          item.id === editEquipment.id ? { ...editEquipment, updatedAt: new Date() } : item,
+          item.id === editEquipment.id ? { ...equipmentData, id: editEquipment.id } : item,
         ),
       )
 
@@ -437,9 +484,11 @@ export function EquipmentSettings() {
       console.error("Error updating equipment:", error)
       toast({
         title: "Error",
-        description: "Failed to update equipment",
+        description: `Failed to update equipment: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -591,173 +640,243 @@ export function EquipmentSettings() {
               Add Equipment
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl flex flex-col h-[80vh]">
             <DialogHeader>
               <DialogTitle>Add New Equipment</DialogTitle>
               <DialogDescription>Configure a new piece of equipment in your building management system</DialogDescription>
             </DialogHeader>
-            {newEquipment && (
-              <div className="space-y-6 py-4">
-                {/* Basic Information Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Basic Information</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input
-                        id="name"
-                        value={newEquipment.name}
-                        onChange={(e) => setNewEquipment({ ...newEquipment, name: e.target.value })}
-                        required
-                      />
+            {/* Make the content area scrollable */}
+            <div className="flex-1 overflow-y-auto pr-2">
+              {newEquipment && (
+                <div className="space-y-6 py-4">
+                  {/* Basic Information Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Basic Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                          id="name"
+                          value={newEquipment.name}
+                          onChange={(e) => setNewEquipment({ ...newEquipment, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="type">Type</Label>
+                        <Select
+                          value={newEquipment.type}
+                          onValueChange={(value) => {
+                            const selectedLocation = locations.find(loc => loc.id === newEquipment.locationId);
+                            const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : '';
+                            
+                            setNewEquipment({
+                              ...newEquipment,
+                              type: value,
+                              firebasePath: {
+                                ...newEquipment.firebasePath || {},
+                                location: locationName,
+                                system: getDefaultSystemName(value)
+                              }
+                            });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EQUIPMENT_TYPES.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="type">Type</Label>
+                      <Label htmlFor="location">Location</Label>
                       <Select
-                        value={newEquipment.type}
-                        onValueChange={(value) => setNewEquipment({ ...newEquipment, type: value })}
+                        value={newEquipment.locationId}
+                        onValueChange={(value) => {
+                          const selectedLocation = locations.find(loc => loc.id === value);
+                          const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : '';
+                          
+                          setNewEquipment({
+                            ...newEquipment,
+                            locationId: value,
+                            firebasePath: {
+                              ...newEquipment.firebasePath || {},
+                              location: locationName
+                            }
+                          });
+                        }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder="Select location" />
                         </SelectTrigger>
                         <SelectContent>
-                          {EQUIPMENT_TYPES.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
+                          {locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Select
-                      value={newEquipment.locationId}
-                      onValueChange={(value) => setNewEquipment({ ...newEquipment, locationId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* MQTT Configuration Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">MQTT Configuration</h3>
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="topic">Topic</Label>
+                      <Label htmlFor="ipAddress">IP Address (Optional)</Label>
                       <Input
-                        id="topic"
-                        value={newEquipment.mqttConfig.topic}
-                        onChange={(e) =>
-                          setNewEquipment({
-                            ...newEquipment,
-                            mqttConfig: { ...newEquipment.mqttConfig, topic: e.target.value },
-                          })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="clientId">Client ID</Label>
-                      <Input
-                        id="clientId"
-                        value={newEquipment.mqttConfig.clientId}
-                        onChange={(e) =>
-                          setNewEquipment({
-                            ...newEquipment,
-                            mqttConfig: { ...newEquipment.mqttConfig, clientId: e.target.value },
-                          })
-                        }
-                        required
+                        id="ipAddress"
+                        value={newEquipment.ipAddress || ""}
+                        onChange={(e) => setNewEquipment({ ...newEquipment, ipAddress: e.target.value })}
+                        placeholder="e.g. 192.168.1.100"
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Thresholds Section */}
-                {newEquipment.type && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Thresholds</h3>
+                  {/* Firebase Path Configuration */}
+                  <div className="space-y-4 border rounded-lg p-4">
+                    <h3 className="text-lg font-semibold">Firebase Path Configuration</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firebase-location">Location Name (Auto-populated)</Label>
+                        <Input
+                          id="firebase-location"
+                          value={newEquipment.firebasePath?.location || ""}
+                          onChange={(e) =>
+                            setNewEquipment({
+                              ...newEquipment,
+                              firebasePath: {
+                                ...newEquipment.firebasePath!,
+                                location: e.target.value
+                              },
+                            })
+                          }
+                          placeholder="e.g. AkronCarnegiePublicLibrary"
+                          className="bg-gray-50"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Automatically set from selected location
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="firebase-system">System Name</Label>
+                        <Input
+                          id="firebase-system"
+                          value={newEquipment.firebasePath?.system || ""}
+                          onChange={(e) =>
+                            setNewEquipment({
+                              ...newEquipment,
+                              firebasePath: {
+                                ...newEquipment.firebasePath!,
+                                system: e.target.value
+                              },
+                            })
+                          }
+                          placeholder="e.g. AHU-1, Boilers, etc."
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          This must match the exact system name in Firebase RTDB
+                        </p>
+                      </div>
+                    </div>
+                    
+		    {/* Add zone input for applicable equipment types */}
+                    {['Air Handler', 'Fan Coil', 'VAV Box', 'DOAS'].includes(newEquipment.type || '') && (
+                      <div className="space-y-2">
+                        <Label htmlFor="equipment-zone">Zone</Label>
+                        <Input
+                          id="equipment-zone"
+                          value={newEquipment.zone || ""}
+                          onChange={(e) =>
+                            setNewEquipment({
+                              ...newEquipment,
+                              zone: e.target.value,
+                            })
+                          }
+                          placeholder="e.g. North Wing, Room 101"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Optional zone name for this equipment
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Thresholds Section */}
+                  {newEquipment.type && (
                     <div className="space-y-4">
-                      {EQUIPMENT_THRESHOLDS[newEquipment.type as keyof typeof EQUIPMENT_THRESHOLDS]?.availableTypes.map(
-                        (thresholdType) => (
-                          <div key={thresholdType} className="space-y-4 border rounded-lg p-4">
-                            <h4 className="font-medium text-sm">{thresholdType}</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                              {Object.entries(THRESHOLD_TYPES[thresholdType as keyof typeof THRESHOLD_TYPES]).map(
-                                ([key, config]) => (
-                                  <div key={key} className="space-y-2">
-                                    <Label>{config.label}</Label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <Input
-                                        type="number"
-                                        step={key === 'pressure' ? "0.01" : "1"}
-                                        placeholder={`Min (${config.min})`}
-                                        value={newEquipment.thresholds?.[thresholdType]?.[key]?.min || ""}
-                                        onChange={(e) =>
-                                          setNewEquipment({
-                                            ...newEquipment,
-                                            thresholds: {
-                                              ...newEquipment.thresholds,
-                                              [thresholdType]: {
-                                                ...newEquipment.thresholds?.[thresholdType],
-                                                [key]: {
-                                                  ...newEquipment.thresholds?.[thresholdType]?.[key],
-                                                  min: parseFloat(e.target.value),
+                      <h3 className="text-lg font-semibold">Thresholds</h3>
+                      <div className="space-y-4">
+                        {EQUIPMENT_THRESHOLDS[newEquipment.type as keyof typeof EQUIPMENT_THRESHOLDS]?.availableTypes.map(
+                          (thresholdType) => (
+                            <div key={thresholdType} className="space-y-4 border rounded-lg p-4">
+                              <h4 className="font-medium text-sm">{thresholdType}</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                {Object.entries(THRESHOLD_TYPES[thresholdType as keyof typeof THRESHOLD_TYPES]).map(
+                                  ([key, config]) => (
+                                    <div key={key} className="space-y-2">
+                                      <Label>{config.label}</Label>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <Input
+                                          type="number"
+                                          step={key === 'pressure' ? "0.01" : "1"}
+                                          placeholder={`Min (${config.min})`}
+                                          value={newEquipment.thresholds?.[thresholdType]?.[key]?.min || ""}
+                                          onChange={(e) =>
+                                            setNewEquipment({
+                                              ...newEquipment,
+                                              thresholds: {
+                                                ...newEquipment.thresholds,
+                                                [thresholdType]: {
+                                                  ...newEquipment.thresholds?.[thresholdType],
+                                                  [key]: {
+                                                    ...newEquipment.thresholds?.[thresholdType]?.[key],
+                                                    min: parseFloat(e.target.value),
+                                                  },
                                                 },
                                               },
-                                            },
-                                          })
-                                        }
-                                        required
-                                      />
-                                      <Input
-                                        type="number"
-                                        step={key === 'pressure' ? "0.01" : "1"}
-                                        placeholder={`Max (${config.max})`}
-                                        value={newEquipment.thresholds?.[thresholdType]?.[key]?.max || ""}
-                                        onChange={(e) =>
-                                          setNewEquipment({
-                                            ...newEquipment,
-                                            thresholds: {
-                                              ...newEquipment.thresholds,
-                                              [thresholdType]: {
-                                                ...newEquipment.thresholds?.[thresholdType],
-                                                [key]: {
-                                                  ...newEquipment.thresholds?.[thresholdType]?.[key],
-                                                  max: parseFloat(e.target.value),
+                                            })
+                                          }
+                                        />
+                                        <Input
+                                          type="number"
+                                          step={key === 'pressure' ? "0.01" : "1"}
+                                          placeholder={`Max (${config.max})`}
+                                          value={newEquipment.thresholds?.[thresholdType]?.[key]?.max || ""}
+                                          onChange={(e) =>
+                                            setNewEquipment({
+                                              ...newEquipment,
+                                              thresholds: {
+                                                ...newEquipment.thresholds,
+                                                [thresholdType]: {
+                                                  ...newEquipment.thresholds?.[thresholdType],
+                                                  [key]: {
+                                                    ...newEquipment.thresholds?.[thresholdType]?.[key],
+                                                    max: parseFloat(e.target.value),
+                                                  },
                                                 },
                                               },
-                                            },
-                                          })
-                                        }
-                                        required
-                                      />
+                                            })
+                                          }
+                                        />
+                                      </div>
                                     </div>
-                                  </div>
-                                )
-                              )}
+                                  )
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )
-                      )}
+                          )
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-            <DialogFooter className="sticky bottom-0 bg-background border-t p-4">
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Footer stays fixed at the bottom */}
+            <DialogFooter className="border-t p-4 mt-auto">
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
@@ -788,7 +907,9 @@ export function EquipmentSettings() {
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>MQTT IP</TableHead>
+                  <TableHead>Firebase Path</TableHead>
+                  <TableHead>Zone</TableHead>
+                  <TableHead>IP Address</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -798,7 +919,13 @@ export function EquipmentSettings() {
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.type}</TableCell>
                     <TableCell>{getLocationName(item.locationId)}</TableCell>
-                    <TableCell>{item.mqttConfig.ip}</TableCell>
+                    <TableCell>
+                      {item.firebasePath ? 
+                        `${item.firebasePath.location}/${item.firebasePath.system}` : 
+                        "Not configured"}
+                    </TableCell>
+                    <TableCell>{item.zone || "-"}</TableCell>
+                    <TableCell>{item.ipAddress || "-"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
                         <Button
@@ -848,184 +975,181 @@ export function EquipmentSettings() {
       </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="max-w-4xl flex flex-col h-[80vh]">
           <DialogHeader>
             <DialogTitle>Edit Equipment</DialogTitle>
             <DialogDescription>Update the equipment details</DialogDescription>
           </DialogHeader>
-          {editEquipment && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Equipment Name</Label>
-                  <Input
-                    id="edit-name"
-                    value={editEquipment.name}
-                    onChange={(e) => setEditEquipment({ ...editEquipment, name: e.target.value })}
-                    required
-                  />
+          <div className="flex-1 overflow-y-auto pr-2">
+            {editEquipment && (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">Equipment Name</Label>
+                    <Input
+                      id="edit-name"
+                      value={editEquipment.name}
+                      onChange={(e) => setEditEquipment({ ...editEquipment, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-type">Equipment Type</Label>
+                    <Select
+                      value={editEquipment.type}
+                      onValueChange={(value) => {
+                        const selectedLocation = locations.find(loc => loc.id === editEquipment.locationId);
+                        const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : '';
+                        
+                        setEditEquipment({
+                          ...editEquipment,
+                          type: value,
+                          firebasePath: {
+                            ...editEquipment.firebasePath || {},
+                            location: locationName,
+                            system: getDefaultSystemName(value)
+                          }
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EQUIPMENT_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-type">Equipment Type</Label>
+                  <Label htmlFor="edit-location">Location</Label>
                   <Select
-                    value={editEquipment.type}
-                    onValueChange={(value) => setEditEquipment({ ...editEquipment, type: value })}
+                    value={editEquipment.locationId}
+                    onValueChange={(value) => {
+                      const selectedLocation = locations.find(loc => loc.id === value);
+                      const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : '';
+                      
+                      setEditEquipment({
+                        ...editEquipment,
+                        locationId: value,
+                        firebasePath: {
+                          ...editEquipment.firebasePath || {},
+                          location: locationName
+                        }
+                      });
+                    }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
+                      <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
-                      {EQUIPMENT_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
+                      {locations.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-location">Location</Label>
-                <Select
-                  value={editEquipment.locationId}
-                  onValueChange={(value) => setEditEquipment({ ...editEquipment, locationId: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-medium">MQTT Configuration</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-mqtt-ip">IP Address</Label>
-                    <Input
-                      id="edit-mqtt-ip"
-                      value={editEquipment.mqttConfig.ip}
-                      onChange={(e) =>
-                        setEditEquipment({
-                          ...editEquipment,
-                          mqttConfig: { ...editEquipment.mqttConfig, ip: e.target.value },
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-mqtt-port">Port</Label>
-                    <Input
-                      id="edit-mqtt-port"
-                      type="number"
-                      value={editEquipment.mqttConfig.port}
-                      onChange={(e) =>
-                        setEditEquipment({
-                          ...editEquipment,
-                          mqttConfig: { ...editEquipment.mqttConfig, port: parseInt(e.target.value) },
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-mqtt-username">Username</Label>
-                    <Input
-                      id="edit-mqtt-username"
-                      value={editEquipment.mqttConfig.username}
-                      onChange={(e) =>
-                        setEditEquipment({
-                          ...editEquipment,
-                          mqttConfig: { ...editEquipment.mqttConfig, username: e.target.value },
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-mqtt-password">Password</Label>
-                    <Input
-                      id="edit-mqtt-password"
-                      type="password"
-                      value={editEquipment.mqttConfig.password}
-                      onChange={(e) =>
-                        setEditEquipment({
-                          ...editEquipment,
-                          mqttConfig: { ...editEquipment.mqttConfig, password: e.target.value },
-                        })
-                      }
-                    />
-                  </div>
-                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-mqtt-topics">Topics</Label>
-                  <div className="grid grid-cols-3 gap-4">
+                  <Label htmlFor="edit-ip">IP Address (Optional)</Label>
+                  <Input
+                    id="edit-ip"
+                    value={editEquipment.ipAddress || ""}
+                    onChange={(e) => setEditEquipment({ 
+                      ...editEquipment, 
+                      ipAddress: e.target.value 
+                    })}
+                    placeholder="e.g. 192.168.1.100"
+                  />
+                </div>
+
+                {/* Firebase Path Configuration for Edit */}
+                <div className="space-y-4 border rounded-lg p-4">
+                  <h3 className="font-medium">Firebase Path Configuration</h3>
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="edit-mqtt-topic-metrics">Metrics</Label>
+                      <Label htmlFor="edit-firebase-location">Location Name (Auto-populated)</Label>
                       <Input
-                        id="edit-mqtt-topic-metrics"
-                        value={editEquipment.mqttConfig.topics.metrics}
+                        id="edit-firebase-location"
+                        value={editEquipment.firebasePath?.location || ""}
                         onChange={(e) =>
                           setEditEquipment({
                             ...editEquipment,
-                            mqttConfig: {
-                              ...editEquipment.mqttConfig,
-                              topics: { ...editEquipment.mqttConfig.topics, metrics: e.target.value },
+                            firebasePath: {
+                              ...editEquipment.firebasePath || {},
+                              location: e.target.value
                             },
                           })
                         }
+                        placeholder="e.g. AkronCarnegiePublicLibrary"
+                        className="bg-gray-50"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Automatically set from selected location
+                      </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="edit-mqtt-topic-status">Status</Label>
+                      <Label htmlFor="edit-firebase-system">System Name</Label>
                       <Input
-                        id="edit-mqtt-topic-status"
-                        value={editEquipment.mqttConfig.topics.status}
+                        id="edit-firebase-system"
+                        value={editEquipment.firebasePath?.system || ""}
                         onChange={(e) =>
                           setEditEquipment({
                             ...editEquipment,
-                            mqttConfig: {
-                              ...editEquipment.mqttConfig,
-                              topics: { ...editEquipment.mqttConfig.topics, status: e.target.value },
+                            firebasePath: {
+                              ...editEquipment.firebasePath || {},
+                              system: e.target.value
                             },
                           })
                         }
+                        placeholder="e.g. AHU-1, Boilers, etc."
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-mqtt-topic-control">Control</Label>
-                      <Input
-                        id="edit-mqtt-topic-control"
-                        value={editEquipment.mqttConfig.topics.control}
-                        onChange={(e) =>
-                          setEditEquipment({
-                            ...editEquipment,
-                            mqttConfig: {
-                              ...editEquipment.mqttConfig,
-                              topics: { ...editEquipment.mqttConfig.topics, control: e.target.value },
-                            },
-                          })
-                        }
-                      />
+                      <p className="text-xs text-muted-foreground">
+                        This must match the exact system name in Firebase RTDB
+                      </p>
                     </div>
                   </div>
+                  
+                  {/* Add zone input for edit mode */}
+                  {['Air Handler', 'Fan Coil', 'VAV Box', 'DOAS'].includes(editEquipment.type) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-equipment-zone">Zone</Label>
+                      <Input
+                        id="edit-equipment-zone"
+                        value={editEquipment.zone || ""}
+                        onChange={(e) =>
+                          setEditEquipment({
+                            ...editEquipment,
+                            zone: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. North Wing, Room 101"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional zone name for this equipment
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              {editEquipment?.type && renderThresholdFields(editEquipment.type, true)}
-            </div>
-          )}
-          <DialogFooter>
+                {/* Thresholds for edit mode */}
+                {editEquipment.type && renderThresholdFields(editEquipment.type, true)}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="border-t p-4 mt-auto">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditEquipment} disabled={!editEquipment?.name || !editEquipment?.type || !editEquipment?.locationId}>
+            <Button 
+              onClick={handleEditEquipment} 
+              disabled={!editEquipment?.name || !editEquipment?.type || !editEquipment?.locationId}
+            >
               Save Changes
             </Button>
           </DialogFooter>
@@ -1033,4 +1157,4 @@ export function EquipmentSettings() {
       </Dialog>
     </div>
   )
-} 
+}

@@ -2,161 +2,167 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/components/ui/use-toast"
-import { useFirebase } from "@/lib/firebase-context"
-import { AlertCircle, CheckCircle2, Cloud } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { useToast } from "@/hooks/use-toast"
+import { db } from "@/lib/firebase"
+import { doc, getDoc, setDoc } from "firebase/firestore"
+import { useAuth } from "@/lib/auth-context" // Assuming you have an auth context
 
 export function WeatherSettings() {
-  const { config, updateConfig } = useFirebase()
-  const [weatherConfig, setWeatherConfig] = useState({
-    weatherApiKey: config?.weatherApiKey || "",
-    weatherLocation: config?.weatherLocation || "",
-  })
-  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle")
-  const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
+  const { user } = useAuth() // Get current user from auth context
 
+  const [weatherApiKey, setWeatherApiKey] = useState("")
+  const [enableWeather, setEnableWeather] = useState(true)
+  const [weatherProvider, setWeatherProvider] = useState("openweathermap")
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  // Load settings from Firestore when component mounts
   useEffect(() => {
-    if (config) {
-      setWeatherConfig({
-        weatherApiKey: config.weatherApiKey || "",
-        weatherLocation: config.weatherLocation || "",
-      })
-    }
-  }, [config])
+    async function loadSettings() {
+      try {
+        setLoading(true)
 
-  const handleSaveConfig = async () => {
-    try {
-      setIsSaving(true)
-      await updateConfig({
-        ...config,
-        weatherApiKey: weatherConfig.weatherApiKey,
-        weatherLocation: weatherConfig.weatherLocation,
+        // First try to get organization-wide settings
+        const orgSettingsDoc = await getDoc(doc(db, "settings", "weather"))
+
+        if (orgSettingsDoc.exists()) {
+          const data = orgSettingsDoc.data()
+          setWeatherApiKey(data.apiKey || "")
+          setEnableWeather(data.enabled !== false) // Default to true if not specified
+          setWeatherProvider(data.provider || "openweathermap")
+          console.log("Loaded organization weather settings")
+        } else {
+          // If no org settings, try user-specific settings
+          if (user?.uid) {
+            const userSettingsDoc = await getDoc(doc(db, "users", user.uid, "settings", "weather"))
+
+            if (userSettingsDoc.exists()) {
+              const data = userSettingsDoc.data()
+              setWeatherApiKey(data.apiKey || "")
+              setEnableWeather(data.enabled !== false)
+              setWeatherProvider(data.provider || "openweathermap")
+              console.log("Loaded user weather settings")
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading weather settings:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load weather settings",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadSettings()
+  }, [user, toast])
+
+  // Save settings to Firestore
+  const saveSettings = async () => {
+    if (!weatherApiKey && enableWeather) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a Weather API key or disable weather features",
+        variant: "destructive",
       })
+      return
+    }
+
+    try {
+      setSaving(true)
+
+      const settingsData = {
+        apiKey: weatherApiKey,
+        enabled: enableWeather,
+        provider: weatherProvider,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user?.uid || "unknown",
+      }
+
+      // Save to organization settings
+      await setDoc(doc(db, "settings", "weather"), settingsData, { merge: true })
+
+      // Also save to user settings if user is logged in
+      if (user?.uid) {
+        await setDoc(doc(db, "users", user.uid, "settings", "weather"), settingsData, { merge: true })
+      }
 
       toast({
-        title: "Weather Configuration Saved",
-        description: "Your weather configuration has been updated and persisted",
+        title: "Settings Saved",
+        description: "Weather settings have been saved successfully",
       })
     } catch (error) {
-      console.error("Error saving weather config:", error)
+      console.error("Error saving weather settings:", error)
       toast({
         title: "Error",
-        description: "Failed to save weather configuration. Please try again.",
+        description: "Failed to save weather settings",
         variant: "destructive",
       })
     } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleTestWeatherApi = async () => {
-    setTestStatus("testing")
-
-    try {
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${weatherConfig.weatherLocation}&appid=${weatherConfig.weatherApiKey}&units=metric`,
-      )
-
-      if (response.ok) {
-        setTestStatus("success")
-        toast({
-          title: "Weather API Test Successful",
-          description: "Successfully connected to OpenWeatherMap API",
-        })
-      } else {
-        setTestStatus("error")
-        toast({
-          title: "Weather API Test Failed",
-          description: "Failed to connect to OpenWeatherMap API. Please check your API key and location.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error("Error testing weather API:", error)
-      setTestStatus("error")
-      toast({
-        title: "Weather API Test Error",
-        description: "An error occurred while testing the OpenWeatherMap API",
-        variant: "destructive",
-      })
+      setSaving(false)
     }
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Cloud className="h-5 w-5 mr-2" />
-            Weather Configuration
-          </CardTitle>
-          <CardDescription>Configure OpenWeatherMap API for weather display</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="weather-api-key">OpenWeatherMap API Key</Label>
-            <Input
-              id="weather-api-key"
-              value={weatherConfig.weatherApiKey}
-              onChange={(e) => setWeatherConfig({ ...weatherConfig, weatherApiKey: e.target.value })}
-              placeholder="Your OpenWeatherMap API Key"
-            />
-            <p className="text-xs text-muted-foreground">
-              Get your API key from{" "}
-              <a href="https://openweathermap.org/api" target="_blank" rel="noopener noreferrer" className="underline">
-                OpenWeatherMap
-              </a>
-            </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Weather Integration</CardTitle>
+        <CardDescription>Configure weather data integration for your locations</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="enable-weather">Enable Weather Data</Label>
+            <p className="text-sm text-muted-foreground">Show weather data on dashboards and location pages</p>
           </div>
+          <Switch id="enable-weather" checked={enableWeather} onCheckedChange={setEnableWeather} />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="weather-location">Location</Label>
-            <Input
-              id="weather-location"
-              value={weatherConfig.weatherLocation}
-              onChange={(e) => setWeatherConfig({ ...weatherConfig, weatherLocation: e.target.value })}
-              placeholder="City name (e.g., London,UK)"
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter city name and country code separated by comma (e.g., London,UK)
-            </p>
-          </div>
-
-          {testStatus === "success" && (
-            <div className="flex items-center p-3 text-sm rounded-md bg-green-50 text-green-700">
-              <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />
-              Weather API connection successful
-            </div>
-          )}
-
-          {testStatus === "error" && (
-            <div className="flex items-center p-3 text-sm rounded-md bg-red-50 text-red-700">
-              <AlertCircle className="h-5 w-5 mr-2 text-red-500" />
-              Failed to connect to Weather API. Please check your API key and location.
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handleTestWeatherApi}
-            disabled={!weatherConfig.weatherApiKey || !weatherConfig.weatherLocation || testStatus === "testing" || isSaving}
+        <div className="space-y-2">
+          <Label htmlFor="weather-provider">Weather Provider</Label>
+          <select
+            id="weather-provider"
+            value={weatherProvider}
+            onChange={(e) => setWeatherProvider(e.target.value)}
+            className="w-full p-2 border rounded-md"
+            disabled={!enableWeather}
           >
-            {testStatus === "testing" ? "Testing..." : "Test API Connection"}
-          </Button>
-          <Button 
-            onClick={handleSaveConfig} 
-            disabled={!weatherConfig.weatherApiKey || !weatherConfig.weatherLocation || isSaving}
-          >
-            {isSaving ? "Saving..." : "Save Configuration"}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+            <option value="openweathermap">OpenWeatherMap</option>
+            <option value="weatherapi">WeatherAPI.com</option>
+            <option value="accuweather">AccuWeather</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="weather-api-key">API Key</Label>
+          <Input
+            id="weather-api-key"
+            type="password"
+            placeholder="Enter your weather API key"
+            value={weatherApiKey}
+            onChange={(e) => setWeatherApiKey(e.target.value)}
+            disabled={!enableWeather}
+          />
+          <p className="text-xs text-muted-foreground">
+            {weatherProvider === "openweathermap" && "Get your API key from OpenWeatherMap.org"}
+            {weatherProvider === "weatherapi" && "Get your API key from WeatherAPI.com"}
+            {weatherProvider === "accuweather" && "Get your API key from developer.accuweather.com"}
+          </p>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={saveSettings} disabled={saving || loading}>
+          {saving ? "Saving..." : "Save Settings"}
+        </Button>
+      </CardFooter>
+    </Card>
   )
 }
-

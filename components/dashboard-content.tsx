@@ -19,58 +19,33 @@ export default function DashboardContent() {
   const [lastDoc, setLastDoc] = useState<any>(null)
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(1)
-  const { db, fetchPaginatedData, fetchCachedData } = useFirebase()
+  const [pageData, setPageData] = useState<{ [key: number]: { data: any[]; lastDoc: any } }>({})
+  const { db } = useFirebase()
   const router = useRouter()
 
-  // Memoize the fetch function to avoid recreating it on every render
+  // Fetch locations for a specific page
   const fetchLocations = useCallback(
-    async (isFirstPage = false) => {
+    async (pageNum: number) => {
       if (!db) return
 
       try {
         setLoading(true)
+        console.log(`Fetching locations for page ${pageNum}`)
 
-        // If it's the first page, reset pagination state
-        if (isFirstPage) {
-          setLastDoc(null)
-          setPage(1)
+        // If we already have this page cached in state, use it
+        if (pageData[pageNum]) {
+          console.log(`Using cached data for page ${pageNum}`, pageData[pageNum].data)
+          setLocations(pageData[pageNum].data)
+          setLastDoc(pageData[pageNum].lastDoc)
+          setHasMore(pageData[pageNum].data.length === LOCATIONS_PER_PAGE)
+          setLoading(false)
+          return
         }
 
-        // Use the cached data for the first page if available
-        if (isFirstPage) {
-          const cacheKey = "dashboard_locations_page1"
-          const cachedData = await fetchCachedData(
-            cacheKey,
-            async () => {
-              if (!db) return { data: [], lastDoc: null }
-
-              const locationsCollection = collection(db, "locations")
-              const q = query(locationsCollection, orderBy("name"), limit(LOCATIONS_PER_PAGE))
-              const snapshot = await getDocs(q)
-              
-              const data = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-              }))
-
-              console.log("Fetched locations for dashboard:", data) // Debug log
-
-              return {
-                data,
-                lastDoc: snapshot.docs[snapshot.docs.length - 1],
-              }
-            },
-            10, // Cache for 10 minutes
-          )
-
-          console.log("Setting locations in dashboard:", cachedData.data) // Debug log
-          setLocations(cachedData.data)
-          setLastDoc(cachedData.lastDoc)
-          setHasMore(cachedData.data.length === LOCATIONS_PER_PAGE)
-        } else {
-          // For subsequent pages, fetch directly
+        // For first page, start fresh
+        if (pageNum === 1) {
           const locationsCollection = collection(db, "locations")
-          const q = query(locationsCollection, orderBy("name"), startAfter(lastDoc), limit(LOCATIONS_PER_PAGE))
+          const q = query(locationsCollection, orderBy("name"), limit(LOCATIONS_PER_PAGE))
           const snapshot = await getDocs(q)
 
           const data = snapshot.docs.map((doc) => ({
@@ -78,43 +53,79 @@ export default function DashboardContent() {
             ...doc.data(),
           }))
 
-          if (data.length === 0) {
-            setHasMore(false)
-          } else {
-            setLocations((prev) => [...prev, ...data])
-            setLastDoc(snapshot.docs[snapshot.docs.length - 1])
-            setHasMore(data.length === LOCATIONS_PER_PAGE)
+          console.log(`Fetched ${data.length} locations for page 1`)
+
+          setLocations(data)
+          setLastDoc(snapshot.docs[snapshot.docs.length - 1])
+          setHasMore(data.length === LOCATIONS_PER_PAGE)
+
+          // Cache this page data
+          setPageData((prev) => ({
+            ...prev,
+            1: { data, lastDoc: snapshot.docs[snapshot.docs.length - 1] },
+          }))
+        }
+        // For subsequent pages, we need the last doc from the previous page
+        else {
+          // Make sure we have the previous page's last doc
+          if (!pageData[pageNum - 1]?.lastDoc) {
+            console.error(`Missing last document reference for page ${pageNum - 1}`)
+            setLoading(false)
+            return
           }
+
+          const prevPageLastDoc = pageData[pageNum - 1].lastDoc
+          const locationsCollection = collection(db, "locations")
+          const q = query(locationsCollection, orderBy("name"), startAfter(prevPageLastDoc), limit(LOCATIONS_PER_PAGE))
+          const snapshot = await getDocs(q)
+
+          const data = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+
+          console.log(`Fetched ${data.length} locations for page ${pageNum}`)
+
+          setLocations(data)
+          setLastDoc(snapshot.docs[snapshot.docs.length - 1])
+          setHasMore(data.length === LOCATIONS_PER_PAGE)
+
+          // Cache this page data
+          setPageData((prev) => ({
+            ...prev,
+            [pageNum]: { data, lastDoc: snapshot.docs[snapshot.docs.length - 1] },
+          }))
         }
       } catch (error) {
-        console.error("Error fetching locations:", error)
+        console.error(`Error fetching locations for page ${pageNum}:`, error)
       } finally {
         setLoading(false)
       }
     },
-    [db, lastDoc, fetchPaginatedData, fetchCachedData],
+    [db, pageData],
   )
 
   // Initial data load
   useEffect(() => {
-    fetchLocations(true)
+    fetchLocations(1)
   }, [fetchLocations])
 
-  // Load more data
-  const handleLoadMore = () => {
+  // When page changes, fetch that page's data
+  useEffect(() => {
+    fetchLocations(page)
+  }, [page, fetchLocations])
+
+  // Load next page
+  const handleNextPage = () => {
     if (hasMore && !loading) {
       setPage((prev) => prev + 1)
-      fetchLocations()
     }
   }
 
   // Go back to previous page
   const handlePrevPage = () => {
-    if (page > 1) {
-      // This is a simplified approach - for a real app, you'd need to store previous page data
+    if (page > 1 && !loading) {
       setPage((prev) => prev - 1)
-      // For simplicity, we'll just reload the first page
-      fetchLocations(true)
     }
   }
 
@@ -231,7 +242,7 @@ export default function DashboardContent() {
 
               <Button
                 variant="outline"
-                onClick={handleLoadMore}
+                onClick={handleNextPage}
                 disabled={!hasMore || loading}
                 className="hover:bg-[#e6f3f1]"
               >
@@ -252,4 +263,3 @@ export default function DashboardContent() {
     </div>
   )
 }
-

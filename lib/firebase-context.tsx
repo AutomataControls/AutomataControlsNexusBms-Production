@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from "react"
 import { initializeApp, deleteApp, type FirebaseApp, getApps, getApp } from "firebase/app"
 import {
   getFirestore,
@@ -15,11 +13,10 @@ import {
   startAfter,
   orderBy,
   getDocs,
-  QueryDocumentSnapshot,
-  DocumentData,
+  type QueryDocumentSnapshot,
+  type DocumentData,
   setDoc,
 } from "firebase/firestore"
-import { db } from './firebase'
 
 interface FirebaseConfig {
   apiKey: string
@@ -35,6 +32,12 @@ interface FirebaseConfig {
   controlServerUsername?: string
   controlServerPassword?: string
   controlProtocol?: string
+  sessionConfig?: {
+    enableTimeout: boolean
+    timeoutMinutes: number
+    warnBeforeTimeout: boolean
+    warningSeconds: number
+  }
 }
 
 interface FirebaseContextType {
@@ -47,16 +50,12 @@ interface FirebaseContextType {
     collectionName: string,
     pageSize: number,
     lastDoc: QueryDocumentSnapshot<DocumentData> | null,
-    orderByField?: string
+    orderByField?: string,
   ) => Promise<{
-    data: any[];
-    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+    data: any[]
+    lastDoc: QueryDocumentSnapshot<DocumentData> | null
   }>
-  fetchCachedData: (
-    key: string,
-    fetchFn: () => Promise<any>,
-    expirationMinutes: number
-  ) => Promise<any>
+  fetchCachedData: (key: string, fetchFn: () => Promise<any>, expirationMinutes: number) => Promise<any>
 }
 
 // Cache for data
@@ -77,32 +76,53 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadConfig = async () => {
       try {
+        // Try to load from localStorage first
+        let localConfig = null
+        try {
+          const savedConfig = localStorage.getItem("firebaseConfig")
+          if (savedConfig) {
+            localConfig = JSON.parse(savedConfig)
+            console.log("Loaded config from localStorage:", localConfig)
+          }
+        } catch (e) {
+          console.error("Error parsing saved config:", e)
+        }
+
         // Use environment variables for Firebase configuration
         const envConfig = {
-          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-          measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-        };
-        
-        setConfig(envConfig);
-        initializeFirebase(envConfig);
-        
+          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || localConfig?.apiKey,
+          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || localConfig?.authDomain,
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || localConfig?.projectId,
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || localConfig?.storageBucket,
+          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || localConfig?.messagingSenderId,
+          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || localConfig?.appId,
+          measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || localConfig?.measurementId,
+          // Include any additional config from localStorage
+          weatherApiKey: localConfig?.weatherApiKey,
+          weatherLocation: localConfig?.weatherLocation,
+          controlServerIp: localConfig?.controlServerIp,
+          controlServerPort: localConfig?.controlServerPort,
+          controlServerUsername: localConfig?.controlServerUsername,
+          controlServerPassword: localConfig?.controlServerPassword,
+          controlProtocol: localConfig?.controlProtocol,
+          sessionConfig: localConfig?.sessionConfig,
+        }
+
+        setConfig(envConfig)
+        initializeFirebase(envConfig)
+
         // After initialization is complete, try to load additional configuration from Firestore
         setTimeout(async () => {
           if (db) {
             try {
-              const configRef = doc(collection(db, "system_config"), "app_config");
-              const configDoc = await getDoc(configRef);
-              
+              const configRef = doc(collection(db, "system_config"), "app_config")
+              const configDoc = await getDoc(configRef)
+
               if (configDoc.exists()) {
-                const firestoreConfig = configDoc.data();
+                const firestoreConfig = configDoc.data()
                 // Only update additional configuration fields, not core Firebase config
-                setConfig(prevConfig => ({ 
-                  ...prevConfig, 
+                setConfig((prevConfig) => ({
+                  ...prevConfig,
                   weatherApiKey: firestoreConfig.weatherApiKey || prevConfig?.weatherApiKey,
                   weatherLocation: firestoreConfig.weatherLocation || prevConfig?.weatherLocation,
                   controlServerIp: firestoreConfig.controlServerIp || prevConfig?.controlServerIp,
@@ -110,20 +130,21 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
                   controlServerUsername: firestoreConfig.controlServerUsername || prevConfig?.controlServerUsername,
                   controlServerPassword: firestoreConfig.controlServerPassword || prevConfig?.controlServerPassword,
                   controlProtocol: firestoreConfig.controlProtocol || prevConfig?.controlProtocol,
-                }));
+                  sessionConfig: firestoreConfig.sessionConfig || prevConfig?.sessionConfig,
+                }))
               }
             } catch (error) {
-              console.error("Error loading additional config from Firestore:", error);
+              console.error("Error loading additional config from Firestore:", error)
             }
           }
-        }, 1000); // Small delay to ensure db is initialized
+        }, 1000) // Small delay to ensure db is initialized
       } catch (error) {
-        console.error("Error loading Firebase config:", error);
+        console.error("Error loading Firebase config:", error)
       }
-    };
+    }
 
-    loadConfig();
-  }, [db]);
+    loadConfig()
+  }, [db])
 
   const initializeFirebase = (config: FirebaseConfig) => {
     try {
@@ -146,26 +167,53 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
 
   const updateConfig = async (newConfig: FirebaseConfig) => {
     try {
+      // Update state immediately for UI responsiveness
+      setConfig((prevConfig) => ({
+        ...prevConfig,
+        ...newConfig,
+      }))
+
       // Save to localStorage as a backup
-      localStorage.setItem("firebaseConfig", JSON.stringify(newConfig))
-      setConfig(newConfig)
+      localStorage.setItem(
+        "firebaseConfig",
+        JSON.stringify({
+          ...config,
+          ...newConfig,
+        }),
+      )
 
       // Save to Firestore
       if (db) {
         const configRef = doc(collection(db, "system_config"), "app_config")
-        await setDoc(configRef, {
-          ...newConfig,
-          updatedAt: new Date(),
-        })
+        await setDoc(
+          configRef,
+          {
+            ...newConfig,
+            updatedAt: new Date(),
+          },
+          { merge: true },
+        ) // Use merge: true to only update specified fields
       }
 
-      // Re-initialize Firebase with new config if needed
-      const apps = getApps()
-      if (apps.length > 0) {
-        await deleteApp(getApp())
+      // Only re-initialize Firebase if core Firebase config has changed
+      const coreConfigChanged = [
+        "apiKey",
+        "authDomain",
+        "projectId",
+        "storageBucket",
+        "messagingSenderId",
+        "appId",
+      ].some((key) => newConfig[key] !== config?.[key])
+
+      if (coreConfigChanged) {
+        const apps = getApps()
+        if (apps.length > 0) {
+          await deleteApp(getApp())
+        }
+        initializeFirebase(newConfig)
       }
 
-      initializeFirebase(newConfig)
+      return true
     } catch (error) {
       console.error("Error updating config:", error)
       throw error
@@ -196,10 +244,10 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     collectionName: string,
     pageSize: number,
     lastDoc: QueryDocumentSnapshot<DocumentData> | null,
-    orderByField?: string
+    orderByField?: string,
   ) => {
     let q = collection(db, collectionName)
-    
+
     if (orderByField) {
       if (lastDoc) {
         q = query(collection(db, collectionName), orderBy(orderByField), startAfter(lastDoc), limit(pageSize))
@@ -215,27 +263,23 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     }
 
     const snapshot = await getDocs(q)
-    const data = snapshot.docs.map(doc => ({
+    const data = snapshot.docs.map((doc) => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
     }))
 
     return {
       data,
-      lastDoc: snapshot.docs[snapshot.docs.length - 1] || null
+      lastDoc: snapshot.docs[snapshot.docs.length - 1] || null,
     }
   }
 
   // Function to fetch and cache data
-  const fetchCachedData = async (
-    key: string,
-    fetchFn: () => Promise<any>,
-    expirationMinutes: number
-  ) => {
+  const fetchCachedData = async (key: string, fetchFn: () => Promise<any>, expirationMinutes: number) => {
     const now = Date.now()
     const cached = cache.get(key)
 
-    if (cached && (now - cached.timestamp) < expirationMinutes * 60 * 1000) {
+    if (cached && now - cached.timestamp < expirationMinutes * 60 * 1000) {
       return cached.data
     }
 

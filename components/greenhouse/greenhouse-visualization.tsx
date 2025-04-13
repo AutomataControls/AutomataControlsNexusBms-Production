@@ -4,37 +4,193 @@ import { useEffect, useRef, useState } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { cn } from "@/lib/utils"
-import { FanIcon, Flame, Thermometer, Droplets, Sun } from "lucide-react"
+import { FanIcon, Flame, Thermometer, Droplets, Sun, Clock, Cloud, CloudRain } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import * as THREE from "three"
 
-export interface GreenhouseVisualizationProps {
-  controls: {
-    // Ventilation
-    ridgeVentEnable?: boolean
-    ridgeVentPosition?: number // 0-100%
-    sideVentEnable?: boolean
-    sideVentPosition?: number // 0-100%
-    exhaustFan1Enable?: boolean
-    exhaustFan1Speed?: number // 0-100%
-    exhaustFan2Enable?: boolean
-    exhaustFan2Speed?: number // 0-100%
-    supplyFanEnable?: boolean
-    supplyFanSpeed?: number // 0-100%
 
-    // Heating
-    hangingHeater1Enable?: boolean
-    hangingHeater2Enable?: boolean
-    hangingHeater3Enable?: boolean
-    hangingHeater4Enable?: boolean
-    floorHeater1Enable?: boolean
-    floorHeater2Enable?: boolean
+export function GreenhouseDataProvider({ locationId }: { locationId: string }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [greenhouseData, setGreenhouseData] = useState<any>(null)
+
+  const handleRefresh = () => {
+    console.log("Manual refresh triggered")
+    setRefreshKey((prev) => prev + 1)
   }
-  sensorData: {
-    temperature: { avg: number; values: number[] }
-    humidity: { avg: number; values: number[] }
-    uvIndex: number
+
+  useEffect(() => {
+    if (!secondaryDb || !locationId) {
+      setError("Database or location ID not available")
+      setLoading(false)
+      return
+    }
+
+    console.log(`Fetching greenhouse data for location: ${locationId}, refresh key: ${refreshKey}`)
+
+    // Reference to the greenhouse data in the database
+    const greenhouseRef = ref(secondaryDb, `locations/${locationId}/systems/Greenhouse`)
+
+    const unsubscribe = onValue(
+      greenhouseRef,
+      (snapshot) => {
+        const data = snapshot.val()
+        if (!data) {
+          console.error("No greenhouse data found for this location")
+          setError("No greenhouse data found for this location")
+          setLoading(false)
+          return
+        }
+
+        console.log("Received greenhouse data:", data)
+        setGreenhouseData(data)
+        setLoading(false)
+      },
+      (error) => {
+        console.error("Error fetching greenhouse data:", error)
+        setError(`Failed to fetch greenhouse data: ${error.message}`)
+        setLoading(false)
+      },
+    )
+
+    // Clean up the listener when the component unmounts
+    return () => unsubscribe()
+  }, [secondaryDb, locationId, refreshKey])
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <Skeleton className="h-[800px] w-full" />
+        </CardContent>
+      </Card>
+    )
   }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <h3 className="text-lg font-medium mb-2">Error Loading Greenhouse Data</h3>
+            <p className="text-muted-foreground">{error}</p>
+            <Button onClick={handleRefresh} variant="outline" className="mt-4">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Extract metrics from the greenhouse data
+  const metrics = greenhouseData?.metrics || {}
+
+  // Log the metrics to verify they're not empty
+  console.log("Metrics from greenhouse data:", metrics)
+
+  // Instead of passing an object, let's pass individual props directly
+  // This is to work around potential issues with object spreading or prop passing
+  const ridgeVentEnable = metrics["Ridge Vent Open"] === true
+  const ridgeVentPosition = Number(metrics["Ridge Vent Position"] || 0)
+  const sideVentEnable = metrics["Window Vent Open"] === true
+  const sideVentPosition = Number(metrics["Window Vent Position"] || 0)
+  const exhaustFan1Enable = metrics["Exhaust Fan 1 Enabled"] === true || metrics["Exhaust Fan 1 Active Control"] === true
+  const exhaustFan1Speed = 100
+  const exhaustFan2Enable = metrics["Exhaust Fan 2 Enabled"] === true || metrics["Exhaust Fan 2 Active Control"] === true
+  const exhaustFan2Speed = 100
+  const supplyFanEnable = metrics["Supply Enabled"] === true || metrics["Supply Active Control"] === true
+  const supplyFanSpeed = 100
+  const hangingHeater1Enable = metrics["FCU 1 Enabled"] === true || metrics["FCU 1 Active Control"] === true
+  const hangingHeater2Enable = metrics["FCU 2 Enabled"] === true || metrics["FCU 2 Active Control"] === true
+  const hangingHeater3Enable = metrics["FCU 3 Enabled"] === true
+  const hangingHeater4Enable = metrics["FCU 4 Enabled"] === true || metrics["FCU 4 Active Control"] === true
+  const floorHeater1Enable = metrics["Floor Heat Active Control"] === true
+  const floorHeater2Enable = metrics["Floor Heat 2 Enabled"] === true
+
+  const avgTemp = Number(metrics["Average Temperature"] || 0)
+  const avgHumidity = Number(metrics["Average Humidity"] || 0)
+  const uvIndex = 3
+  const isRaining = metrics["Is Raining"] === true
+  const outsideTemp = Number(metrics["Outside Temperature"] || 0)
+  const timeOfDay = metrics["Time of Day"] || "day"
+  const lastUpdated = greenhouseData?.dateTime ? new Date(greenhouseData.dateTime).toLocaleString() : "Unknown"
+  const globalSetpoint = Number(metrics["Global Setpoint"] || 0)
+
+  const temp1 = Number(metrics["Temperature 1"] || 0)
+  const temp2 = Number(metrics["Temperature 2"] || 0)
+  const temp3 = Number(metrics["Zone 1 Temperature"] || 0) 
+  const temp4 = Number(metrics["Zone 2 Temperature"] || 0)
+  
+  const hum1 = Number(metrics["Humidity 1"] || 0)
+  const hum2 = Number(metrics["Humidity 2"] || 0)
+  const hum3 = Number(metrics["Zone 1 Humidity"] || 0)
+  const hum4 = Number(metrics["Zone 2 Humidity"] || 0)
+
+  // Test props - what we're trying to build
+  const hardcodedControls = {
+    ridgeVentEnable: false, 
+    ridgeVentPosition: 0,
+    sideVentEnable: false,
+    sideVentPosition: 0,
+    exhaustFan1Enable: exhaustFan1Enable,
+    exhaustFan1Speed: 100,
+    exhaustFan2Enable: exhaustFan2Enable,
+    exhaustFan2Speed: 100,
+    supplyFanEnable: false,
+    supplyFanSpeed: 100,
+    hangingHeater1Enable: false,
+    hangingHeater2Enable: false, 
+    hangingHeater3Enable: false,
+    hangingHeater4Enable: false,
+    floorHeater1Enable: floorHeater1Enable,
+    floorHeater2Enable: false
+  }
+
+  const hardcodedSensorData = {
+    temperature: {
+      avg: avgTemp,
+      values: [temp1, temp2, temp3, temp4]
+    },
+    humidity: {
+      avg: avgHumidity,
+      values: [hum1, hum2, hum3, hum4]
+    },
+    uvIndex: 3,
+    isRaining: isRaining,
+    outsideTemp: outsideTemp,
+    timeOfDay: timeOfDay,
+    lastUpdated: lastUpdated,
+    globalSetpoint: globalSetpoint
+  }
+
+  console.log("Using HARDCODED controls:", hardcodedControls)
+  console.log("Using HARDCODED sensor data:", hardcodedSensorData)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Temperature: <span className="font-medium">{avgTemp}°F</span> • Humidity:{" "}
+            <span className="font-medium">{avgHumidity}%</span>
+          </p>
+        </div>
+        <Button onClick={handleRefresh} variant="outline" size="sm">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh Data
+        </Button>
+      </div>
+
+      <GreenhouseVisualization
+        controls={hardcodedControls}
+        sensorData={hardcodedSensorData}
+        key={`viz-${refreshKey}-${Date.now()}`}
+      />
+    </div>
+  )
 }
 
 const GlassPanel = ({ position, rotation = [0, 0, 0], scale, opacity = 0.3 }) => {
@@ -137,7 +293,7 @@ const WaterCoil = ({ start, end, height, active }) => {
       uniform vec3 color;
       uniform float isActive; // Renamed from 'active' to 'isActive'
       varying vec2 vUv;
-      
+
       void main() {
         // Create flowing stripes when active with enhanced contrast
         float stripe = sin(vUv.x * 50.0 - time * 5.0) * 0.5 + 0.5;
@@ -246,6 +402,11 @@ const Fan3D = ({ position, rotation, active, speed, label, color }) => {
       bladeRef.current.rotation.z += 0.05 * (speed / 100)
     }
   })
+
+  // Log fan state for debugging
+  useEffect(() => {
+    console.log(`Fan ${label} - active: ${active}, speed: ${speed}`)
+  }, [active, speed, label])
 
   return (
     <group position={position} rotation={rotation} ref={fanRef}>
@@ -485,6 +646,11 @@ const SceneSetup = () => {
 
 // Update the GreenhouseModel component to include the new elements
 const GreenhouseModel = ({ controls }) => {
+  // Log controls for debugging
+  useEffect(() => {
+    console.log("GreenhouseModel received controls:", controls)
+  }, [controls])
+
   const ridgeVentPos = (controls.ridgeVentPosition || 0) / 100
   const sideVentPos = (controls.sideVentPosition || 0) / 100
 
@@ -651,12 +817,22 @@ export function GreenhouseVisualization({
     floorHeater2Enable: false,
   },
   sensorData = {
-    temperature: { avg: 22, values: [21, 22, 23, 22, 21] },
-    humidity: { avg: 65, values: [64, 65, 66, 65, 64] },
+    temperature: { avg: 72, values: [70, 72, 74, 72] },
+    humidity: { avg: 65, values: [64, 65, 66, 65] },
     uvIndex: 3,
+    isRaining: false,
+    outsideTemp: 68,
+    timeOfDay: "day",
+    lastUpdated: "Unknown",
+    globalSetpoint: 72,
   },
 }: GreenhouseVisualizationProps) {
   const [view, setView] = useState<"3d" | "2d">("3d")
+
+  // Log props for debugging
+  useEffect(() => {
+    console.log("GreenhouseVisualization received props:", { controls, sensorData })
+  }, [controls, sensorData])
 
   return (
     <div className="w-full h-[800px] bg-background rounded-lg overflow-hidden relative">
@@ -674,7 +850,7 @@ export function GreenhouseVisualization({
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         <Badge variant="outline" className="flex items-center gap-2">
           <Thermometer className="w-4 h-4" />
-          {sensorData.temperature.avg}°C
+          {sensorData.temperature.avg}°F
         </Badge>
         <Badge variant="outline" className="flex items-center gap-2">
           <Droplets className="w-4 h-4" />
@@ -684,7 +860,35 @@ export function GreenhouseVisualization({
           <Sun className="w-4 h-4" />
           UV: {sensorData.uvIndex}
         </Badge>
+        {sensorData.outsideTemp && (
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Thermometer className="w-4 h-4" />
+            Outside: {sensorData.outsideTemp}°F
+          </Badge>
+        )}
+        {sensorData.isRaining !== undefined && (
+          <Badge variant="outline" className="flex items-center gap-2">
+            {sensorData.isRaining ? <CloudRain className="w-4 h-4" /> : <Cloud className="w-4 h-4" />}
+            {sensorData.isRaining ? "Raining" : "Not Raining"}
+          </Badge>
+        )}
+        {sensorData.globalSetpoint && (
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Thermometer className="w-4 h-4 text-green-500" />
+            Setpoint: {sensorData.globalSetpoint}°F
+          </Badge>
+        )}
       </div>
+
+      {/* Last Updated */}
+      {sensorData.lastUpdated && (
+        <div className="absolute bottom-4 left-4 z-10">
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Last Updated: {sensorData.lastUpdated}
+          </Badge>
+        </div>
+      )}
 
       {view === "3d" ? (
         <Canvas shadows>
@@ -835,4 +1039,3 @@ export function GreenhouseVisualization({
     </div>
   )
 }
-

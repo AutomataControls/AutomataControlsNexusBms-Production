@@ -1,3 +1,7 @@
+// lib/firebase.ts
+// Initialize Firebase SDK with your configuration and connect to Firestore, Auth, and Storage services. Also, initialize Analytics only on the client side. Ensure that the Firebase configuration is stored in environment variables for security reasons. The `app` is
+
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';

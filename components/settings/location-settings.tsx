@@ -8,14 +8,15 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useFirebase } from "@/lib/firebase-context"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Building, Edit, Plus, Trash } from "lucide-react"
+import { Building, Calendar, Edit, Plus, Trash } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ZoneSettings } from "@/components/settings/zone-settings"
 import { EquipmentSettings } from "./equipment-settings"
-import { locationSchema, validateTechnician, validateTask, TECHNICIAN_SPECIALTIES, type Technician, type Task } from "@/lib/validation"
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore"
+import { validateTechnician, validateTask, TECHNICIAN_SPECIALTIES, type Technician, type Task } from "@/lib/validation"
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,7 @@ export function LocationSettings() {
     color: "#4FD1C5",
     notes: "",
   })
+  const [editTechnician, setEditTechnician] = useState<Technician | null>(null)
   const [newTask, setNewTask] = useState<Partial<Task>>({
     title: "",
     description: "",
@@ -65,6 +67,8 @@ export function LocationSettings() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false)
   const [isAddTechnicianDialogOpen, setIsAddTechnicianDialogOpen] = useState<boolean>(false)
+  const [isEditTechnicianDialogOpen, setIsEditTechnicianDialogOpen] = useState<boolean>(false)
+  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState<boolean>(false)
   const [newLocation, setNewLocation] = useState<any>({
     name: "",
     address: "",
@@ -77,6 +81,7 @@ export function LocationSettings() {
     contactPhone: "",
   })
   const [editLocation, setEditLocation] = useState<any>(null)
+  const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null)
 
   // Fetch locations
   useEffect(() => {
@@ -122,7 +127,7 @@ export function LocationSettings() {
           assignedLocations: doc.data().assignedLocations || [],
           notes: doc.data().notes,
           createdAt: doc.data().createdAt,
-          updatedAt: doc.data().updatedAt
+          updatedAt: doc.data().updatedAt,
         }))
         setTechnicians(technicianData)
       } catch (error) {
@@ -156,7 +161,7 @@ export function LocationSettings() {
           priority: doc.data().priority || "Medium",
           dueDate: doc.data().dueDate?.toDate() || new Date(),
           createdAt: doc.data().createdAt,
-          updatedAt: doc.data().updatedAt
+          updatedAt: doc.data().updatedAt,
         }))
         setTasks(taskData)
       } catch (error) {
@@ -177,7 +182,14 @@ export function LocationSettings() {
 
     setIsLoading(true)
     try {
-      const validationResult = validateTechnician(newTechnician)
+      // Filter out any empty arrays
+      const technicianData = {
+        ...newTechnician,
+        specialties: newTechnician.specialties?.filter((s) => s.type && s.level) || [],
+        assignedLocations: newTechnician.assignedLocations?.filter((loc) => loc) || [],
+      }
+
+      const validationResult = validateTechnician(technicianData)
       if (!validationResult.success) {
         const errors = validationResult.errors || []
         errors.forEach((error) => {
@@ -187,6 +199,7 @@ export function LocationSettings() {
             variant: "destructive",
           })
         })
+        setIsLoading(false)
         return
       }
 
@@ -197,15 +210,52 @@ export function LocationSettings() {
         updatedAt: new Date(),
       })
 
-      setTechnicians([
-        ...technicians,
-        {
-          id: docRef.id,
-          ...validationResult.data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Technician,
-      ])
+      const newTechnicianWithId = {
+        id: docRef.id,
+        ...validationResult.data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Technician
+
+      setTechnicians([...technicians, newTechnicianWithId])
+
+      // Send email notification if locations are assigned
+      if (newTechnicianWithId.assignedLocations && newTechnicianWithId.assignedLocations.length > 0) {
+        // Get location details for each assigned location
+        const assignedLocationDetails = newTechnicianWithId.assignedLocations
+          .map((locId) => {
+            const location = locations.find((loc) => loc.id === locId)
+            return location
+              ? {
+                  id: location.id,
+                  name: location.name,
+                  city: location.city,
+                  state: location.state,
+                  country: location.country,
+                }
+              : null
+          })
+          .filter(Boolean)
+
+        if (assignedLocationDetails.length > 0) {
+          try {
+            await fetch("/api/send-technician-updates", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                technicianName: newTechnicianWithId.name,
+                technicianEmail: newTechnicianWithId.email,
+                assignedLocations: assignedLocationDetails,
+                action: "added",
+              }),
+            })
+          } catch (emailError) {
+            console.error("Error sending location assignment email:", emailError)
+          }
+        }
+      }
 
       setNewTechnician({
         name: "",
@@ -217,6 +267,7 @@ export function LocationSettings() {
         notes: "",
       })
 
+      setIsAddTechnicianDialogOpen(false)
       toast({
         title: "Technician Added",
         description: "The technician has been added successfully",
@@ -227,6 +278,110 @@ export function LocationSettings() {
       toast({
         title: "Error",
         description: "Failed to add technician. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleEditTechnician = async () => {
+    if (!db || !editTechnician) return
+
+    setIsLoading(true)
+    try {
+      // Filter out any empty arrays
+      const technicianData = {
+        ...editTechnician,
+        specialties: editTechnician.specialties?.filter((s) => s.type && s.level) || [],
+        assignedLocations: editTechnician.assignedLocations?.filter((loc) => loc) || [],
+      }
+
+      const validationResult = validateTechnician(technicianData)
+      if (!validationResult.success) {
+        const errors = validationResult.errors || []
+        errors.forEach((error) => {
+          toast({
+            title: "Validation Error",
+            description: error.message,
+            variant: "destructive",
+          })
+        })
+        setIsLoading(false)
+        return
+      }
+
+      // Find the original technician to compare location changes
+      const originalTechnician = technicians.find((tech) => tech.id === editTechnician.id)
+      const hasLocationChanges =
+        originalTechnician &&
+        JSON.stringify(originalTechnician.assignedLocations.sort()) !==
+          JSON.stringify(technicianData.assignedLocations.sort())
+
+      const technicianRef = doc(db, "technicians", editTechnician.id)
+      await updateDoc(technicianRef, {
+        ...validationResult.data,
+        updatedAt: new Date(),
+      })
+
+      const updatedTechnician = {
+        ...editTechnician,
+        ...validationResult.data,
+        updatedAt: new Date(),
+      }
+
+      setTechnicians(technicians.map((tech) => (tech.id === editTechnician.id ? updatedTechnician : tech)))
+
+      // Send email notification if locations have changed
+      if (hasLocationChanges && updatedTechnician.assignedLocations && updatedTechnician.assignedLocations.length > 0) {
+        // Get location details for each assigned location
+        const assignedLocationDetails = updatedTechnician.assignedLocations
+          .map((locId) => {
+            const location = locations.find((loc) => loc.id === locId)
+            return location
+              ? {
+                  id: location.id,
+                  name: location.name,
+                  city: location.city,
+                  state: location.state,
+                  country: location.country,
+                }
+              : null
+          })
+          .filter(Boolean)
+
+        if (assignedLocationDetails.length > 0) {
+          try {
+            await fetch("/api/send-technician-updates", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                technicianName: updatedTechnician.name,
+                technicianEmail: updatedTechnician.email,
+                assignedLocations: assignedLocationDetails,
+                action: "updated",
+              }),
+            })
+          } catch (emailError) {
+            console.error("Error sending location assignment update email:", emailError)
+          }
+        }
+      }
+
+      setEditTechnician(null)
+      setIsEditTechnicianDialogOpen(false)
+      toast({
+        title: "Technician Updated",
+        description: "The technician has been updated successfully",
+        className: "bg-teal-50 border-teal-200",
+      })
+    } catch (error) {
+      console.error("Error updating technician:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update technician. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -249,6 +404,7 @@ export function LocationSettings() {
             variant: "destructive",
           })
         })
+        setIsLoading(false)
         return
       }
 
@@ -259,15 +415,42 @@ export function LocationSettings() {
         updatedAt: new Date(),
       })
 
-      setTasks([
-        ...tasks,
-        {
-          id: docRef.id,
-          ...validationResult.data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Task,
-      ])
+      const newTaskWithId = {
+        id: docRef.id,
+        ...validationResult.data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Task
+
+      setTasks([...tasks, newTaskWithId])
+
+      // Get assigned technician details
+      const assignedTechnician = technicians.find((tech) => tech.id === newTask.assignedTo)
+
+      // Get location details
+      const locationDoc = await getDoc(doc(db, "locations", newTask.locationId || ""))
+      const locationData = locationDoc.exists() ? locationDoc.data() : null
+
+      // Send email notification to technician only
+      if (assignedTechnician?.email) {
+        await fetch("/api/send-task-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            taskId: docRef.id,
+            taskTitle: newTask.title,
+            taskDescription: newTask.description,
+            taskPriority: newTask.priority,
+            taskDueDate: newTask.dueDate,
+            locationId: newTask.locationId,
+            locationName: locationData?.name || "Unknown Location",
+            recipients: [assignedTechnician.email],
+            technicianName: assignedTechnician.name,
+          }),
+        })
+      }
 
       setNewTask({
         title: "",
@@ -279,6 +462,7 @@ export function LocationSettings() {
         dueDate: new Date(),
       })
 
+      setIsAddTaskDialogOpen(false)
       toast({
         title: "Task Added",
         description: "The task has been added successfully",
@@ -415,11 +599,11 @@ export function LocationSettings() {
       })
 
       // Update local state
-      setLocations(locations.map((location) =>
-        location.id === editLocation.id
-          ? { ...editLocation, updatedAt: new Date() }
-          : location
-      ))
+      setLocations(
+        locations.map((location) =>
+          location.id === editLocation.id ? { ...editLocation, updatedAt: new Date() } : location,
+        ),
+      )
 
       // Close the dialog
       setIsEditDialogOpen(false)
@@ -468,6 +652,69 @@ export function LocationSettings() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleLocationChange = (locationId: string, checked: boolean, forEdit = false) => {
+    const updateFunction = (prev: any) => {
+      if (!prev) return prev
+
+      let assignedLocations = [...(prev.assignedLocations || [])]
+
+      if (checked) {
+        // Add location if not already included
+        if (!assignedLocations.includes(locationId)) {
+          assignedLocations.push(locationId)
+        }
+      } else {
+        // Remove location if present
+        assignedLocations = assignedLocations.filter((id) => id !== locationId)
+      }
+
+      return {
+        ...prev,
+        assignedLocations,
+      }
+    }
+
+    if (forEdit) {
+      setEditTechnician(updateFunction)
+    } else {
+      setNewTechnician(updateFunction)
+    }
+  }
+
+  const handleSpecialtyChange = (specialty: string, level: string, forEdit = false) => {
+    const updateFunction = (prev: any) => {
+      if (!prev) return prev
+
+      const specialties = [...(prev.specialties || [])]
+      const existingIndex = specialties.findIndex((s) => s.type === specialty)
+
+      if (level === "not-selected") {
+        // Remove the specialty if it exists
+        if (existingIndex !== -1) {
+          specialties.splice(existingIndex, 1)
+        }
+      } else {
+        // Update or add the specialty
+        if (existingIndex !== -1) {
+          specialties[existingIndex] = { type: specialty, level }
+        } else {
+          specialties.push({ type: specialty, level })
+        }
+      }
+
+      return {
+        ...prev,
+        specialties,
+      }
+    }
+
+    if (forEdit) {
+      setEditTechnician(updateFunction)
+    } else {
+      setNewTechnician(updateFunction)
     }
   }
 
@@ -872,14 +1119,10 @@ export function LocationSettings() {
                         <div key={specialty} className="space-y-2">
                           <Label>{specialty}</Label>
                           <Select
-                            value={newTechnician.specialties?.find(s => s.type === specialty)?.level || "not-selected"}
-                            onValueChange={(value) => {
-                              const updatedSpecialties = newTechnician.specialties?.filter(s => s.type !== specialty) || [];
-                              if (value !== "not-selected") {
-                                updatedSpecialties.push({ type: specialty, level: value });
-                              }
-                              setNewTechnician({ ...newTechnician, specialties: updatedSpecialties });
-                            }}
+                            value={
+                              newTechnician.specialties?.find((s) => s.type === specialty)?.level || "not-selected"
+                            }
+                            onValueChange={(value) => handleSpecialtyChange(specialty, value)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder={`Select ${specialty} Level`} />
@@ -899,27 +1142,20 @@ export function LocationSettings() {
                   </div>
                   <div className="space-y-2">
                     <Label>Assigned Locations</Label>
-                    <Select
-                      value={newTechnician.assignedLocations?.[0] || "not-assigned"}
-                      onValueChange={(value) => {
-                        setNewTechnician({
-                          ...newTechnician,
-                          assignedLocations: value !== "not-assigned" ? [value] : []
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="not-assigned">None</SelectItem>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
+                    <div className="max-h-40 overflow-y-auto border rounded p-2">
+                      {locations.map((location) => (
+                        <div key={location.id} className="flex items-center space-x-2 py-1">
+                          <Checkbox
+                            id={`loc-${location.id}`}
+                            checked={newTechnician.assignedLocations?.includes(location.id)}
+                            onCheckedChange={(checked) => handleLocationChange(location.id, checked as boolean)}
+                          />
+                          <Label htmlFor={`loc-${location.id}`} className="text-sm font-normal cursor-pointer">
                             {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="color">Color</Label>
@@ -954,16 +1190,13 @@ export function LocationSettings() {
                         assignedLocations: [],
                         color: "#4FD1C5",
                         notes: "",
-                      });
-                      setIsAddTechnicianDialogOpen(false);
+                      })
+                      setIsAddTechnicianDialogOpen(false)
                     }}
                   >
                     Cancel
                   </Button>
-                  <Button
-                    onClick={handleAddTechnician}
-                    disabled={isLoading}
-                  >
+                  <Button onClick={handleAddTechnician} disabled={isLoading}>
                     Add Technician
                   </Button>
                 </DialogFooter>
@@ -999,10 +1232,7 @@ export function LocationSettings() {
                         <TableRow key={technician.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: technician.color }}
-                              />
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: technician.color }} />
                               {technician.name}
                             </div>
                           </TableCell>
@@ -1039,12 +1269,23 @@ export function LocationSettings() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => {
-                                  setEditLocation(technician)
-                                  setIsEditDialogOpen(true)
+                                  setEditTechnician(technician)
+                                  setIsEditTechnicianDialogOpen(true)
                                 }}
                               >
                                 <Edit className="h-4 w-4" />
                                 <span className="sr-only">Edit</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedTechnician(technician)
+                                  setIsAddTaskDialogOpen(true)
+                                }}
+                              >
+                                <Calendar className="h-4 w-4" />
+                                <span className="sr-only">Add Task</span>
                               </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -1082,7 +1323,7 @@ export function LocationSettings() {
                 <TabsContent value="tasks">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-medium">Tasks</h3>
-                    <Button>
+                    <Button onClick={() => setIsAddTaskDialogOpen(true)}>
                       <Plus className="mr-2 h-4 w-4" />
                       Add Task
                     </Button>
@@ -1114,24 +1355,25 @@ export function LocationSettings() {
                             {locations.find((loc) => loc.id === task.locationId)?.name || "Unknown Location"}
                           </TableCell>
                           <TableCell>
-                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                              ${task.status === "Completed"
-                                ? "bg-green-100 text-green-800"
-                                : task.status === "In Progress"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : task.status === "Delayed"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : task.status === "Cancelled"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-gray-100 text-gray-800"
+                            <div
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                              ${
+                                task.status === "Completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : task.status === "In Progress"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : task.status === "Delayed"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : task.status === "Cancelled"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-gray-100 text-gray-800"
                               }
-                            `}>
+                            `}
+                            >
                               {task.status}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            {new Date(task.dueDate).toLocaleDateString()}
-                          </TableCell>
+                          <TableCell>{new Date(task.dueDate).toLocaleDateString()}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end space-x-2">
                               <Button
@@ -1179,6 +1421,252 @@ export function LocationSettings() {
               </Tabs>
             </CardContent>
           </Card>
+
+          {/* Edit Technician Dialog */}
+          <Dialog open={isEditTechnicianDialogOpen} onOpenChange={setIsEditTechnicianDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Edit Technician</DialogTitle>
+                <DialogDescription>Update technician information</DialogDescription>
+              </DialogHeader>
+              {editTechnician && (
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Name</Label>
+                      <Input
+                        id="edit-name"
+                        value={editTechnician.name}
+                        onChange={(e) => setEditTechnician({ ...editTechnician, name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone">Phone</Label>
+                      <Input
+                        id="edit-phone"
+                        value={editTechnician.phone}
+                        onChange={(e) => setEditTechnician({ ...editTechnician, phone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editTechnician.email}
+                      onChange={(e) => setEditTechnician({ ...editTechnician, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Specialties</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(TECHNICIAN_SPECIALTIES).map(([specialty, levels]) => (
+                        <div key={specialty} className="space-y-2">
+                          <Label>{specialty}</Label>
+                          <Select
+                            value={
+                              editTechnician.specialties?.find((s) => s.type === specialty)?.level || "not-selected"
+                            }
+                            onValueChange={(value) => handleSpecialtyChange(specialty, value, true)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={`Select ${specialty} Level`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="not-selected">None</SelectItem>
+                              {levels.map((level) => (
+                                <SelectItem key={level} value={level}>
+                                  {level}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Assigned Locations</Label>
+                    <div className="max-h-40 overflow-y-auto border rounded p-2">
+                      {locations.map((location) => (
+                        <div key={location.id} className="flex items-center space-x-2 py-1">
+                          <Checkbox
+                            id={`edit-loc-${location.id}`}
+                            checked={editTechnician.assignedLocations?.includes(location.id)}
+                            onCheckedChange={(checked) => handleLocationChange(location.id, checked as boolean, true)}
+                          />
+                          <Label htmlFor={`edit-loc-${location.id}`} className="text-sm font-normal cursor-pointer">
+                            {location.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-color">Color</Label>
+                    <Input
+                      id="edit-color"
+                      type="color"
+                      className="h-10 px-3 py-2"
+                      value={editTechnician.color}
+                      onChange={(e) => setEditTechnician({ ...editTechnician, color: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-notes">Notes</Label>
+                    <Textarea
+                      id="edit-notes"
+                      value={editTechnician.notes}
+                      onChange={(e) => setEditTechnician({ ...editTechnician, notes: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditTechnicianDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleEditTechnician} disabled={isLoading}>
+                  {isLoading ? "Updating..." : "Update Technician"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Task Dialog */}
+          <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Add New Task</DialogTitle>
+                <DialogDescription>
+                  {selectedTechnician
+                    ? `Create a task for ${selectedTechnician.name}`
+                    : "Create a new task and assign it to a technician"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="task-title">Task Title</Label>
+                  <Input
+                    id="task-title"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    placeholder="Enter task title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="task-description">Description</Label>
+                  <Textarea
+                    id="task-description"
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    placeholder="Describe the task in detail"
+                    rows={4}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="task-priority">Priority</Label>
+                    <Select
+                      value={newTask.priority}
+                      onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
+                    >
+                      <SelectTrigger id="task-priority">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Low">Low</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="High">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="task-due-date">Due Date</Label>
+                    <Input
+                      id="task-due-date"
+                      type="date"
+                      value={
+                        newTask.dueDate instanceof Date
+                          ? newTask.dueDate.toISOString().split("T")[0]
+                          : typeof newTask.dueDate === "string"
+                            ? newTask.dueDate
+                            : new Date().toISOString().split("T")[0]
+                      }
+                      onChange={(e) => setNewTask({ ...newTask, dueDate: new Date(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="task-location">Location</Label>
+                  <Select
+                    value={newTask.locationId}
+                    onValueChange={(value) => setNewTask({ ...newTask, locationId: value })}
+                  >
+                    <SelectTrigger id="task-location">
+                      <SelectValue placeholder="Select location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {!selectedTechnician && (
+                  <div className="space-y-2">
+                    <Label htmlFor="task-technician">Assign To</Label>
+                    <Select
+                      value={newTask.assignedTo}
+                      onValueChange={(value) => setNewTask({ ...newTask, assignedTo: value })}
+                    >
+                      <SelectTrigger id="task-technician">
+                        <SelectValue placeholder="Select technician" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {technicians.map((tech) => (
+                          <SelectItem key={tech.id} value={tech.id}>
+                            {tech.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddTaskDialogOpen(false)
+                    setSelectedTechnician(null)
+                    setNewTask({
+                      title: "",
+                      description: "",
+                      locationId: "",
+                      assignedTo: "",
+                      status: "Pending",
+                      priority: "Medium",
+                      dueDate: new Date(),
+                    })
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddTask}
+                  disabled={
+                    isLoading || !newTask.title || !newTask.locationId || (!selectedTechnician && !newTask.assignedTo)
+                  }
+                >
+                  {isLoading ? "Creating..." : "Create Task"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         <TabsContent value="zones">
           <ZoneSettings />

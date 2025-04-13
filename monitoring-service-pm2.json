@@ -1,0 +1,14 @@
+{
+  "apps": [
+    {
+      "name": "monitoring-service",
+      "script": "./scripts/start-monitoring.js",
+      "cwd": "/opt/productionapp",
+      "watch": false,
+      "log_date_format": "YYYY-MM-DD HH:mm:ss",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  ]
+}

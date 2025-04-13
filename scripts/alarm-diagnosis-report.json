@@ -1,0 +1,794 @@
+[
+  {
+    "id": "atZviSNhI2NjepHo8FoZ",
+    "rawData": {
+      "severity": "warning",
+      "locationName": "Heritage Pointe of Warren",
+      "resolved": false,
+      "name": "Mixed Air temperature Threshold Exceeded",
+      "equipmentName": "AHU-1",
+      "equipmentId": "2JFzwQkC1XwJhUvm09rE",
+      "locationId": "1",
+      "timestamp": {
+        "seconds": 1744247519,
+        "nanoseconds": 369000000
+      },
+      "acknowledged": false,
+      "message": "Mixed Air temperature value of 44.79 is below minimum threshold of 45",
+      "active": true
+    },
+    "transformedData": {
+      "id": "atZviSNhI2NjepHo8FoZ",
+      "name": "Mixed Air temperature Threshold Exceeded",
+      "equipmentId": "2JFzwQkC1XwJhUvm09rE",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-1",
+      "severity": "warning",
+      "message": "Mixed Air temperature value of 44.79 is below minimum threshold of 45",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:11:59.369Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "y3qqXY8e9gwlp4vxdjrR",
+    "rawData": {
+      "locationId": "1",
+      "resolved": false,
+      "acknowledged": false,
+      "severity": "critical",
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "active": true,
+      "name": "Freeze Stat temperature Threshold Exceeded",
+      "locationName": "Heritage Pointe of Warren",
+      "timestamp": {
+        "seconds": 1744246919,
+        "nanoseconds": 636000000
+      },
+      "message": "Freeze Stat temperature value of 42.23 exceeds maximum threshold of 40",
+      "equipmentName": "AHU-4"
+    },
+    "transformedData": {
+      "id": "y3qqXY8e9gwlp4vxdjrR",
+      "name": "Freeze Stat temperature Threshold Exceeded",
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-4",
+      "severity": "critical",
+      "message": "Freeze Stat temperature value of 42.23 exceeds maximum threshold of 40",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:59.636Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "cORtKjXW52tQtajHc9XI",
+    "rawData": {
+      "locationName": "Heritage Pointe of Warren",
+      "active": true,
+      "timestamp": {
+        "seconds": 1744246866,
+        "nanoseconds": 905000000
+      },
+      "resolved": false,
+      "name": "Freeze Stat temperature Threshold Exceeded",
+      "message": "Freeze Stat temperature value of 59.42 exceeds maximum threshold of 40",
+      "acknowledged": false,
+      "severity": "critical",
+      "equipmentName": "AHU-2",
+      "locationId": "1",
+      "equipmentId": "upkoHEsD5zVaiLFhGfs5"
+    },
+    "transformedData": {
+      "id": "cORtKjXW52tQtajHc9XI",
+      "name": "Freeze Stat temperature Threshold Exceeded",
+      "equipmentId": "upkoHEsD5zVaiLFhGfs5",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-2",
+      "severity": "critical",
+      "message": "Freeze Stat temperature value of 59.42 exceeds maximum threshold of 40",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:06.905Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "1Ya0ETXOHNptHHpFbTfM",
+    "rawData": {
+      "message": "Zone temperature value of 59.42 is below minimum threshold of 68",
+      "severity": "warning",
+      "active": true,
+      "equipmentId": "upkoHEsD5zVaiLFhGfs5",
+      "locationId": "1",
+      "name": "Zone temperature Threshold Exceeded",
+      "resolved": false,
+      "locationName": "Heritage Pointe of Warren",
+      "timestamp": {
+        "seconds": 1744246866,
+        "nanoseconds": 571000000
+      },
+      "acknowledged": false,
+      "equipmentName": "AHU-2"
+    },
+    "transformedData": {
+      "id": "1Ya0ETXOHNptHHpFbTfM",
+      "name": "Zone temperature Threshold Exceeded",
+      "equipmentId": "upkoHEsD5zVaiLFhGfs5",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-2",
+      "severity": "warning",
+      "message": "Zone temperature value of 59.42 is below minimum threshold of 68",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:06.571Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "SaaHY9BGi9ZGddCMn7ts",
+    "rawData": {
+      "equipmentName": "SteamBundle",
+      "timestamp": {
+        "seconds": 1744246866,
+        "nanoseconds": 144000000
+      },
+      "equipmentId": "pQeFoogngCqEZUI6YRCT",
+      "message": "Steam temperature value of 39.02 is below minimum threshold of 125",
+      "name": "Steam temperature Threshold Exceeded",
+      "locationId": "1",
+      "severity": "warning",
+      "resolved": false,
+      "locationName": "Heritage Pointe of Warren",
+      "active": true,
+      "acknowledged": false
+    },
+    "transformedData": {
+      "id": "SaaHY9BGi9ZGddCMn7ts",
+      "name": "Steam temperature Threshold Exceeded",
+      "equipmentId": "pQeFoogngCqEZUI6YRCT",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "SteamBundle",
+      "severity": "warning",
+      "message": "Steam temperature value of 39.02 is below minimum threshold of 125",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:06.144Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "U1o9nkdWX1W5ndxjAc5e",
+    "rawData": {
+      "resolved": false,
+      "locationName": "Byrna Ammunition",
+      "timestamp": {
+        "seconds": 1744246865,
+        "nanoseconds": 782000000
+      },
+      "acknowledged": false,
+      "message": "Supply Air temperature value of 38.75 is below minimum threshold of 62",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentName": "DOAS-1",
+      "equipmentId": "mCuOPlcHHiTP2HinEfXj",
+      "active": true,
+      "severity": "warning",
+      "locationId": "3"
+    },
+    "transformedData": {
+      "id": "U1o9nkdWX1W5ndxjAc5e",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentId": "mCuOPlcHHiTP2HinEfXj",
+      "locationId": "3",
+      "locationName": "Byrna Ammunition",
+      "equipmentName": "DOAS-1",
+      "severity": "warning",
+      "message": "Supply Air temperature value of 38.75 is below minimum threshold of 62",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:05.782Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "ByrnaAmmunition",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "7kmvTcoTC13uJVl8AypO",
+    "rawData": {
+      "timestamp": {
+        "seconds": 1744246865,
+        "nanoseconds": 435000000
+      },
+      "locationName": "Hopebridge Autism Center ",
+      "equipmentId": "k04HDjmrjhG4VjEa9Js1",
+      "locationId": "5",
+      "acknowledged": false,
+      "active": true,
+      "name": "Boiler temperature Threshold Exceeded",
+      "resolved": false,
+      "equipmentName": "Boiler-2",
+      "severity": "warning",
+      "message": "Boiler temperature value of 20.3 is below minimum threshold of 80"
+    },
+    "transformedData": {
+      "id": "7kmvTcoTC13uJVl8AypO",
+      "name": "Boiler temperature Threshold Exceeded",
+      "equipmentId": "k04HDjmrjhG4VjEa9Js1",
+      "locationId": "5",
+      "locationName": "Hopebridge Autism Center ",
+      "equipmentName": "Boiler-2",
+      "severity": "warning",
+      "message": "Boiler temperature value of 20.3 is below minimum threshold of 80",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:05.435Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HopbridgeAutismCenter",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "pBzysiloDdmc8HmhPOCy",
+    "rawData": {
+      "locationName": "St John Catholic School",
+      "locationId": "11",
+      "timestamp": {
+        "seconds": 1744246864,
+        "nanoseconds": 530000000
+      },
+      "name": "Water Supply temperature Threshold Exceeded",
+      "message": "Water Supply temperature value of 81.72 exceeds maximum threshold of 65",
+      "active": true,
+      "resolved": false,
+      "severity": "critical",
+      "equipmentName": "Chiller",
+      "acknowledged": false,
+      "equipmentId": "RMxQ7lIJFAhyX6cj9RVA"
+    },
+    "transformedData": {
+      "id": "pBzysiloDdmc8HmhPOCy",
+      "name": "Water Supply temperature Threshold Exceeded",
+      "equipmentId": "RMxQ7lIJFAhyX6cj9RVA",
+      "locationId": "11",
+      "locationName": "St John Catholic School",
+      "equipmentName": "Chiller",
+      "severity": "critical",
+      "message": "Water Supply temperature value of 81.72 exceeds maximum threshold of 65",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:04.530Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "StJohnCatholicSchool",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "PI5hf1rBeLav84HqELFv",
+    "rawData": {
+      "severity": "warning",
+      "resolved": false,
+      "equipmentName": "DOAS-2",
+      "timestamp": {
+        "seconds": 1744246864,
+        "nanoseconds": 217000000
+      },
+      "name": "Supply Air temperature Threshold Exceeded",
+      "locationId": "3",
+      "locationName": "Byrna Ammunition",
+      "equipmentId": "PpTG1BvhE8cHMR52QUFK",
+      "active": true,
+      "message": "Supply Air temperature value of 38.75 is below minimum threshold of 60",
+      "acknowledged": false
+    },
+    "transformedData": {
+      "id": "PI5hf1rBeLav84HqELFv",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentId": "PpTG1BvhE8cHMR52QUFK",
+      "locationId": "3",
+      "locationName": "Byrna Ammunition",
+      "equipmentName": "DOAS-2",
+      "severity": "warning",
+      "message": "Supply Air temperature value of 38.75 is below minimum threshold of 60",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:04.217Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "ByrnaAmmunition",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "VQXYnWkhHdigxVouKAji",
+    "rawData": {
+      "name": "Boiler temperature Threshold Exceeded",
+      "active": true,
+      "locationId": "5",
+      "acknowledged": false,
+      "equipmentName": "Boiler-1",
+      "locationName": "Hopebridge Autism Center ",
+      "timestamp": {
+        "seconds": 1744246863,
+        "nanoseconds": 859000000
+      },
+      "message": "Boiler temperature value of 20.3 is below minimum threshold of 80",
+      "resolved": false,
+      "severity": "warning",
+      "equipmentId": "NFDisFgQMzYTgDRgNSEL"
+    },
+    "transformedData": {
+      "id": "VQXYnWkhHdigxVouKAji",
+      "name": "Boiler temperature Threshold Exceeded",
+      "equipmentId": "NFDisFgQMzYTgDRgNSEL",
+      "locationId": "5",
+      "locationName": "Hopebridge Autism Center ",
+      "equipmentName": "Boiler-1",
+      "severity": "warning",
+      "message": "Boiler temperature value of 20.3 is below minimum threshold of 80",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:03.859Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HopbridgeAutismCenter",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "f1P5VOhEm5A8kCxgEyIE",
+    "rawData": {
+      "name": "Freeze Stat temperature Threshold Exceeded",
+      "message": "Freeze Stat temperature value of 69.22 exceeds maximum threshold of 40",
+      "severity": "critical",
+      "acknowledged": false,
+      "equipmentId": "M1M5hb1y3ku0HpGTuEzU",
+      "resolved": false,
+      "locationId": "6",
+      "active": true,
+      "locationName": "Akron Carnegie Public Library",
+      "timestamp": {
+        "seconds": 1744246863,
+        "nanoseconds": 472000000
+      },
+      "equipmentName": "AHU-3"
+    },
+    "transformedData": {
+      "id": "f1P5VOhEm5A8kCxgEyIE",
+      "name": "Freeze Stat temperature Threshold Exceeded",
+      "equipmentId": "M1M5hb1y3ku0HpGTuEzU",
+      "locationId": "6",
+      "locationName": "Akron Carnegie Public Library",
+      "equipmentName": "AHU-3",
+      "severity": "critical",
+      "message": "Freeze Stat temperature value of 69.22 exceeds maximum threshold of 40",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:03.472Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "AkronCarnegiePublicLibrary",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "zo5BQOb5nUJbeZClyI90",
+    "rawData": {
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "active": true,
+      "resolved": false,
+      "equipmentId": "BeZOBmanKJ8iYJESMIYr",
+      "acknowledged": false,
+      "name": "Supply Air temperature Threshold Exceeded",
+      "timestamp": {
+        "seconds": 1744246862,
+        "nanoseconds": 948000000
+      },
+      "severity": "warning",
+      "message": "Supply Air temperature value of 65.21 is below minimum threshold of 70",
+      "equipmentName": "AHU-7"
+    },
+    "transformedData": {
+      "id": "zo5BQOb5nUJbeZClyI90",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentId": "BeZOBmanKJ8iYJESMIYr",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-7",
+      "severity": "warning",
+      "message": "Supply Air temperature value of 65.21 is below minimum threshold of 70",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:02.948Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "xXtXpCMRp5ToEijQQBo1",
+    "rawData": {
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentId": "57bJYUeT8vbjsKqzo0uD",
+      "locationId": "5",
+      "resolved": false,
+      "acknowledged": false,
+      "active": true,
+      "timestamp": {
+        "seconds": 1744246862,
+        "nanoseconds": 510000000
+      },
+      "locationName": "Hopebridge Autism Center ",
+      "equipmentName": "AHU-3",
+      "severity": "warning",
+      "message": "Supply Air temperature value of 38.48 is below minimum threshold of 50"
+    },
+    "transformedData": {
+      "id": "xXtXpCMRp5ToEijQQBo1",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentId": "57bJYUeT8vbjsKqzo0uD",
+      "locationId": "5",
+      "locationName": "Hopebridge Autism Center ",
+      "equipmentName": "AHU-3",
+      "severity": "warning",
+      "message": "Supply Air temperature value of 38.48 is below minimum threshold of 50",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:02.510Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HopbridgeAutismCenter",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "gVFvSab07qo0uzFnDyXH",
+    "rawData": {
+      "equipmentName": "AHU-3",
+      "name": "Mixed Air temperature Threshold Exceeded",
+      "resolved": false,
+      "locationId": "5",
+      "acknowledged": false,
+      "timestamp": {
+        "seconds": 1744246862,
+        "nanoseconds": 151000000
+      },
+      "message": "Mixed Air temperature value of 38.48 is below minimum threshold of 40",
+      "active": true,
+      "severity": "warning",
+      "equipmentId": "57bJYUeT8vbjsKqzo0uD",
+      "locationName": "Hopebridge Autism Center "
+    },
+    "transformedData": {
+      "id": "gVFvSab07qo0uzFnDyXH",
+      "name": "Mixed Air temperature Threshold Exceeded",
+      "equipmentId": "57bJYUeT8vbjsKqzo0uD",
+      "locationId": "5",
+      "locationName": "Hopebridge Autism Center ",
+      "equipmentName": "AHU-3",
+      "severity": "warning",
+      "message": "Mixed Air temperature value of 38.48 is below minimum threshold of 40",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:02.151Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HopbridgeAutismCenter",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "IKOnzWcGlPibfxoeKu2X",
+    "rawData": {
+      "acknowledged": false,
+      "name": "Freeze Stat temperature Threshold Exceeded",
+      "message": "Freeze Stat temperature value of 40.46 exceeds maximum threshold of 40",
+      "severity": "critical",
+      "timestamp": {
+        "seconds": 1744246861,
+        "nanoseconds": 823000000
+      },
+      "locationId": "6",
+      "equipmentName": "AHU-1",
+      "equipmentId": "4t81e8mfOxnrFw6PGIzQ",
+      "resolved": false,
+      "active": true,
+      "locationName": "Akron Carnegie Public Library"
+    },
+    "transformedData": {
+      "id": "IKOnzWcGlPibfxoeKu2X",
+      "name": "Freeze Stat temperature Threshold Exceeded",
+      "equipmentId": "4t81e8mfOxnrFw6PGIzQ",
+      "locationId": "6",
+      "locationName": "Akron Carnegie Public Library",
+      "equipmentName": "AHU-1",
+      "severity": "critical",
+      "message": "Freeze Stat temperature value of 40.46 exceeds maximum threshold of 40",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:01.823Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "AkronCarnegiePublicLibrary",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "ks9bKh7wBcWuVak9i3sY",
+    "rawData": {
+      "acknowledged": false,
+      "locationId": "6",
+      "timestamp": {
+        "seconds": 1744246861,
+        "nanoseconds": 519000000
+      },
+      "locationName": "Akron Carnegie Public Library",
+      "severity": "warning",
+      "message": "Mixed Air temperature value of 40.46 is below minimum threshold of 45",
+      "name": "Mixed Air temperature Threshold Exceeded",
+      "active": true,
+      "equipmentId": "4t81e8mfOxnrFw6PGIzQ",
+      "equipmentName": "AHU-1",
+      "resolved": false
+    },
+    "transformedData": {
+      "id": "ks9bKh7wBcWuVak9i3sY",
+      "name": "Mixed Air temperature Threshold Exceeded",
+      "equipmentId": "4t81e8mfOxnrFw6PGIzQ",
+      "locationId": "6",
+      "locationName": "Akron Carnegie Public Library",
+      "equipmentName": "AHU-1",
+      "severity": "warning",
+      "message": "Mixed Air temperature value of 40.46 is below minimum threshold of 45",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:01.519Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "AkronCarnegiePublicLibrary",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "rwbIY3Q9DgBERQ685EUx",
+    "rawData": {
+      "locationName": "Akron Carnegie Public Library",
+      "acknowledged": false,
+      "resolved": false,
+      "name": "Supply Air temperature Threshold Exceeded",
+      "active": true,
+      "locationId": "6",
+      "timestamp": {
+        "seconds": 1744246861,
+        "nanoseconds": 177000000
+      },
+      "equipmentName": "AHU-1",
+      "message": "Supply Air temperature value of 40.46 is below minimum threshold of 50",
+      "equipmentId": "4t81e8mfOxnrFw6PGIzQ",
+      "severity": "warning"
+    },
+    "transformedData": {
+      "id": "rwbIY3Q9DgBERQ685EUx",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentId": "4t81e8mfOxnrFw6PGIzQ",
+      "locationId": "6",
+      "locationName": "Akron Carnegie Public Library",
+      "equipmentName": "AHU-1",
+      "severity": "warning",
+      "message": "Supply Air temperature value of 40.46 is below minimum threshold of 50",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:01.177Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "AkronCarnegiePublicLibrary",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "uYvsAUwVKrLKUBIRmfMZ",
+    "rawData": {
+      "locationId": "1",
+      "equipmentName": "AHU-4",
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "name": "Zone temperature Threshold Exceeded",
+      "acknowledged": false,
+      "message": "Zone temperature value of 38.17 is below minimum threshold of 65",
+      "active": true,
+      "locationName": "Heritage Pointe of Warren",
+      "timestamp": {
+        "seconds": 1744246860,
+        "nanoseconds": 843000000
+      },
+      "resolved": false,
+      "severity": "warning"
+    },
+    "transformedData": {
+      "id": "uYvsAUwVKrLKUBIRmfMZ",
+      "name": "Zone temperature Threshold Exceeded",
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-4",
+      "severity": "warning",
+      "message": "Zone temperature value of 38.17 is below minimum threshold of 65",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:00.843Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "S3Ht2Qibrj14zWo2iNMk",
+    "rawData": {
+      "name": "Mixed Air temperature Threshold Exceeded",
+      "locationName": "Heritage Pointe of Warren",
+      "resolved": false,
+      "active": true,
+      "timestamp": {
+        "seconds": 1744246860,
+        "nanoseconds": 500000000
+      },
+      "message": "Mixed Air temperature value of 38.17 is below minimum threshold of 50",
+      "acknowledged": false,
+      "equipmentName": "AHU-4",
+      "locationId": "1",
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "severity": "warning"
+    },
+    "transformedData": {
+      "id": "S3Ht2Qibrj14zWo2iNMk",
+      "name": "Mixed Air temperature Threshold Exceeded",
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-4",
+      "severity": "warning",
+      "message": "Mixed Air temperature value of 38.17 is below minimum threshold of 50",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:00.500Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "qmXjsEbIbuainICSSiPd",
+    "rawData": {
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "message": "Return Air temperature value of 38.17 is below minimum threshold of 50",
+      "acknowledged": false,
+      "resolved": false,
+      "active": true,
+      "equipmentName": "AHU-4",
+      "locationName": "Heritage Pointe of Warren",
+      "name": "Return Air temperature Threshold Exceeded",
+      "timestamp": {
+        "seconds": 1744246860,
+        "nanoseconds": 113000000
+      },
+      "severity": "warning",
+      "locationId": "1"
+    },
+    "transformedData": {
+      "id": "qmXjsEbIbuainICSSiPd",
+      "name": "Return Air temperature Threshold Exceeded",
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-4",
+      "severity": "warning",
+      "message": "Return Air temperature value of 38.17 is below minimum threshold of 50",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:01:00.113Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "OebpjpprK06SW4qYnijV",
+    "rawData": {
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "active": true,
+      "timestamp": {
+        "seconds": 1744246859,
+        "nanoseconds": 733000000
+      },
+      "name": "Supply Air temperature Threshold Exceeded",
+      "acknowledged": false,
+      "equipmentName": "AHU-4",
+      "resolved": false,
+      "severity": "warning",
+      "locationName": "Heritage Pointe of Warren",
+      "message": "Supply Air temperature value of 38.17 is below minimum threshold of 50",
+      "locationId": "1"
+    },
+    "transformedData": {
+      "id": "OebpjpprK06SW4qYnijV",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentId": "3zJm0Nkl1c7EiANkQOay",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-4",
+      "severity": "warning",
+      "message": "Supply Air temperature value of 38.17 is below minimum threshold of 50",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:00:59.733Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  },
+  {
+    "id": "UM405YortFLyRYujKBzb",
+    "rawData": {
+      "equipmentName": "AHU-1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentId": "2JFzwQkC1XwJhUvm09rE",
+      "active": true,
+      "resolved": false,
+      "acknowledged": false,
+      "message": "Supply Air temperature value of 45.82 is below minimum threshold of 50",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "severity": "warning",
+      "locationId": "1",
+      "timestamp": {
+        "seconds": 1744246859,
+        "nanoseconds": 265000000
+      }
+    },
+    "transformedData": {
+      "id": "UM405YortFLyRYujKBzb",
+      "name": "Supply Air temperature Threshold Exceeded",
+      "equipmentId": "2JFzwQkC1XwJhUvm09rE",
+      "locationId": "1",
+      "locationName": "Heritage Pointe of Warren",
+      "equipmentName": "AHU-1",
+      "severity": "warning",
+      "message": "Supply Air temperature value of 45.82 is below minimum threshold of 50",
+      "active": true,
+      "acknowledged": false,
+      "resolved": false,
+      "timestamp": "2025-04-10T01:00:59.265Z"
+    },
+    "issues": [],
+    "rtdbLocationKey": "HeritageWarren",
+    "rtdbLocationName": "No name in RTDB"
+  }
+]

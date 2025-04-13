@@ -1,0 +1,5133 @@
+{
+  "AkronCarnegiePublicLibrary": {
+    "id": "6",
+    "name": "AkronCarnegiePublicLibrary",
+    "systems": {
+      "AHU-1": {
+        "name": "AHU-1",
+        "metrics": {
+          "Active Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Cooling Differential": {
+            "value": -2.0600000000000023,
+            "type": "number",
+            "possibleMappings": [
+              "Cooling Differential",
+              "cooling differential",
+              "Cooling_Differential"
+            ]
+          },
+          "Cooling Enabled": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Cooling Enabled",
+              "cooling enabled",
+              "Cooling_Enabled"
+            ]
+          },
+          "DX Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "DX Enabled",
+              "dx enabled",
+              "DX_Enabled"
+            ]
+          },
+          "Discharge Air": {
+            "value": 69.17,
+            "type": "number",
+            "possibleMappings": [
+              "Discharge Air",
+              "discharge air",
+              "Discharge_Air"
+            ]
+          },
+          "Fan Status": {
+            "value": "On",
+            "type": "string",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "HVAC State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "Heating Actuator": {
+            "value": 10,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Actuator",
+              "heating actuator",
+              "Heating_Actuator"
+            ]
+          },
+          "Last Enable Time": {
+            "value": 1743848203308,
+            "type": "number",
+            "possibleMappings": [
+              "Last Enable Time",
+              "last enable time",
+              "Last_Enable_Time"
+            ]
+          },
+          "Last Stage 1 Time": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Last Stage 1 Time",
+              "last stage 1 time",
+              "Last_Stage_1_Time"
+            ]
+          },
+          "Last Stage 2 Time": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Last Stage 2 Time",
+              "last stage 2 time",
+              "Last_Stage_2_Time"
+            ]
+          },
+          "Mixed Air": {
+            "value": 64.06,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air",
+              "mixed air",
+              "Mixed_Air"
+            ]
+          },
+          "Occupancy Set For Day": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupancy Set For Day",
+              "occupancy set for day",
+              "Occupancy_Set_For_Day"
+            ]
+          },
+          "Outdoor Air Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Actuator",
+              "outdoor air actuator",
+              "Outdoor_Air_Actuator"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 37.76,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 95,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.54,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Return Air": {
+            "value": 67.52,
+            "type": "number",
+            "possibleMappings": [
+              "Return Air",
+              "return air",
+              "Return_Air"
+            ]
+          },
+          "Return Air Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "Return Air Actuator",
+              "return air actuator",
+              "Return_Air_Actuator"
+            ]
+          },
+          "Stage 1 Enabled": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Stage 1 Enabled",
+              "stage 1 enabled",
+              "Stage_1_Enabled"
+            ]
+          },
+          "Stage 2 Enabled": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Stage 2 Enabled",
+              "stage 2 enabled",
+              "Stage_2_Enabled"
+            ]
+          },
+          "Target Temperature": {
+            "value": 71.5,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "VFD Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "VFD Enabled",
+              "vfd enabled",
+              "VFD_Enabled"
+            ]
+          },
+          "VFD Speed": {
+            "value": 8,
+            "type": "number",
+            "possibleMappings": [
+              "VFD Speed",
+              "vfd speed",
+              "VFD_Speed"
+            ]
+          }
+        }
+      },
+      "AHU-2": {
+        "name": "AHU-2",
+        "metrics": {
+          "Active Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Cooling Differential": {
+            "value": -1.9200000000000017,
+            "type": "number",
+            "possibleMappings": [
+              "Cooling Differential",
+              "cooling differential",
+              "Cooling_Differential"
+            ]
+          },
+          "DX Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "DX Enable",
+              "dx enable",
+              "DX_Enable"
+            ]
+          },
+          "Discharge Air": {
+            "value": 68.81,
+            "type": "number",
+            "possibleMappings": [
+              "Discharge Air",
+              "discharge air",
+              "Discharge_Air"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "HVAC State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "Heating Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Actuator",
+              "heating actuator",
+              "Heating_Actuator"
+            ]
+          },
+          "Mixed Air Temperature": {
+            "value": 67.12,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air Temperature",
+              "mixed air temperature",
+              "Mixed_Air_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "North Upstairs": {
+            "value": "69.58",
+            "type": "string",
+            "possibleMappings": [
+              "North Upstairs",
+              "north upstairs",
+              "North_Upstairs"
+            ]
+          },
+          "Occupancy Set For Day": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupancy Set For Day",
+              "occupancy set for day",
+              "Occupancy_Set_For_Day"
+            ]
+          },
+          "Outdoor Air Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Actuator",
+              "outdoor air actuator",
+              "Outdoor_Air_Actuator"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 35.8,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 95,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.54,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Return Air": {
+            "value": 67.43,
+            "type": "number",
+            "possibleMappings": [
+              "Return Air",
+              "return air",
+              "Return_Air"
+            ]
+          },
+          "Return Air Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "Return Air Actuator",
+              "return air actuator",
+              "Return_Air_Actuator"
+            ]
+          },
+          "Setpoint Differential": {
+            "value": -0.8599999999999994,
+            "type": "number",
+            "possibleMappings": [
+              "Setpoint Differential",
+              "setpoint differential",
+              "Setpoint_Differential"
+            ]
+          },
+          "Target Temperature": {
+            "value": 71.5,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Thermostat Ambient Temperature": {
+            "value": "69.58",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Ambient Temperature",
+              "thermostat ambient temperature",
+              "Thermostat_Ambient_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Thermostat Away": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Thermostat Away",
+              "thermostat away",
+              "Thermostat_Away"
+            ]
+          },
+          "Thermostat Mode": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Mode",
+              "thermostat mode",
+              "Thermostat_Mode"
+            ]
+          },
+          "Thermostat Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Switch State",
+              "thermostat switch state",
+              "Thermostat_Switch_State"
+            ]
+          },
+          "Thermostat Target Temperature": {
+            "value": 71.5,
+            "type": "number",
+            "possibleMappings": [
+              "Thermostat Target Temperature",
+              "thermostat target temperature",
+              "Thermostat_Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          }
+        }
+      },
+      "AHU-3": {
+        "name": "AHU-3",
+        "metrics": {
+          "Active Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Alarm Status": {
+            "value": "Clear",
+            "type": "string",
+            "possibleMappings": [
+              "Alarm Status",
+              "alarm status",
+              "Alarm_Status"
+            ]
+          },
+          "Discharge Air": {
+            "value": 71.26,
+            "type": "number",
+            "possibleMappings": [
+              "Discharge Air",
+              "discharge air",
+              "Discharge_Air"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "HVAC State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "Heating Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Actuator",
+              "heating actuator",
+              "Heating_Actuator"
+            ]
+          },
+          "Heating Differential": {
+            "value": 1.8199999999999932,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Differential",
+              "heating differential",
+              "Heating_Differential"
+            ]
+          },
+          "Last Stage 1 Time": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Last Stage 1 Time",
+              "last stage 1 time",
+              "Last_Stage_1_Time"
+            ]
+          },
+          "Last Stage 2 Time": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Last Stage 2 Time",
+              "last stage 2 time",
+              "Last_Stage_2_Time"
+            ]
+          },
+          "Mixed Air Temperature": {
+            "value": 69.84,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air Temperature",
+              "mixed air temperature",
+              "Mixed_Air_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Occupancy Set For Day": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupancy Set For Day",
+              "occupancy set for day",
+              "Occupancy_Set_For_Day"
+            ]
+          },
+          "Outdoor Air Actuator": {
+            "value": 0.15936363636363632,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Actuator",
+              "outdoor air actuator",
+              "Outdoor_Air_Actuator"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 39.58,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 95,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.54,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Return Air": {
+            "value": 70.19,
+            "type": "number",
+            "possibleMappings": [
+              "Return Air",
+              "return air",
+              "Return_Air"
+            ]
+          },
+          "Return Air Actuator": {
+            "value": 99.84063636363636,
+            "type": "number",
+            "possibleMappings": [
+              "Return Air Actuator",
+              "return air actuator",
+              "Return_Air_Actuator"
+            ]
+          },
+          "Setpoint Differential": {
+            "value": 1.980000000000004,
+            "type": "number",
+            "possibleMappings": [
+              "Setpoint Differential",
+              "setpoint differential",
+              "Setpoint_Differential"
+            ]
+          },
+          "South Office": {
+            "value": "70.66",
+            "type": "string",
+            "possibleMappings": [
+              "South Office",
+              "south office",
+              "South_Office"
+            ]
+          },
+          "Stage 1 Enabled": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Stage 1 Enabled",
+              "stage 1 enabled",
+              "Stage_1_Enabled"
+            ]
+          },
+          "Stage 2 Enabled": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Stage 2 Enabled",
+              "stage 2 enabled",
+              "Stage_2_Enabled"
+            ]
+          },
+          "Supply": {
+            "value": 71.26,
+            "type": "number",
+            "possibleMappings": [
+              "Supply",
+              "supply"
+            ]
+          },
+          "Target Temperature": {
+            "value": "72.0",
+            "type": "string",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Thermostat Ambient Temperature": {
+            "value": "70.66",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Ambient Temperature",
+              "thermostat ambient temperature",
+              "Thermostat_Ambient_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Thermostat Away": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Thermostat Away",
+              "thermostat away",
+              "Thermostat_Away"
+            ]
+          },
+          "Thermostat Mode": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Mode",
+              "thermostat mode",
+              "Thermostat_Mode"
+            ]
+          },
+          "Thermostat Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Switch State",
+              "thermostat switch state",
+              "Thermostat_Switch_State"
+            ]
+          },
+          "Thermostat Target Temperature": {
+            "value": 71.5,
+            "type": "number",
+            "possibleMappings": [
+              "Thermostat Target Temperature",
+              "thermostat target temperature",
+              "Thermostat_Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          }
+        }
+      },
+      "Boilers": {
+        "name": "Boilers",
+        "metrics": {
+          "Active Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Alarm Status": {
+            "value": "Clear",
+            "type": "string",
+            "possibleMappings": [
+              "Alarm Status",
+              "alarm status",
+              "Alarm_Status"
+            ]
+          },
+          "Boiler Loop Temperature": {
+            "value": 132.90800000000002,
+            "type": "number",
+            "possibleMappings": [
+              "Boiler Loop Temperature",
+              "boiler loop temperature",
+              "Boiler_Loop_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Differential Pressure": {
+            "value": 18.75,
+            "type": "number",
+            "possibleMappings": [
+              "Differential Pressure",
+              "differential pressure",
+              "Differential_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "H2O Return": {
+            "value": 134.024,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Return",
+              "h2o return",
+              "H2O_Return"
+            ]
+          },
+          "H2O Supply": {
+            "value": 132.90800000000002,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Supply",
+              "h2o supply",
+              "H2O_Supply"
+            ]
+          },
+          "HVAC State": {
+            "value": "off",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "HW Pump 1 Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "HW Pump 1 Status",
+              "hw pump 1 status",
+              "HW_Pump_1_Status"
+            ]
+          },
+          "HW Pump 2 Status": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "HW Pump 2 Status",
+              "hw pump 2 status",
+              "HW_Pump_2_Status"
+            ]
+          },
+          "Last Enabled Pump": {
+            "value": "Pump1",
+            "type": "string",
+            "possibleMappings": [
+              "Last Enabled Pump",
+              "last enabled pump",
+              "Last_Enabled_Pump"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 37.76,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 95,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.54,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Target Temperature": {
+            "value": 125,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Thermostat Ambient Temperature": {
+            "value": 132.90800000000002,
+            "type": "number",
+            "possibleMappings": [
+              "Thermostat Ambient Temperature",
+              "thermostat ambient temperature",
+              "Thermostat_Ambient_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Thermostat Away": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Thermostat Away",
+              "thermostat away",
+              "Thermostat_Away"
+            ]
+          },
+          "Thermostat Mode": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Mode",
+              "thermostat mode",
+              "Thermostat_Mode"
+            ]
+          },
+          "Thermostat Switch State": {
+            "value": "off",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Switch State",
+              "thermostat switch state",
+              "Thermostat_Switch_State"
+            ]
+          },
+          "Thermostat Target Temperature": {
+            "value": 125,
+            "type": "number",
+            "possibleMappings": [
+              "Thermostat Target Temperature",
+              "thermostat target temperature",
+              "Thermostat_Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "ByrnaAmmunition": {
+    "id": "3",
+    "name": "ByrnaAmmunition",
+    "systems": {
+      "DOAS-1": {
+        "name": "DOAS-1",
+        "metrics": {
+          "Building Pressure": {
+            "value": -0.299,
+            "type": "number",
+            "possibleMappings": [
+              "Building Pressure",
+              "building pressure",
+              "Building_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Exhaust Fan Amps": {
+            "value": 1.2,
+            "type": "number",
+            "possibleMappings": [
+              "Exhaust Fan Amps",
+              "exhaust fan amps",
+              "Exhaust_Fan_Amps"
+            ]
+          },
+          "Exhaust Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Exhaust Fan Status",
+              "exhaust fan status",
+              "Exhaust_Fan_Status"
+            ]
+          },
+          "Exhaust VFD Speed": {
+            "value": 57,
+            "type": "number",
+            "possibleMappings": [
+              "Exhaust VFD Speed",
+              "exhaust vfd speed",
+              "Exhaust_VFD_Speed"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Status",
+              "freeze status",
+              "Freeze_Status"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "Last Cooling State": {
+            "value": 1,
+            "type": "number",
+            "possibleMappings": [
+              "Last Cooling State",
+              "last cooling state",
+              "Last_Cooling_State"
+            ]
+          },
+          "Last Heating State": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Last Heating State",
+              "last heating state",
+              "Last_Heating_State"
+            ]
+          },
+          "OA Actuator": {
+            "value": 99,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied Scheduled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied Scheduled",
+              "occupied scheduled",
+              "Occupied_Scheduled"
+            ]
+          },
+          "Outdoor Temperature": {
+            "value": 38.64,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Temperature",
+              "outdoor temperature",
+              "Outdoor_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Smoke Detector Shutdown": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Smoke Detector Shutdown",
+              "smoke detector shutdown",
+              "Smoke_Detector_Shutdown"
+            ]
+          },
+          "Space Humidity": {
+            "value": 32.8,
+            "type": "number",
+            "possibleMappings": [
+              "Space Humidity",
+              "space humidity",
+              "Space_Humidity",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Space RH 1": {
+            "value": 32,
+            "type": "number",
+            "possibleMappings": [
+              "Space RH 1",
+              "space rh 1",
+              "Space_RH_1"
+            ]
+          },
+          "Space RH 2": {
+            "value": 30.6,
+            "type": "number",
+            "possibleMappings": [
+              "Space RH 2",
+              "space rh 2",
+              "Space_RH_2"
+            ]
+          },
+          "Space Temperature": {
+            "value": 69.3,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature",
+              "space temperature",
+              "Space_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 1": {
+            "value": 68.7,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 1",
+              "space temperature 1",
+              "Space_Temperature_1",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 2": {
+            "value": 69.9,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 2",
+              "space temperature 2",
+              "Space_Temperature_2",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Supply Fan Amps": {
+            "value": 15.25,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Fan Amps",
+              "supply fan amps",
+              "Supply_Fan_Amps"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 67.57,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          },
+          "VFD Speed": {
+            "value": 52.9,
+            "type": "number",
+            "possibleMappings": [
+              "VFD Speed",
+              "vfd speed",
+              "VFD_Speed"
+            ]
+          }
+        }
+      },
+      "DOAS-2": {
+        "name": "DOAS-2",
+        "metrics": {
+          "Building Pressure": {
+            "value": -0.39936000000000005,
+            "type": "number",
+            "possibleMappings": [
+              "Building Pressure",
+              "building pressure",
+              "Building_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Cooling Enabled": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Cooling Enabled",
+              "cooling enabled",
+              "Cooling_Enabled"
+            ]
+          },
+          "Exhaust Fan Amps": {
+            "value": 1.15,
+            "type": "number",
+            "possibleMappings": [
+              "Exhaust Fan Amps",
+              "exhaust fan amps",
+              "Exhaust_Fan_Amps"
+            ]
+          },
+          "Exhaust Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Exhaust Fan Status",
+              "exhaust fan status",
+              "Exhaust_Fan_Status"
+            ]
+          },
+          "Exhaust Fan VFD Speed": {
+            "value": 54,
+            "type": "number",
+            "possibleMappings": [
+              "Exhaust Fan VFD Speed",
+              "exhaust fan vfd speed",
+              "Exhaust_Fan_VFD_Speed"
+            ]
+          },
+          "Freeze Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Status",
+              "freeze status",
+              "Freeze_Status"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "Heating Enabled": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Enabled",
+              "heating enabled",
+              "Heating_Enabled"
+            ]
+          },
+          "OA Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied Scheduled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied Scheduled",
+              "occupied scheduled",
+              "Occupied_Scheduled"
+            ]
+          },
+          "Outdoor Temperature": {
+            "value": 38.64,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Temperature",
+              "outdoor temperature",
+              "Outdoor_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Space Humidity": {
+            "value": 36.68,
+            "type": "number",
+            "possibleMappings": [
+              "Space Humidity",
+              "space humidity",
+              "Space_Humidity",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Space RH 1": {
+            "value": 36.8,
+            "type": "number",
+            "possibleMappings": [
+              "Space RH 1",
+              "space rh 1",
+              "Space_RH_1"
+            ]
+          },
+          "Space RH 2": {
+            "value": 36.1,
+            "type": "number",
+            "possibleMappings": [
+              "Space RH 2",
+              "space rh 2",
+              "Space_RH_2"
+            ]
+          },
+          "Space RH 3": {
+            "value": 35.1,
+            "type": "number",
+            "possibleMappings": [
+              "Space RH 3",
+              "space rh 3",
+              "Space_RH_3"
+            ]
+          },
+          "Space RH 4": {
+            "value": 35.57,
+            "type": "number",
+            "possibleMappings": [
+              "Space RH 4",
+              "space rh 4",
+              "Space_RH_4"
+            ]
+          },
+          "Space RH 5": {
+            "value": 32.36,
+            "type": "number",
+            "possibleMappings": [
+              "Space RH 5",
+              "space rh 5",
+              "Space_RH_5"
+            ]
+          },
+          "Space Temperature": {
+            "value": 68,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature",
+              "space temperature",
+              "Space_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 1": {
+            "value": 66.3,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 1",
+              "space temperature 1",
+              "Space_Temperature_1",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 2": {
+            "value": 67.1,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 2",
+              "space temperature 2",
+              "Space_Temperature_2",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 3": {
+            "value": 67.8,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 3",
+              "space temperature 3",
+              "Space_Temperature_3",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 4": {
+            "value": 67.8,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 4",
+              "space temperature 4",
+              "Space_Temperature_4",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 5": {
+            "value": 71,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 5",
+              "space temperature 5",
+              "Space_Temperature_5",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Supply Fan Amps": {
+            "value": 5.29,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Fan Amps",
+              "supply fan amps",
+              "Supply_Fan_Amps"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 63.6,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "ElementLabs": {
+    "id": "8",
+    "name": "ElementLabs",
+    "systems": {
+      "DOAS-1": {
+        "name": "DOAS-1",
+        "metrics": {
+          "Discharge Air": {
+            "value": 69.35,
+            "type": "number",
+            "possibleMappings": [
+              "Discharge Air",
+              "discharge air",
+              "Discharge_Air"
+            ]
+          },
+          "Element MUA1": {
+            "value": 69.35,
+            "type": "number",
+            "possibleMappings": [
+              "Element MUA1",
+              "element mua1",
+              "Element_MUA1"
+            ]
+          },
+          "Fan Status": {
+            "value": "On",
+            "type": "string",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Trip": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Trip",
+              "freeze trip",
+              "Freeze_Trip"
+            ]
+          },
+          "Intake Air": {
+            "value": "38.66",
+            "type": "string",
+            "possibleMappings": [
+              "Intake Air",
+              "intake air",
+              "Intake_Air"
+            ]
+          },
+          "Lab RH": {
+            "value": 48.199999999999996,
+            "type": "number",
+            "possibleMappings": [
+              "Lab RH",
+              "lab rh",
+              "Lab_RH"
+            ]
+          },
+          "Lab Temperature": {
+            "value": 69.36,
+            "type": "number",
+            "possibleMappings": [
+              "Lab Temperature",
+              "lab temperature",
+              "Lab_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 38.66,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 96,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.57,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Target Temperature": {
+            "value": 72,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "VFD Speed": {
+            "value": 98,
+            "type": "number",
+            "possibleMappings": [
+              "VFD Speed",
+              "vfd speed",
+              "VFD_Speed"
+            ]
+          }
+        }
+      },
+      "DOAS-2": {
+        "name": "DOAS-2",
+        "metrics": {
+          "Discharge Air": {
+            "value": 67.9228753,
+            "type": "number",
+            "possibleMappings": [
+              "Discharge Air",
+              "discharge air",
+              "Discharge_Air"
+            ]
+          },
+          "Freeze Stat": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "Freeze Trip": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Trip",
+              "freeze trip",
+              "Freeze_Trip"
+            ]
+          },
+          "Intake Air": {
+            "value": 38.66,
+            "type": "number",
+            "possibleMappings": [
+              "Intake Air",
+              "intake air",
+              "Intake_Air"
+            ]
+          },
+          "Lab RH": {
+            "value": 34.793499999999995,
+            "type": "number",
+            "possibleMappings": [
+              "Lab RH",
+              "lab rh",
+              "Lab_RH"
+            ]
+          },
+          "Lab Temperature": {
+            "value": 68.44699999999999,
+            "type": "number",
+            "possibleMappings": [
+              "Lab Temperature",
+              "lab temperature",
+              "Lab_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 38.66,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 96,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.57,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Target Temperature": {
+            "value": 71,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "VFD Speed": {
+            "value": 92,
+            "type": "number",
+            "possibleMappings": [
+              "VFD Speed",
+              "vfd speed",
+              "VFD_Speed"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "FirstChurchOfGod": {
+    "id": "9",
+    "name": "FirstChurchOfGod",
+    "systems": {
+      "AHU-1": {
+        "name": "AHU-1",
+        "metrics": {
+          "Building Pressure": {
+            "value": 3.87,
+            "type": "number",
+            "possibleMappings": [
+              "Building Pressure",
+              "building pressure",
+              "Building_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "CW Actuator": {
+            "value": 82.94,
+            "type": "number",
+            "possibleMappings": [
+              "CW Actuator",
+              "cw actuator",
+              "CW_Actuator"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freezestat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freezestat",
+              "freezestat"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "HW Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "HW Actuator",
+              "hw actuator",
+              "HW_Actuator"
+            ]
+          },
+          "Humidity": {
+            "value": 94,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Integral": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Integral",
+              "integral"
+            ]
+          },
+          "Last Error": {
+            "value": -11.520000000000003,
+            "type": "number",
+            "possibleMappings": [
+              "Last Error",
+              "last error",
+              "Last_Error"
+            ]
+          },
+          "Mixed Air": {
+            "value": 69.13,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air",
+              "mixed air",
+              "Mixed_Air"
+            ]
+          },
+          "OA Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Air": {
+            "value": 38.48,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air",
+              "outdoor air",
+              "Outdoor_Air"
+            ]
+          },
+          "Setpoint": {
+            "value": 52,
+            "type": "number",
+            "possibleMappings": [
+              "Setpoint",
+              "setpoint"
+            ]
+          },
+          "Stage 1 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Stage 1 Enabled",
+              "stage 1 enabled",
+              "Stage_1_Enabled"
+            ]
+          },
+          "Stage 2 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Stage 2 Enabled",
+              "stage 2 enabled",
+              "Stage_2_Enabled"
+            ]
+          },
+          "Supply": {
+            "value": 63.52,
+            "type": "number",
+            "possibleMappings": [
+              "Supply",
+              "supply"
+            ]
+          },
+          "VFD": {
+            "value": 46.08,
+            "type": "number",
+            "possibleMappings": [
+              "VFD",
+              "vfd"
+            ]
+          }
+        }
+      },
+      "MechanicalRoom": {
+        "name": "MechanicalRoom",
+        "metrics": {
+          "Boiler 1 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Boiler 1 Enable",
+              "boiler 1 enable",
+              "Boiler_1_Enable"
+            ]
+          },
+          "Boiler 2 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Boiler 2 Enable",
+              "boiler 2 enable",
+              "Boiler_2_Enable"
+            ]
+          },
+          "Boiler 3 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Boiler 3 Enable",
+              "boiler 3 enable",
+              "Boiler_3_Enable"
+            ]
+          },
+          "Boiler 4 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Boiler 4 Enable",
+              "boiler 4 enable",
+              "Boiler_4_Enable"
+            ]
+          },
+          "CW Pump 1 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "CW Pump 1 Enable",
+              "cw pump 1 enable",
+              "CW_Pump_1_Enable"
+            ]
+          },
+          "CW Pump 1 Status": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "CW Pump 1 Status",
+              "cw pump 1 status",
+              "CW_Pump_1_Status"
+            ]
+          },
+          "CW Pump 2 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "CW Pump 2 Enable",
+              "cw pump 2 enable",
+              "CW_Pump_2_Enable"
+            ]
+          },
+          "CW Pump 2 Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "CW Pump 2 Status",
+              "cw pump 2 status",
+              "CW_Pump_2_Status"
+            ]
+          },
+          "Chiller 1 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Chiller 1 Enable",
+              "chiller 1 enable",
+              "Chiller_1_Enable"
+            ]
+          },
+          "Chiller 2 Enable": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Chiller 2 Enable",
+              "chiller 2 enable",
+              "Chiller_2_Enable"
+            ]
+          },
+          "Equipment States Last Update": {
+            "value": "2025-04-06T18:58:38.804Z",
+            "type": "string",
+            "possibleMappings": [
+              "Equipment States Last Update",
+              "equipment states last update",
+              "Equipment_States_Last_Update"
+            ]
+          },
+          "H2O Return Temperature": {
+            "value": 61.34,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Return Temperature",
+              "h2o return temperature",
+              "H2O_Return_Temperature",
+              "Temperature",
+              "temperature",
+              "Return Air Temperature",
+              "ReturnAirTemperature"
+            ]
+          },
+          "H2O Supply Temperature": {
+            "value": 55.38,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Supply Temperature",
+              "h2o supply temperature",
+              "H2O_Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          },
+          "HW Pump 1 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "HW Pump 1 Enable",
+              "hw pump 1 enable",
+              "HW_Pump_1_Enable"
+            ]
+          },
+          "HW Pump 2 Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "HW Pump 2 Enable",
+              "hw pump 2 enable",
+              "HW_Pump_2_Enable"
+            ]
+          },
+          "Heating Loop Return Temperature": {
+            "value": 167.9,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Loop Return Temperature",
+              "heating loop return temperature",
+              "Heating_Loop_Return_Temperature",
+              "Temperature",
+              "temperature",
+              "Return Air Temperature",
+              "ReturnAirTemperature"
+            ]
+          },
+          "Heating Loop Supply Temperature": {
+            "value": 163.85,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Loop Supply Temperature",
+              "heating loop supply temperature",
+              "Heating_Loop_Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 38.48,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 94,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.61,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Thermostat Last Update": {
+            "value": "2025-04-10T14:03:07.655Z",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Last Update",
+              "thermostat last update",
+              "Thermostat_Last_Update"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "HeritageHuntington": {
+    "id": "4",
+    "name": "HeritageHuntington",
+    "systems": {
+      "FanCoil1": {
+        "name": "FanCoil1",
+        "metrics": {
+          "Alarm Status": {
+            "value": "MUA1AllClear",
+            "type": "string",
+            "possibleMappings": [
+              "Alarm Status",
+              "alarm status",
+              "Alarm_Status"
+            ]
+          },
+          "CW Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "CW Actuator",
+              "cw actuator",
+              "CW_Actuator"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freezestat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freezestat",
+              "freezestat"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "Humidity": {
+            "value": 94,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Integral": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Integral",
+              "integral"
+            ]
+          },
+          "Last Error": {
+            "value": 1.6200000000000045,
+            "type": "number",
+            "possibleMappings": [
+              "Last Error",
+              "last error",
+              "Last_Error"
+            ]
+          },
+          "Last Simulated Pressure": {
+            "value": 0.101,
+            "type": "number",
+            "possibleMappings": [
+              "Last Simulated Pressure",
+              "last simulated pressure",
+              "Last_Simulated_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Mixed Air": {
+            "value": 56.2,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air",
+              "mixed air",
+              "Mixed_Air"
+            ]
+          },
+          "OA Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Air": {
+            "value": 39.92,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air",
+              "outdoor air",
+              "Outdoor_Air"
+            ]
+          },
+          "Stage 1 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Stage 1 Enabled",
+              "stage 1 enabled",
+              "Stage_1_Enabled"
+            ]
+          },
+          "Stage 2 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Stage 2 Enabled",
+              "stage 2 enabled",
+              "Stage_2_Enabled"
+            ]
+          },
+          "Supply": {
+            "value": 73.72,
+            "type": "number",
+            "possibleMappings": [
+              "Supply",
+              "supply"
+            ]
+          }
+        }
+      },
+      "MechanicalRoom1": {
+        "name": "MechanicalRoom1",
+        "metrics": {
+          "Active Pump": {
+            "value": "Pump2",
+            "type": "string",
+            "possibleMappings": [
+              "Active Pump",
+              "active pump",
+              "Active_Pump"
+            ]
+          },
+          "Active Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Ambient Temperature": {
+            "value": 137.9,
+            "type": "number",
+            "possibleMappings": [
+              "Ambient Temperature",
+              "ambient temperature",
+              "Ambient_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Boiler 1 Status": {
+            "value": "Open",
+            "type": "string",
+            "possibleMappings": [
+              "Boiler 1 Status",
+              "boiler 1 status",
+              "Boiler_1_Status"
+            ]
+          },
+          "Boiler 2 Status": {
+            "value": "Open",
+            "type": "string",
+            "possibleMappings": [
+              "Boiler 2 Status",
+              "boiler 2 status",
+              "Boiler_2_Status"
+            ]
+          },
+          "CW Pump 1 Status": {
+            "value": "Open",
+            "type": "string",
+            "possibleMappings": [
+              "CW Pump 1 Status",
+              "cw pump 1 status",
+              "CW_Pump_1_Status"
+            ]
+          },
+          "CW Pump 2 Status": {
+            "value": "Open",
+            "type": "string",
+            "possibleMappings": [
+              "CW Pump 2 Status",
+              "cw pump 2 status",
+              "CW_Pump_2_Status"
+            ]
+          },
+          "DM H2O Return": {
+            "value": 113.97,
+            "type": "number",
+            "possibleMappings": [
+              "DM H2O Return",
+              "dm h2o return",
+              "DM_H2O_Return"
+            ]
+          },
+          "DM H2O Supply": {
+            "value": 116.97,
+            "type": "number",
+            "possibleMappings": [
+              "DM H2O Supply",
+              "dm h2o supply",
+              "DM_H2O_Supply"
+            ]
+          },
+          "DM Target Temperature": {
+            "value": 124.75,
+            "type": "number",
+            "possibleMappings": [
+              "DM Target Temperature",
+              "dm target temperature",
+              "DM_Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "DM Temperature Differential": {
+            "value": -7.090000000000003,
+            "type": "number",
+            "possibleMappings": [
+              "DM Temperature Differential",
+              "dm temperature differential",
+              "DM_Temperature_Differential",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "H2O Return": {
+            "value": 144.55,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Return",
+              "h2o return",
+              "H2O_Return"
+            ]
+          },
+          "H2O Supply": {
+            "value": 137.9,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Supply",
+              "h2o supply",
+              "H2O_Supply"
+            ]
+          },
+          "HVAC State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "HW Pump 1 Status": {
+            "value": "Open",
+            "type": "string",
+            "possibleMappings": [
+              "HW Pump 1 Status",
+              "hw pump 1 status",
+              "HW_Pump_1_Status"
+            ]
+          },
+          "HW Pump 2 Status": {
+            "value": "Open",
+            "type": "string",
+            "possibleMappings": [
+              "HW Pump 2 Status",
+              "hw pump 2 status",
+              "HW_Pump_2_Status"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 49.1,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 92,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 1.79,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Pump 1 Status": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Pump 1 Status",
+              "pump 1 status",
+              "Pump_1_Status"
+            ]
+          },
+          "Pump 2 Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Pump 2 Status",
+              "pump 2 status",
+              "Pump_2_Status"
+            ]
+          },
+          "Target Temperature": {
+            "value": 150,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Temperature Differential": {
+            "value": 12.099999999999994,
+            "type": "number",
+            "possibleMappings": [
+              "Temperature Differential",
+              "temperature differential",
+              "Temperature_Differential",
+              "Temperature",
+              "temperature"
+            ]
+          }
+        }
+      },
+      "MechanicalRoom2": {
+        "name": "MechanicalRoom2",
+        "metrics": {
+          "Active Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Ambient Temperature": {
+            "value": 134.04,
+            "type": "number",
+            "possibleMappings": [
+              "Ambient Temperature",
+              "ambient temperature",
+              "Ambient_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Boiler 1 Status": {
+            "value": "On",
+            "type": "string",
+            "possibleMappings": [
+              "Boiler 1 Status",
+              "boiler 1 status",
+              "Boiler_1_Status"
+            ]
+          },
+          "Boiler 2 Status": {
+            "value": "On",
+            "type": "string",
+            "possibleMappings": [
+              "Boiler 2 Status",
+              "boiler 2 status",
+              "Boiler_2_Status"
+            ]
+          },
+          "H2O Return": {
+            "value": "132.19",
+            "type": "string",
+            "possibleMappings": [
+              "H2O Return",
+              "h2o return",
+              "H2O_Return"
+            ]
+          },
+          "H2O Supply": {
+            "value": "134.04",
+            "type": "string",
+            "possibleMappings": [
+              "H2O Supply",
+              "h2o supply",
+              "H2O_Supply"
+            ]
+          },
+          "HVAC State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "HW Pump 1 Status": {
+            "value": "On",
+            "type": "string",
+            "possibleMappings": [
+              "HW Pump 1 Status",
+              "hw pump 1 status",
+              "HW_Pump_1_Status"
+            ]
+          },
+          "HW Pump 2 Status": {
+            "value": "Off",
+            "type": "string",
+            "possibleMappings": [
+              "HW Pump 2 Status",
+              "hw pump 2 status",
+              "HW_Pump_2_Status"
+            ]
+          },
+          "Lead Lag Week": {
+            "value": 2,
+            "type": "number",
+            "possibleMappings": [
+              "Lead Lag Week",
+              "lead lag week",
+              "Lead_Lag_Week"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 39.92,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 95,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 1.79,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Pump Discharge Pressure": {
+            "value": 6.48,
+            "type": "number",
+            "possibleMappings": [
+              "Pump Discharge Pressure",
+              "pump discharge pressure",
+              "Pump_Discharge_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Target Temperature": {
+            "value": 160,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "VFD Speed": {
+            "value": 6.139,
+            "type": "number",
+            "possibleMappings": [
+              "VFD Speed",
+              "vfd speed",
+              "VFD_Speed"
+            ]
+          },
+          "VFD Status": {
+            "value": "On",
+            "type": "string",
+            "possibleMappings": [
+              "VFD Status",
+              "vfd status",
+              "VFD_Status"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "HeritageWarren": {
+    "id": "1",
+    "name": "HeritageWarren",
+    "systems": {
+      "AHU-1": {
+        "name": "AHU-1",
+        "metrics": {
+          "Cooling Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Cooling Actuator",
+              "cooling actuator",
+              "Cooling_Actuator"
+            ]
+          },
+          "Fan Amps": {
+            "value": 5.35,
+            "type": "number",
+            "possibleMappings": [
+              "Fan Amps",
+              "fan amps",
+              "Fan_Amps"
+            ]
+          },
+          "Fan Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Enabled",
+              "fan enabled",
+              "Fan_Enabled"
+            ]
+          },
+          "Fan Running": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Running",
+              "fan running",
+              "Fan_Running"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "Heating Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Actuator",
+              "heating actuator",
+              "Heating_Actuator"
+            ]
+          },
+          "OA Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Outdoor Temperature": {
+            "value": 45.49,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Temperature",
+              "outdoor temperature",
+              "Outdoor_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Pump Amps": {
+            "value": 3.69,
+            "type": "number",
+            "possibleMappings": [
+              "Pump Amps",
+              "pump amps",
+              "Pump_Amps"
+            ]
+          },
+          "Pump Running": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Pump Running",
+              "pump running",
+              "Pump_Running"
+            ]
+          },
+          "Pump Status": {
+            "value": 1,
+            "type": "number",
+            "possibleMappings": [
+              "Pump Status",
+              "pump status",
+              "Pump_Status"
+            ]
+          },
+          "Setpoint": {
+            "value": 78,
+            "type": "number",
+            "possibleMappings": [
+              "Setpoint",
+              "setpoint"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 72.25,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          }
+        }
+      },
+      "AHU-2": {
+        "name": "AHU-2",
+        "metrics": {
+          "Cooling Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Cooling Actuator",
+              "cooling actuator",
+              "Cooling_Actuator"
+            ]
+          },
+          "Fan Amps": {
+            "value": 6.94,
+            "type": "number",
+            "possibleMappings": [
+              "Fan Amps",
+              "fan amps",
+              "Fan_Amps"
+            ]
+          },
+          "Fan Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Enabled",
+              "fan enabled",
+              "Fan_Enabled"
+            ]
+          },
+          "Fan Running": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Running",
+              "fan running",
+              "Fan_Running"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "Global Setpoint": {
+            "value": 77.5,
+            "type": "number",
+            "possibleMappings": [
+              "Global Setpoint",
+              "global setpoint",
+              "Global_Setpoint"
+            ]
+          },
+          "Heating Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Actuator",
+              "heating actuator",
+              "Heating_Actuator"
+            ]
+          },
+          "Heating Stage 1 Amps": {
+            "value": 0.01,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Stage 1 Amps",
+              "heating stage 1 amps",
+              "Heating_Stage_1_Amps"
+            ]
+          },
+          "Heating Stage 1 Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Heating Stage 1 Status",
+              "heating stage 1 status",
+              "Heating_Stage_1_Status"
+            ]
+          },
+          "Heating Stage 2 Amps": {
+            "value": 0.04,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Stage 2 Amps",
+              "heating stage 2 amps",
+              "Heating_Stage_2_Amps"
+            ]
+          },
+          "Heating Stage 2 Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Heating Stage 2 Status",
+              "heating stage 2 status",
+              "Heating_Stage_2_Status"
+            ]
+          },
+          "Mixed Air Temperature": {
+            "value": 59.47,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air Temperature",
+              "mixed air temperature",
+              "Mixed_Air_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "OA Actuator": {
+            "value": 70,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied": {
+            "value": "unoccupied",
+            "type": "string",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Actuator": {
+            "value": 7,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Actuator",
+              "outdoor actuator",
+              "Outdoor_Actuator"
+            ]
+          },
+          "Outdoor Temperature": {
+            "value": 40.05,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Temperature",
+              "outdoor temperature",
+              "Outdoor_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Return Actuator": {
+            "value": 25,
+            "type": "number",
+            "possibleMappings": [
+              "Return Actuator",
+              "return actuator",
+              "Return_Actuator"
+            ]
+          },
+          "Return Temperature": {
+            "value": 83.58,
+            "type": "number",
+            "possibleMappings": [
+              "Return Temperature",
+              "return temperature",
+              "Return_Temperature",
+              "Temperature",
+              "temperature",
+              "Return Air Temperature",
+              "ReturnAirTemperature"
+            ]
+          },
+          "Setpoint": {
+            "value": 94.17,
+            "type": "number",
+            "possibleMappings": [
+              "Setpoint",
+              "setpoint"
+            ]
+          },
+          "Space Temperature": {
+            "value": 77.26,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature",
+              "space temperature",
+              "Space_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 1": {
+            "value": 76.96,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 1",
+              "space temperature 1",
+              "Space_Temperature_1",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 2": {
+            "value": 77.56,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 2",
+              "space temperature 2",
+              "Space_Temperature_2",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 94.17,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          }
+        }
+      },
+      "AHU-4": {
+        "name": "AHU-4",
+        "metrics": {
+          "Cooling Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Cooling Actuator",
+              "cooling actuator",
+              "Cooling_Actuator"
+            ]
+          },
+          "Fan Amps": {
+            "value": 6.7,
+            "type": "number",
+            "possibleMappings": [
+              "Fan Amps",
+              "fan amps",
+              "Fan_Amps"
+            ]
+          },
+          "Fan Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Enabled",
+              "fan enabled",
+              "Fan_Enabled"
+            ]
+          },
+          "Fan Running": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Running",
+              "fan running",
+              "Fan_Running"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "Heating Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Actuator",
+              "heating actuator",
+              "Heating_Actuator"
+            ]
+          },
+          "Mixed Air Temperature": {
+            "value": 44.17,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air Temperature",
+              "mixed air temperature",
+              "Mixed_Air_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "OA Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied": {
+            "value": "unoccupied",
+            "type": "string",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Actuator": {
+            "value": 10,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Actuator",
+              "outdoor actuator",
+              "Outdoor_Actuator"
+            ]
+          },
+          "Outdoor Temperature": {
+            "value": 40.05,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Temperature",
+              "outdoor temperature",
+              "Outdoor_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Return Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Return Actuator",
+              "return actuator",
+              "Return_Actuator"
+            ]
+          },
+          "Return Temperature": {
+            "value": 73.82,
+            "type": "number",
+            "possibleMappings": [
+              "Return Temperature",
+              "return temperature",
+              "Return_Temperature",
+              "Temperature",
+              "temperature",
+              "Return Air Temperature",
+              "ReturnAirTemperature"
+            ]
+          },
+          "Space Temperature": {
+            "value": 75.48,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature",
+              "space temperature",
+              "Space_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Space Temperature 1": {
+            "value": 75.48,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature 1",
+              "space temperature 1",
+              "Space_Temperature_1",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 81.42,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          }
+        }
+      },
+      "AHU-7": {
+        "name": "AHU-7",
+        "metrics": {
+          "Dehumidification Active": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Dehumidification Active",
+              "dehumidification active",
+              "Dehumidification_Active",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "Freezestat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freezestat",
+              "freezestat"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "Humidity": {
+            "value": 92,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Last Preheat Error": {
+            "value": 2.8900000000000006,
+            "type": "number",
+            "possibleMappings": [
+              "Last Preheat Error",
+              "last preheat error",
+              "Last_Preheat_Error"
+            ]
+          },
+          "Last Pump State": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Last Pump State",
+              "last pump state",
+              "Last_Pump_State"
+            ]
+          },
+          "Last Reheat Error": {
+            "value": 2.8900000000000006,
+            "type": "number",
+            "possibleMappings": [
+              "Last Reheat Error",
+              "last reheat error",
+              "Last_Reheat_Error"
+            ]
+          },
+          "Last Simulated Pressure": {
+            "value": 0.103,
+            "type": "number",
+            "possibleMappings": [
+              "Last Simulated Pressure",
+              "last simulated pressure",
+              "Last_Simulated_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Mixed Air Temperature": {
+            "value": 67.03,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air Temperature",
+              "mixed air temperature",
+              "Mixed_Air_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "OA Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Temperature": {
+            "value": 34.52,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Temperature",
+              "outdoor temperature",
+              "Outdoor_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Preheat Integral": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "Preheat Integral",
+              "preheat integral",
+              "Preheat_Integral"
+            ]
+          },
+          "Preheat Valve": {
+            "value": 73.34,
+            "type": "number",
+            "possibleMappings": [
+              "Preheat Valve",
+              "preheat valve",
+              "Preheat_Valve"
+            ]
+          },
+          "Reheat Integral": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "Reheat Integral",
+              "reheat integral",
+              "Reheat_Integral"
+            ]
+          },
+          "Reheat Valve": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "Reheat Valve",
+              "reheat valve",
+              "Reheat_Valve"
+            ]
+          },
+          "Return Temperature": {
+            "value": 88.83,
+            "type": "number",
+            "possibleMappings": [
+              "Return Temperature",
+              "return temperature",
+              "Return_Temperature",
+              "Temperature",
+              "temperature",
+              "Return Air Temperature",
+              "ReturnAirTemperature"
+            ]
+          },
+          "Space Humidity": {
+            "value": 48.95,
+            "type": "number",
+            "possibleMappings": [
+              "Space Humidity",
+              "space humidity",
+              "Space_Humidity",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Space Temperature": {
+            "value": 87.11,
+            "type": "number",
+            "possibleMappings": [
+              "Space Temperature",
+              "space temperature",
+              "Space_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 82.6,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          },
+          "VFD Speed": {
+            "value": 13.17,
+            "type": "number",
+            "possibleMappings": [
+              "VFD Speed",
+              "vfd speed",
+              "VFD_Speed"
+            ]
+          }
+        }
+      },
+      "SteamBundle": {
+        "name": "SteamBundle",
+        "metrics": {
+          "OneThird Actuator": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "OneThird Actuator",
+              "onethird actuator",
+              "OneThird_Actuator"
+            ]
+          },
+          "Outdoor Temperature": {
+            "value": 40.05,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Temperature",
+              "outdoor temperature",
+              "Outdoor_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Pump 1 Amps": {
+            "value": 20.89,
+            "type": "number",
+            "possibleMappings": [
+              "Pump 1 Amps",
+              "pump 1 amps",
+              "Pump_1_Amps"
+            ]
+          },
+          "Pump 1 Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Pump 1 Status",
+              "pump 1 status",
+              "Pump_1_Status"
+            ]
+          },
+          "Pump 2 Amps": {
+            "value": 0.01,
+            "type": "number",
+            "possibleMappings": [
+              "Pump 2 Amps",
+              "pump 2 amps",
+              "Pump_2_Amps"
+            ]
+          },
+          "Pump 2 Running": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Pump 2 Running",
+              "pump 2 running",
+              "Pump_2_Running"
+            ]
+          },
+          "Pump 2 Status": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Pump 2 Status",
+              "pump 2 status",
+              "Pump_2_Status"
+            ]
+          },
+          "Pump Running": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Pump Running",
+              "pump running",
+              "Pump_Running"
+            ]
+          },
+          "Return Temperature": {
+            "value": 147.49,
+            "type": "number",
+            "possibleMappings": [
+              "Return Temperature",
+              "return temperature",
+              "Return_Temperature",
+              "Temperature",
+              "temperature",
+              "Return Air Temperature",
+              "ReturnAirTemperature"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 149.65,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          },
+          "TwoThirds Actuator": {
+            "value": 1,
+            "type": "number",
+            "possibleMappings": [
+              "TwoThirds Actuator",
+              "twothirds actuator",
+              "TwoThirds_Actuator"
+            ]
+          },
+          "Valve 1 Active": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Valve 1 Active",
+              "valve 1 active",
+              "Valve_1_Active"
+            ]
+          },
+          "Valve 1 Percent": {
+            "value": 100,
+            "type": "number",
+            "possibleMappings": [
+              "Valve 1 Percent",
+              "valve 1 percent",
+              "Valve_1_Percent"
+            ]
+          },
+          "Valve 2 Active": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Valve 2 Active",
+              "valve 2 active",
+              "Valve_2_Active"
+            ]
+          },
+          "Valve 2 Percent": {
+            "value": 1.0104467665007357,
+            "type": "number",
+            "possibleMappings": [
+              "Valve 2 Percent",
+              "valve 2 percent",
+              "Valve_2_Percent"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "HopbridgeAutismCenter": {
+    "id": "5",
+    "name": "HopbridgeAutismCenter",
+    "systems": {
+      "AHU-1": {
+        "name": "AHU-1",
+        "metrics": {
+          "Alarm Status": {
+            "value": "MUA1AllClear",
+            "type": "string",
+            "possibleMappings": [
+              "Alarm Status",
+              "alarm status",
+              "Alarm_Status"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "Humidity": {
+            "value": 49,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Integral": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "Integral",
+              "integral"
+            ]
+          },
+          "Last Error": {
+            "value": -12.799999999999997,
+            "type": "number",
+            "possibleMappings": [
+              "Last Error",
+              "last error",
+              "Last_Error"
+            ]
+          },
+          "Last Simulated Pressure": {
+            "value": 0.091,
+            "type": "number",
+            "possibleMappings": [
+              "Last Simulated Pressure",
+              "last simulated pressure",
+              "Last_Simulated_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Mixed Air Temperature": {
+            "value": 69.26,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air Temperature",
+              "mixed air temperature",
+              "Mixed_Air_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "OA Actuator": {
+            "value": 28,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 38.66,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Stage 1 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Stage 1 Enabled",
+              "stage 1 enabled",
+              "Stage_1_Enabled"
+            ]
+          },
+          "Stage 2 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Stage 2 Enabled",
+              "stage 2 enabled",
+              "Stage_2_Enabled"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 61.38,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          }
+        }
+      },
+      "AHU-2": {
+        "name": "AHU-2",
+        "metrics": {
+          "Circuit 1 SLT": {
+            "value": "67.59",
+            "type": "string",
+            "possibleMappings": [
+              "Circuit 1 SLT",
+              "circuit 1 slt",
+              "Circuit_1_SLT"
+            ]
+          },
+          "Circuit 2 SLT": {
+            "value": "67.31",
+            "type": "string",
+            "possibleMappings": [
+              "Circuit 2 SLT",
+              "circuit 2 slt",
+              "Circuit_2_SLT"
+            ]
+          },
+          "DX Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "DX Enabled",
+              "dx enabled",
+              "DX_Enabled"
+            ]
+          },
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "Humidity": {
+            "value": 63,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Mixed Air Temperature": {
+            "value": 70.37,
+            "type": "number",
+            "possibleMappings": [
+              "Mixed Air Temperature",
+              "mixed air temperature",
+              "Mixed_Air_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "OA Actuator": {
+            "value": 0,
+            "type": "number",
+            "possibleMappings": [
+              "OA Actuator",
+              "oa actuator",
+              "OA_Actuator"
+            ]
+          },
+          "Occupied": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 28.04,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 69.26,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          }
+        }
+      },
+      "AHU-3": {
+        "name": "AHU-3",
+        "metrics": {
+          "Fan Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "Humidity": {
+            "value": 47,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Occupied": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 38.48,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 74.17,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          }
+        }
+      },
+      "Boilers": {
+        "name": "Boilers",
+        "metrics": {
+          "Active Boiler": {
+            "value": 2,
+            "type": "number",
+            "possibleMappings": [
+              "Active Boiler",
+              "active boiler",
+              "Active_Boiler"
+            ]
+          },
+          "Aux Pump Status": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Aux Pump Status",
+              "aux pump status",
+              "Aux_Pump_Status"
+            ]
+          },
+          "Boiler 1 Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Boiler 1 Enabled",
+              "boiler 1 enabled",
+              "Boiler_1_Enabled"
+            ]
+          },
+          "Boiler 2 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Boiler 2 Enabled",
+              "boiler 2 enabled",
+              "Boiler_2_Enabled"
+            ]
+          },
+          "Boiler 2 Status": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Boiler 2 Status",
+              "boiler 2 status",
+              "Boiler_2_Status"
+            ]
+          },
+          "Boiler Enable": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Boiler Enable",
+              "boiler enable",
+              "Boiler_Enable"
+            ]
+          },
+          "Boiler Timer": {
+            "value": 1735935384741,
+            "type": "number",
+            "possibleMappings": [
+              "Boiler Timer",
+              "boiler timer",
+              "Boiler_Timer"
+            ]
+          },
+          "Freezestat": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freezestat",
+              "freezestat"
+            ]
+          },
+          "HOA Mode": {
+            "value": "Auto",
+            "type": "string",
+            "possibleMappings": [
+              "HOA Mode",
+              "hoa mode",
+              "HOA_Mode"
+            ]
+          },
+          "Humidity": {
+            "value": 96,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Occupied": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Occupied",
+              "occupied"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 20.3,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Temperature": {
+            "value": 38.3,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Temperature",
+              "outdoor temperature",
+              "Outdoor_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Pump 4 Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Pump 4 Status",
+              "pump 4 status",
+              "Pump_4_Status"
+            ]
+          },
+          "Pump Pressure": {
+            "value": 11.49,
+            "type": "number",
+            "possibleMappings": [
+              "Pump Pressure",
+              "pump pressure",
+              "Pump_Pressure",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Pump Pressure (alt)": {
+            "value": 11.49,
+            "type": "number",
+            "possibleMappings": [
+              "Pump Pressure (alt)",
+              "pump pressure (alt)",
+              "Pump_Pressure_(alt)",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Return Temperature": {
+            "value": 105.85,
+            "type": "number",
+            "possibleMappings": [
+              "Return Temperature",
+              "return temperature",
+              "Return_Temperature",
+              "Temperature",
+              "temperature",
+              "Return Air Temperature",
+              "ReturnAirTemperature"
+            ]
+          },
+          "Supply Temperature": {
+            "value": 107.89,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Temperature",
+              "supply temperature",
+              "Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          },
+          "Timer Started": {
+            "value": 1,
+            "type": "number",
+            "possibleMappings": [
+              "Timer Started",
+              "timer started",
+              "Timer_Started"
+            ]
+          },
+          "VAV Pump Status": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "VAV Pump Status",
+              "vav pump status",
+              "VAV_Pump_Status"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "NERealtyGroup": {
+    "id": "10",
+    "name": "NERealtyGroup",
+    "systems": {
+      "GeoLoop": {
+        "name": "GeoLoop",
+        "metrics": {
+          "Active Switch State": {
+            "value": "cooling",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Alarm Status": {
+            "value": "Clear",
+            "type": "string",
+            "possibleMappings": [
+              "Alarm Status",
+              "alarm status",
+              "Alarm_Status"
+            ]
+          },
+          "Ambient Temperature": {
+            "value": "45.39",
+            "type": "string",
+            "possibleMappings": [
+              "Ambient Temperature",
+              "ambient temperature",
+              "Ambient_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Compressor Starts Counter": {
+            "value": [
+              143,
+              154,
+              177,
+              149
+            ],
+            "type": "object",
+            "possibleMappings": [
+              "Compressor Starts Counter",
+              "compressor starts counter",
+              "Compressor_Starts_Counter",
+              "Pressure",
+              "pressure",
+              "Static Pressure"
+            ]
+          },
+          "Freeze Stat": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "H2O Return Temperature": {
+            "value": 52.3625,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Return Temperature",
+              "h2o return temperature",
+              "H2O_Return_Temperature",
+              "Temperature",
+              "temperature",
+              "Return Air Temperature",
+              "ReturnAirTemperature"
+            ]
+          },
+          "H2O Supply Temperature": {
+            "value": 45.3875,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Supply Temperature",
+              "h2o supply temperature",
+              "H2O_Supply_Temperature",
+              "Temperature",
+              "temperature",
+              "Supply Air Temperature",
+              "SupplyAirTemperature"
+            ]
+          },
+          "HVAC State": {
+            "value": "cooling",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "Mechanical Cooling Alarm Active": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Mechanical Cooling Alarm Active",
+              "mechanical cooling alarm active",
+              "Mechanical_Cooling_Alarm_Active"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 38.48,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 96,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.57,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "RPI CPU %": {
+            "value": 66.705,
+            "type": "number",
+            "possibleMappings": [
+              "RPI CPU %",
+              "rpi cpu %",
+              "RPI_CPU_%"
+            ]
+          },
+          "RPI Core Temperature": {
+            "value": 66.705,
+            "type": "number",
+            "possibleMappings": [
+              "RPI Core Temperature",
+              "rpi core temperature",
+              "RPI_Core_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Target Temperature": {
+            "value": 45,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "Residential": {
+    "id": "12",
+    "name": "Residential",
+    "systems": {
+      "RRCottage": {
+        "name": "RRCottage",
+        "metrics": {
+          "Active Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Average Temperature": {
+            "value": "70.06",
+            "type": "string",
+            "possibleMappings": [
+              "Average Temperature",
+              "average temperature",
+              "Average_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Cooling Alarm": {
+            "value": "Normal",
+            "type": "string",
+            "possibleMappings": [
+              "Cooling Alarm",
+              "cooling alarm",
+              "Cooling_Alarm"
+            ]
+          },
+          "Downstairs Environment": {
+            "value": "65.07",
+            "type": "string",
+            "possibleMappings": [
+              "Downstairs Environment",
+              "downstairs environment",
+              "Downstairs_Environment"
+            ]
+          },
+          "H2O Alarm": {
+            "value": "Normal",
+            "type": "string",
+            "possibleMappings": [
+              "H2O Alarm",
+              "h2o alarm",
+              "H2O_Alarm"
+            ]
+          },
+          "H2O Return": {
+            "value": "131.89",
+            "type": "string",
+            "possibleMappings": [
+              "H2O Return",
+              "h2o return",
+              "H2O_Return"
+            ]
+          },
+          "H2O Supply": {
+            "value": "130.90",
+            "type": "string",
+            "possibleMappings": [
+              "H2O Supply",
+              "h2o supply",
+              "H2O_Supply"
+            ]
+          },
+          "HVAC State": {
+            "value": "off",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "Heating Alarm": {
+            "value": "Normal",
+            "type": "string",
+            "possibleMappings": [
+              "Heating Alarm",
+              "heating alarm",
+              "Heating_Alarm"
+            ]
+          },
+          "Last Valid BME280 Reading": {
+            "value": 18.37,
+            "type": "number",
+            "possibleMappings": [
+              "Last Valid BME280 Reading",
+              "last valid bme280 reading",
+              "Last_Valid_BME280_Reading"
+            ]
+          },
+          "Last Valid Thermistor Reading": {
+            "value": 131.89,
+            "type": "number",
+            "possibleMappings": [
+              "Last Valid Thermistor Reading",
+              "last valid thermistor reading",
+              "Last_Valid_Thermistor_Reading"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 37.22,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 95,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.06,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Target Temperature": {
+            "value": 65,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Thermostat Ambient Temperature": {
+            "value": "70.06",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Ambient Temperature",
+              "thermostat ambient temperature",
+              "Thermostat_Ambient_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Thermostat Away": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Thermostat Away",
+              "thermostat away",
+              "Thermostat_Away"
+            ]
+          },
+          "Thermostat Mode": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Mode",
+              "thermostat mode",
+              "Thermostat_Mode"
+            ]
+          },
+          "Thermostat Switch State": {
+            "value": "off",
+            "type": "string",
+            "possibleMappings": [
+              "Thermostat Switch State",
+              "thermostat switch state",
+              "Thermostat_Switch_State"
+            ]
+          },
+          "Thermostat Target Temperature": {
+            "value": 65,
+            "type": "number",
+            "possibleMappings": [
+              "Thermostat Target Temperature",
+              "thermostat target temperature",
+              "Thermostat_Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Upstairs Environment": {
+            "value": "75.02",
+            "type": "string",
+            "possibleMappings": [
+              "Upstairs Environment",
+              "upstairs environment",
+              "Upstairs_Environment"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "StJohnCatholicSchool": {
+    "id": "11",
+    "name": "StJohnCatholicSchool",
+    "systems": {
+      "Chiller": {
+        "name": "Chiller",
+        "metrics": {
+          "Active Pump": {
+            "value": "Pump1",
+            "type": "string",
+            "possibleMappings": [
+              "Active Pump",
+              "active pump",
+              "Active_Pump"
+            ]
+          },
+          "Active Switch State": {
+            "value": "heating",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Alarm Status": {
+            "value": "H20ReturnHighAlarm, H20SupplyHighAlarm",
+            "type": "string",
+            "possibleMappings": [
+              "Alarm Status",
+              "alarm status",
+              "Alarm_Status"
+            ]
+          },
+          "Ambient Temperature": {
+            "value": "91.06",
+            "type": "string",
+            "possibleMappings": [
+              "Ambient Temperature",
+              "ambient temperature",
+              "Ambient_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "H2O Return": {
+            "value": 91.166,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Return",
+              "h2o return",
+              "H2O_Return"
+            ]
+          },
+          "H2O Supply": {
+            "value": 91.058,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Supply",
+              "h2o supply",
+              "H2O_Supply"
+            ]
+          },
+          "H2O Supply Alt": {
+            "value": 91.50800000000001,
+            "type": "number",
+            "possibleMappings": [
+              "H2O Supply Alt",
+              "h2o supply alt",
+              "H2O_Supply_Alt"
+            ]
+          },
+          "HVAC State": {
+            "value": "off",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 38.3,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 96,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.57,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Supply Air": {
+            "value": 91.058,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Air",
+              "supply air",
+              "Supply_Air"
+            ]
+          },
+          "Target Temperature": {
+            "value": 54,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "StJudeCatholicSchool": {
+    "id": "2",
+    "name": "StJudeCatholicSchool",
+    "systems": {
+      "Room110_FCU-110": {
+        "name": "Room110_FCU-110",
+        "metrics": {
+          "Active Switch State": {
+            "value": "off",
+            "type": "string",
+            "possibleMappings": [
+              "Active Switch State",
+              "active switch state",
+              "Active_Switch_State"
+            ]
+          },
+          "Cooling Modulation Logic Status": {
+            "value": "Cooling Status Holding",
+            "type": "string",
+            "possibleMappings": [
+              "Cooling Modulation Logic Status",
+              "cooling modulation logic status",
+              "Cooling_Modulation_Logic_Status"
+            ]
+          },
+          "Cooling Setpoint Differential": {
+            "value": -0.12000000000000455,
+            "type": "number",
+            "possibleMappings": [
+              "Cooling Setpoint Differential",
+              "cooling setpoint differential",
+              "Cooling_Setpoint_Differential"
+            ]
+          },
+          "Discharge Air": {
+            "value": 70.7,
+            "type": "number",
+            "possibleMappings": [
+              "Discharge Air",
+              "discharge air",
+              "Discharge_Air"
+            ]
+          },
+          "Fan Status": {
+            "value": "On",
+            "type": "string",
+            "possibleMappings": [
+              "Fan Status",
+              "fan status",
+              "Fan_Status"
+            ]
+          },
+          "Freeze Stat": {
+            "value": "Closed",
+            "type": "string",
+            "possibleMappings": [
+              "Freeze Stat",
+              "freeze stat",
+              "Freeze_Stat"
+            ]
+          },
+          "HVAC State": {
+            "value": "off",
+            "type": "string",
+            "possibleMappings": [
+              "HVAC State",
+              "hvac state",
+              "HVAC_State"
+            ]
+          },
+          "Heating Modulation Logic Status": {
+            "value": "Heating Active",
+            "type": "string",
+            "possibleMappings": [
+              "Heating Modulation Logic Status",
+              "heating modulation logic status",
+              "Heating_Modulation_Logic_Status"
+            ]
+          },
+          "Heating Setpoint Differential": {
+            "value": 0.35999999999999943,
+            "type": "number",
+            "possibleMappings": [
+              "Heating Setpoint Differential",
+              "heating setpoint differential",
+              "Heating_Setpoint_Differential"
+            ]
+          },
+          "Last No Alarm Time": {
+            "value": 1744293649,
+            "type": "number",
+            "possibleMappings": [
+              "Last No Alarm Time",
+              "last no alarm time",
+              "Last_No_Alarm_Time"
+            ]
+          },
+          "Outdoor Air Temperature": {
+            "value": 38.3,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Air Temperature",
+              "outdoor air temperature",
+              "Outdoor_Air_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Outdoor Humidity": {
+            "value": 96,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Humidity",
+              "outdoor humidity",
+              "Outdoor_Humidity",
+              "Humidity",
+              "humidity",
+              "Outside Air Humidity",
+              "Outdoor Air Humidity"
+            ]
+          },
+          "Outdoor Wind Speed": {
+            "value": 2.57,
+            "type": "number",
+            "possibleMappings": [
+              "Outdoor Wind Speed",
+              "outdoor wind speed",
+              "Outdoor_Wind_Speed"
+            ]
+          },
+          "Supply Air": {
+            "value": 71.64,
+            "type": "number",
+            "possibleMappings": [
+              "Supply Air",
+              "supply air",
+              "Supply_Air"
+            ]
+          },
+          "Target Temperature": {
+            "value": 72,
+            "type": "number",
+            "possibleMappings": [
+              "Target Temperature",
+              "target temperature",
+              "Target_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "TaylorUniversity": {
+    "id": "7",
+    "name": "TaylorUniversity",
+    "systems": {
+      "Greenhouse": {
+        "name": "Greenhouse",
+        "metrics": {
+          "Average Humidity": {
+            "value": 60.65,
+            "type": "number",
+            "possibleMappings": [
+              "Average Humidity",
+              "average humidity",
+              "Average_Humidity",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Average Temperature": {
+            "value": 78.88,
+            "type": "number",
+            "possibleMappings": [
+              "Average Temperature",
+              "average temperature",
+              "Average_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Exhaust Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Exhaust Active Control",
+              "exhaust active control",
+              "Exhaust_Active_Control"
+            ]
+          },
+          "Exhaust Fan 1 Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Exhaust Fan 1 Active Control",
+              "exhaust fan 1 active control",
+              "Exhaust_Fan_1_Active_Control"
+            ]
+          },
+          "Exhaust Fan 1 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Exhaust Fan 1 Enabled",
+              "exhaust fan 1 enabled",
+              "Exhaust_Fan_1_Enabled"
+            ]
+          },
+          "Exhaust Fan 2 Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Exhaust Fan 2 Active Control",
+              "exhaust fan 2 active control",
+              "Exhaust_Fan_2_Active_Control"
+            ]
+          },
+          "Exhaust Fan 2 Enabled": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Exhaust Fan 2 Enabled",
+              "exhaust fan 2 enabled",
+              "Exhaust_Fan_2_Enabled"
+            ]
+          },
+          "FCU 1 Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "FCU 1 Active Control",
+              "fcu 1 active control",
+              "FCU_1_Active_Control"
+            ]
+          },
+          "FCU 1 Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "FCU 1 Enabled",
+              "fcu 1 enabled",
+              "FCU_1_Enabled"
+            ]
+          },
+          "FCU 2 Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "FCU 2 Active Control",
+              "fcu 2 active control",
+              "FCU_2_Active_Control"
+            ]
+          },
+          "FCU 2 Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "FCU 2 Enabled",
+              "fcu 2 enabled",
+              "FCU_2_Enabled"
+            ]
+          },
+          "FCU 3 Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "FCU 3 Enabled",
+              "fcu 3 enabled",
+              "FCU_3_Enabled"
+            ]
+          },
+          "FCU 4 Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "FCU 4 Active Control",
+              "fcu 4 active control",
+              "FCU_4_Active_Control"
+            ]
+          },
+          "FCU 4 Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "FCU 4 Enabled",
+              "fcu 4 enabled",
+              "FCU_4_Enabled"
+            ]
+          },
+          "FCU Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "FCU Active Control",
+              "fcu active control",
+              "FCU_Active_Control"
+            ]
+          },
+          "Floor Heat 2 Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Floor Heat 2 Enabled",
+              "floor heat 2 enabled",
+              "Floor_Heat_2_Enabled"
+            ]
+          },
+          "Floor Heat Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Floor Heat Active Control",
+              "floor heat active control",
+              "Floor_Heat_Active_Control"
+            ]
+          },
+          "Global Setpoint": {
+            "value": 85,
+            "type": "number",
+            "possibleMappings": [
+              "Global Setpoint",
+              "global setpoint",
+              "Global_Setpoint"
+            ]
+          },
+          "Humidity 1": {
+            "value": 58.4,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity 1",
+              "humidity 1",
+              "Humidity_1",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Humidity 2": {
+            "value": 62.9,
+            "type": "number",
+            "possibleMappings": [
+              "Humidity 2",
+              "humidity 2",
+              "Humidity_2",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Is Raining": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Is Raining",
+              "is raining",
+              "Is_Raining"
+            ]
+          },
+          "Outside Temperature": {
+            "value": 39.78,
+            "type": "number",
+            "possibleMappings": [
+              "Outside Temperature",
+              "outside temperature",
+              "Outside_Temperature",
+              "Temperature",
+              "temperature",
+              "Outside Air Temperature",
+              "Outdoor Air Temperature",
+              "OutdoorAirTemperature"
+            ]
+          },
+          "Supply Active Control": {
+            "value": false,
+            "type": "boolean",
+            "possibleMappings": [
+              "Supply Active Control",
+              "supply active control",
+              "Supply_Active_Control"
+            ]
+          },
+          "Supply Enabled": {
+            "value": true,
+            "type": "boolean",
+            "possibleMappings": [
+              "Supply Enabled",
+              "supply enabled",
+              "Supply_Enabled"
+            ]
+          },
+          "Temperature 1": {
+            "value": 78.25,
+            "type": "number",
+            "possibleMappings": [
+              "Temperature 1",
+              "temperature 1",
+              "Temperature_1",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Temperature 2": {
+            "value": 79.5,
+            "type": "number",
+            "possibleMappings": [
+              "Temperature 2",
+              "temperature 2",
+              "Temperature_2",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Time of Day": {
+            "value": "Morning",
+            "type": "string",
+            "possibleMappings": [
+              "Time of Day",
+              "time of day",
+              "Time_of_Day"
+            ]
+          },
+          "Zone 1 Humidity": {
+            "value": 58.4,
+            "type": "number",
+            "possibleMappings": [
+              "Zone 1 Humidity",
+              "zone 1 humidity",
+              "Zone_1_Humidity",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Zone 1 Temperature": {
+            "value": 78.25,
+            "type": "number",
+            "possibleMappings": [
+              "Zone 1 Temperature",
+              "zone 1 temperature",
+              "Zone_1_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          },
+          "Zone 2 Humidity": {
+            "value": 62.9,
+            "type": "number",
+            "possibleMappings": [
+              "Zone 2 Humidity",
+              "zone 2 humidity",
+              "Zone_2_Humidity",
+              "Humidity",
+              "humidity"
+            ]
+          },
+          "Zone 2 Temperature": {
+            "value": 79.5,
+            "type": "number",
+            "possibleMappings": [
+              "Zone 2 Temperature",
+              "zone 2 temperature",
+              "Zone_2_Temperature",
+              "Temperature",
+              "temperature"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

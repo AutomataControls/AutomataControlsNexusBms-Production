@@ -10,6 +10,7 @@ import { WeatherSettings } from "@/components/settings/weather-settings"
 import { ControlSettings } from "@/components/settings/control-settings"
 import { SessionSettings } from "@/components/settings/session-settings"
 import { DatabaseSettings } from "@/components/settings/database-settings"
+import { ConnectionTestingSettings } from "@/components/settings/connection-testing"
 
 export default function SettingsContent() {
   return (
@@ -19,7 +20,7 @@ export default function SettingsContent() {
         <p className="text-muted-foreground">Manage your system settings and preferences.</p>
       </div>
       <Tabs defaultValue="locations" className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="locations" className="hover:bg-[#e6f3f1]">
             Locations
           </TabsTrigger>
@@ -29,16 +30,12 @@ export default function SettingsContent() {
           <TabsTrigger value="notifications" className="hover:bg-[#e6f3f1]">
             Notifications
           </TabsTrigger>
-          
+
           {/* Protected Firebase Tab - Only for DevOps */}
-          <ProtectedTabTrigger 
-            value="firebase" 
-            requiredRoles={["devops", "admin"]} 
-            className="hover:bg-[#e6f3f1]"
-          >
+          <ProtectedTabTrigger value="firebase" requiredRoles={["devops", "admin"]} className="hover:bg-[#e6f3f1]">
             Firebase
           </ProtectedTabTrigger>
-          
+
           <TabsTrigger value="weather" className="hover:bg-[#e6f3f1]">
             Weather
           </TabsTrigger>
@@ -51,6 +48,9 @@ export default function SettingsContent() {
           <TabsTrigger value="database" className="hover:bg-[#e6f3f1]">
             Database
           </TabsTrigger>
+          <TabsTrigger value="connection" className="hover:bg-[#e6f3f1]">
+            Connection
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="locations">
           <LocationSettings />
@@ -61,12 +61,12 @@ export default function SettingsContent() {
         <TabsContent value="notifications">
           <NotificationSettings />
         </TabsContent>
-        
+
         {/* Protected Firebase Content */}
         <ProtectedTabContent value="firebase" requiredRoles={["devops", "admin"]}>
           <FirebaseSettings />
         </ProtectedTabContent>
-        
+
         <TabsContent value="weather">
           <WeatherSettings />
         </TabsContent>
@@ -79,7 +79,11 @@ export default function SettingsContent() {
         <TabsContent value="database">
           <DatabaseSettings />
         </TabsContent>
+        <TabsContent value="connection">
+          <ConnectionTestingSettings />
+        </TabsContent>
       </Tabs>
     </div>
   )
 }
+
