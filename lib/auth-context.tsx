@@ -22,6 +22,7 @@ interface User {
   name: string
   email: string
   roles: string[]
+  assignedLocations?: string[] // This can be a string array or single string in Firestore
 }
 
 interface AuthContextType {
@@ -35,7 +36,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+// Helper function to ensure assignedLocations is always an array
+const convertToArray = (value: any): string[] => {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  
+  if (Array.isArray(value)) {
+    return value.map(String);
+  }
+  
+  // If it's a single value (string, number, etc.), wrap it in an array
+  return [String(value)];
+};
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const db = getFirestore()
@@ -59,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name: firebaseUser.displayName || "",
               email: firebaseUser.email,
               roles: ["user"],
+              assignedLocations: [], // Initialize with empty array
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -67,7 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userData = userDoc.exists() ? userDoc.data() : {
             username: firebaseUser.email,
             name: firebaseUser.displayName || "",
-            roles: ["user"]
+            roles: ["user"],
+            assignedLocations: [] // Initialize with empty array
           }
 
           console.log("Setting user state after Google sign-in");
@@ -77,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: userData.name || firebaseUser.displayName || "",
             email: firebaseUser.email || "",
             roles: userData.roles || ["user"],
+            assignedLocations: convertToArray(userData.assignedLocations) // Convert to array regardless of original format
           })
         } else {
           console.log("No Google redirect result found");
@@ -97,12 +115,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (userDoc.exists()) {
             const userData = userDoc.data()
             console.log("User document found in Firestore");
+            console.log("Raw assignedLocations from Firestore:", userData.assignedLocations);
+            console.log("Converted assignedLocations:", convertToArray(userData.assignedLocations));
             setUser({
               id: firebaseUser.uid,
               username: userData.username || firebaseUser.email || "",
               name: userData.name || "",
               email: firebaseUser.email || "",
               roles: userData.roles || ["user"],
+              assignedLocations: convertToArray(userData.assignedLocations) // Convert to array regardless of original format
             })
           } else {
             console.log("Creating new user document");
@@ -113,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name: firebaseUser.displayName || "",
               email: firebaseUser.email,
               roles: ["user"],
+              assignedLocations: [], // Initialize with empty array
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -122,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name: firebaseUser.displayName || "",
               email: firebaseUser.email || "",
               roles: ["user"],
+              assignedLocations: [] // Include empty assignedLocations
             })
           }
         } catch (error) {
@@ -141,7 +164,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await signInWithEmail(auth, email, password)
       const firebaseUser = userCredential.user
-      console.log("Email login successful for:", firebaseUser.email);
+              console.log("Email login successful for:", firebaseUser.email);
+        // Debug raw user data
+        console.log("Getting user document from Firestore...");
 
       // Get additional user data from Firestore
       const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
@@ -153,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: userData.name || "",
           email: firebaseUser.email || "",
           roles: userData.roles || ["user"],
+          assignedLocations: userData.assignedLocations || [] // Include assignedLocations from Firestore
         })
       } else {
         // Create a new user document if it doesn't exist
@@ -162,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: firebaseUser.displayName || "",
           email: firebaseUser.email,
           roles: ["user"],
+          assignedLocations: [], // Initialize with empty array
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -171,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: firebaseUser.displayName || "",
           email: firebaseUser.email || "",
           roles: ["user"],
+          assignedLocations: [] // Include empty assignedLocations
         })
       }
     } catch (error) {

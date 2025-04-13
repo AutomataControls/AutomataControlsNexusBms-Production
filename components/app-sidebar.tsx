@@ -48,47 +48,119 @@ export function AppSidebar() {
   const router = useRouter()
   const pathname = usePathname()
 
+  // Check if user has admin or DevOps privileges
+  const isAdminOrDevOps = useMemo(() => {
+    return user?.roles && (user.roles.includes("admin") || user.roles.includes("DevOps"));
+  }, [user]);
+
+  // Helper function to get the correct navigation URL based on user role
+  const getNavUrl = useCallback((basePath: string) => {
+    // Admin/DevOps users can access the global pages
+    if (isAdminOrDevOps) {
+      return basePath;
+    }
+    
+    // Regular users should always go to their location-specific pages
+    if (selectedLocation) {
+      // For overview page
+      if (basePath === "/dashboard") {
+        return `/dashboard/location/${selectedLocation}`;
+      }
+      
+      // For other pages, add the locationId parameter
+      return `${basePath}?locationId=${selectedLocation}`;
+    }
+    
+    // Fallback to base path if no location is selected
+    return basePath;
+  }, [isAdminOrDevOps, selectedLocation]);
+
   // Fetch locations with caching
   const fetchLocations = useCallback(async () => {
-    if (!db) return
+    if (!db || !user) return
 
     try {
       setLoading(true)
 
-      const cacheKey = "sidebar_locations"
+      const cacheKey = `sidebar_locations_${user.id}`
       const locationData = await fetchCachedData(
         cacheKey,
         async () => {
           if (!db) return []
 
-          const locationsCollection = collection(db, "locations")
-          const snapshot = await getDocs(locationsCollection)
-          const data = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          console.log("Fetched locations for sidebar:", data) // Debug log
-          return data
+          // If user is admin, fetch all locations
+          if (user.roles && (user.roles.includes("admin") || user.roles.includes("DevOps"))) {
+            console.log("Admin user - fetching all locations")
+            const locationsCollection = collection(db, "locations")
+            const snapshot = await getDocs(locationsCollection)
+            return snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }))
+          }
+          // Otherwise, fetch only assigned locations
+          else if (user.assignedLocations && user.assignedLocations.length > 0) {
+            console.log("Regular user - fetching assigned locations:", user.assignedLocations)
+
+            // Get all locations that match the assigned location IDs
+            const locationsCollection = collection(db, "locations")
+            const snapshot = await getDocs(locationsCollection)
+            const assignedLocationDocs = snapshot.docs
+              .filter((doc) => {
+                // Filter by the id field inside the document (not the document ID)
+                const locationData = doc.data();
+                return user.assignedLocations.includes(locationData.id);
+              })
+              .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              }));
+            
+            console.log("Found assigned location documents:", assignedLocationDocs);
+            return assignedLocationDocs;
+          }
+          // Fallback for users with no assigned locations
+          else {
+            console.log("User has no assigned locations")
+            return []
+          }
         },
-        10, // Cache for 10 minutes
+        5, // Cache for 5 minutes - reduced from 10 to ensure more frequent updates
       )
 
-      console.log("Setting locations in sidebar:", locationData) // Debug log
+      console.log("Setting locations in sidebar:", locationData)
       setLocations(locationData)
 
-      // Check localStorage for saved location
-      const savedLocation = localStorage.getItem("selectedLocation")
-      if (savedLocation && locationData.some((loc) => loc.id === savedLocation)) {
-        setSelectedLocation(savedLocation)
-      } else if (locationData.length > 0 && !selectedLocation) {
+      // Auto-select location logic
+      if (locationData.length === 1) {
+        // If user has only one location, auto-select it
         setSelectedLocation(locationData[0].id)
+        localStorage.setItem("selectedLocation", locationData[0].id)
+      } else {
+        // Check localStorage for saved location
+        const savedLocation = localStorage.getItem("selectedLocation")
+        if (savedLocation && locationData.some((loc) => loc.id === savedLocation)) {
+          setSelectedLocation(savedLocation)
+        } else if (locationData.length > 0 && !selectedLocation) {
+          setSelectedLocation(locationData[0].id)
+        }
+      }
+      
+      // If user is not admin/DevOps and has assignedLocations, make sure we're using the first one
+      if (!isAdminOrDevOps && user.assignedLocations && user.assignedLocations.length > 0) {
+        // Use the first assigned location if none is selected
+        if (!selectedLocation) {
+          console.log("Setting default location for regular user:", user.assignedLocations[0]);
+          setSelectedLocation(user.assignedLocations[0]);
+          localStorage.setItem("selectedLocation", user.assignedLocations[0]);
+        }
       }
     } catch (error) {
       console.error("Error fetching locations:", error)
     } finally {
       setLoading(false)
     }
-  }, [db, selectedLocation, fetchCachedData])
+  }, [db, user, selectedLocation, fetchCachedData, isAdminOrDevOps])
 
   // Fetch equipment with caching
   const fetchEquipment = useCallback(async () => {
@@ -222,10 +294,12 @@ export function AppSidebar() {
                   const isActive = pathname.includes(`/dashboard/controls`) && pathname.includes(item.id)
                   return (
                     <SidebarMenuSubItem key={item.id}>
-                      <SidebarMenuSubButton asChild isActive={isActive} className={isActive ? activeClass : hoverClass}>
-                        <a href={`/dashboard/controls?locationId=${selectedLocation}&equipmentId=${item.id}`}>
-                          {item.name}
-                        </a>
+                      <SidebarMenuSubButton 
+                        onClick={() => router.push(`/dashboard/controls?locationId=${selectedLocation}&equipmentId=${item.id}`)}
+                        isActive={isActive} 
+                        className={isActive ? activeClass : hoverClass}
+                      >
+                        {item.name}
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   )
@@ -273,9 +347,19 @@ export function AppSidebar() {
             <p className="font-medium text-orange-500">{user.name || user.username}</p>
           </div>
         )}
-        <Select value={selectedLocation} onValueChange={handleLocationChange} disabled={loading}>
+        {selectedLocation && locations.find((loc) => loc.id === selectedLocation) && (
+          <div className="mb-3 text-xs">
+            <p className="text-gray-500">Client:</p>
+            <p className="font-medium text-teal-700">{locations.find((loc) => loc.id === selectedLocation)?.name}</p>
+          </div>
+        )}
+        <Select 
+          value={selectedLocation} 
+          onValueChange={handleLocationChange} 
+          disabled={loading || (!isAdminOrDevOps && locations.length <= 1)}
+        >
           <SelectTrigger className="w-full bg-white">
-            <SelectValue placeholder="Select location" />
+            <SelectValue placeholder={isAdminOrDevOps ? "Select location" : "Assigned location"} />
           </SelectTrigger>
           <SelectContent>
             {locations.map((location) => (
@@ -294,72 +378,88 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard"}
-                  className={pathname === "/dashboard" ? activeClass : hoverClass}
-                >
-                  <a href="/dashboard">
-                    <Home className="h-4 w-4" />
-                    <span>Overview</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard/controls"}
-                  className={pathname === "/dashboard/controls" ? activeClass : hoverClass}
-                >
-                  <a
-                    href={
-                      selectedLocation ? `/dashboard/controls?locationId=${selectedLocation}` : "/dashboard/controls"
+                  onClick={() => {
+                    if (isAdminOrDevOps) {
+                      router.push("/dashboard");
+                    } else if (selectedLocation) {
+                      router.push(`/dashboard/location/${selectedLocation}`);
+                    } else {
+                      router.push("/dashboard");
                     }
+                  }}
+                  isActive={isAdminOrDevOps ? pathname === "/dashboard" : pathname.includes(`/dashboard/location/${selectedLocation}`)}
+                  className={isAdminOrDevOps ? 
+                    (pathname === "/dashboard" ? activeClass : hoverClass) : 
+                    (pathname.includes(`/dashboard/location/${selectedLocation}`) ? activeClass : hoverClass)}
+                >
+                  <Home className="h-4 w-4" />
+                  <span>Overview</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => {
+                    if (selectedLocation) {
+                      router.push(`/dashboard/controls?locationId=${selectedLocation}`);
+                    } else {
+                      router.push("/dashboard/controls");
+                    }
+                  }}
+                  isActive={pathname.includes("/dashboard/controls")}
+                  className={pathname.includes("/dashboard/controls") ? activeClass : hoverClass}
+                >
+                  <Gauge className="h-4 w-4" />
+                  <span>Controls</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => {
+                    if (selectedLocation) {
+                      router.push(`/dashboard/analytics?locationId=${selectedLocation}`);
+                    } else {
+                      router.push("/dashboard/analytics");
+                    }
+                  }}
+                  isActive={pathname.includes("/dashboard/analytics")}
+                  className={pathname.includes("/dashboard/analytics") ? activeClass : hoverClass}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Analytics</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => {
+                    if (selectedLocation) {
+                      router.push(`/dashboard/alarms?locationId=${selectedLocation}`);
+                    } else {
+                      router.push("/dashboard/alarms");
+                    }
+                  }}
+                  isActive={pathname.includes("/dashboard/alarms")}
+                  className={pathname.includes("/dashboard/alarms") ? activeClass : hoverClass}
+                >
+                  <Bell className="h-4 w-4" />
+                  <span>Alarms</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {isAdminOrDevOps && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => router.push("/dashboard/settings")}
+                    isActive={pathname.includes("/dashboard/settings")}
+                    className={pathname.includes("/dashboard/settings") ? activeClass : hoverClass}
                   >
-                    <Gauge className="h-4 w-4" />
-                    <span>Controls</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard/analytics"}
-                  className={pathname === "/dashboard/analytics" ? activeClass : hoverClass}
-                >
-                  <a href="/dashboard/analytics">
-                    <BarChart3 className="h-4 w-4" />
-                    <span>Analytics</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard/alarms"}
-                  className={pathname === "/dashboard/alarms" ? activeClass : hoverClass}
-                >
-                  <a href="/dashboard/alarms">
-                    <Bell className="h-4 w-4" />
-                    <span>Alarms</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard/settings"}
-                  className={pathname === "/dashboard/settings" ? activeClass : hoverClass}
-                >
-                  <a href="/dashboard/settings">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -32,10 +32,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { validateTechnician, TECHNICIAN_SPECIALTIES, type Technician } from "@/lib/validation"
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore"
+import { collection, addDoc, getDocs, doc, deleteDoc, getDoc, setDoc } from "firebase/firestore"
 import { Checkbox } from "@/components/ui/checkbox"
 
-const COLLECTION_NAME = "automatabmstechnicians"
+// Try a different collection name to see if there's an issue with the original collection
+const COLLECTION_NAME = "technicians"
 
 export function TechnicianSettings() {
   const { db } = useFirebase()
@@ -71,13 +72,26 @@ export function TechnicianSettings() {
       if (!db) return
 
       try {
+        // Try both collection names to ensure we get data
         const techniciansCollection = collection(db, COLLECTION_NAME)
         const snapshot = await getDocs(techniciansCollection)
-        const technicianData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        setTechnicians(technicianData)
+
+        // If no data in the new collection, try the old one
+        if (snapshot.empty) {
+          const oldCollection = collection(db, "automatabmstechnicians")
+          const oldSnapshot = await getDocs(oldCollection)
+          const technicianData = oldSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          setTechnicians(technicianData)
+        } else {
+          const technicianData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          setTechnicians(technicianData)
+        }
       } catch (error) {
         console.error("Error fetching technicians:", error)
         toast({
@@ -126,7 +140,7 @@ export function TechnicianSettings() {
       const technicianData = {
         ...newTechnician,
         specialties: newTechnician.specialties?.filter((s) => s.level !== "unselected") || [],
-        assignedLocations: newTechnician.assignedLocations?.filter((l) => l !== "unassigned") || [],
+        assignedLocations: newTechnician.assignedLocations?.filter((l) => l !== "not-assigned") || [],
       }
 
       const validationResult = validateTechnician(technicianData)
@@ -186,43 +200,34 @@ export function TechnicianSettings() {
     }
   }
 
+  // Simplified update function
   const handleEditTechnician = async () => {
-    if (!db || !editTechnician) return
+    if (!db || !editTechnician || !editTechnician.id) {
+      alert("Missing database connection or technician data")
+      return
+    }
+
+    // Add a console log at the very beginning of the function
+    console.log("handleEditTechnician function called")
+
+    // Show an alert to confirm the button is being clicked
+    alert("Update button clicked - attempting to update technician with ID: " + editTechnician.id)
 
     setIsLoading(true)
     try {
-      // Ensure we have valid data
-      const technicianData = {
-        ...editTechnician,
-        specialties: editTechnician.specialties?.filter((s) => s.level !== "not-selected") || [],
-        assignedLocations: editTechnician.assignedLocations?.filter((l) => l !== "not-assigned") || [],
-      }
+      // Directly update the document with the provided data
+      const technicianRef = doc(db, COLLECTION_NAME, editTechnician.id)
+      await setDoc(technicianRef, editTechnician, { merge: true })
 
-      const validationResult = validateTechnician(technicianData)
-      if (!validationResult.success) {
-        validationResult.errors.forEach((error) => {
-          toast({
-            title: "Validation Error",
-            description: error.message,
-            variant: "destructive",
-          })
-        })
-        setIsLoading(false)
-        return
-      }
-
-      const technicianDoc = doc(db, COLLECTION_NAME, editTechnician.id)
-      await updateDoc(technicianDoc, {
-        ...validationResult.data,
-        updatedAt: new Date(),
-      })
-
-      setTechnicians(
-        technicians.map((tech) =>
-          tech.id === editTechnician.id ? { ...editTechnician, updatedAt: new Date() } : tech,
-        ),
+      // Update local state
+      setTechnicians((prevTechnicians) =>
+        prevTechnicians.map((tech) => (tech.id === editTechnician.id ? { ...tech, ...editTechnician } : tech)),
       )
 
+      // Show success alert
+      alert("Technician updated successfully!")
+
+      // Close dialog and show toast
       setIsEditDialogOpen(false)
       toast({
         title: "Success",
@@ -230,10 +235,12 @@ export function TechnicianSettings() {
         className: "bg-teal-50 border-teal-200",
       })
     } catch (error) {
-      console.error("Error updating technician:", error)
+      // Show error alert with details
+      alert("Error updating technician: " + (error.message || "Unknown error"))
+
       toast({
         title: "Error",
-        description: "Failed to update technician",
+        description: "Failed to update technician: " + (error.message || "Unknown error"),
         variant: "destructive",
       })
     } finally {
@@ -247,6 +254,11 @@ export function TechnicianSettings() {
     try {
       const technicianDoc = doc(db, COLLECTION_NAME, technicianId)
       await deleteDoc(technicianDoc)
+
+      // Also try deleting from the old collection
+      const oldTechnicianDoc = doc(db, "automatabmstechnicians", technicianId)
+      await deleteDoc(oldTechnicianDoc)
+
       setTechnicians(technicians.filter((tech) => tech.id !== technicianId))
       toast({
         title: "Success",

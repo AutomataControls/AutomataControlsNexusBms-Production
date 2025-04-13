@@ -16,84 +16,100 @@ const mqttConfigSchema = z.object({
 })
 
 // Base threshold value schema
-const thresholdValueSchema = z.object({
-  min: z.number(),
-  max: z.number(),
-}).refine((data) => data.max > data.min, {
-  message: "Maximum value must be greater than minimum value",
-  path: ["max"],
-})
+const thresholdValueSchema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+  })
+  .refine((data) => data.max > data.min, {
+    message: "Maximum value must be greater than minimum value",
+    path: ["max"],
+  })
 
 // Measurement validation schemas
-const temperatureSchema = z.object({
-  min: z.number(),
-  max: z.number(),
-  unit: z.literal("°F"),
-  label: z.string(),
-}).refine((data) => data.max > data.min, {
-  message: "Maximum value must be greater than minimum value",
-  path: ["max"],
-})
+const temperatureSchema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+    unit: z.literal("°F"),
+    label: z.string(),
+  })
+  .refine((data) => data.max > data.min, {
+    message: "Maximum value must be greater than minimum value",
+    path: ["max"],
+  })
 
-const pressureSchema = z.object({
-  min: z.number(),
-  max: z.number(),
-  unit: z.literal("inWC"),
-  label: z.string(),
-}).refine((data) => data.max > data.min, {
-  message: "Maximum value must be greater than minimum value",
-  path: ["max"],
-})
+const pressureSchema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+    unit: z.literal("inWC"),
+    label: z.string(),
+  })
+  .refine((data) => data.max > data.min, {
+    message: "Maximum value must be greater than minimum value",
+    path: ["max"],
+  })
 
-const humiditySchema = z.object({
-  min: z.number(),
-  max: z.number(),
-  unit: z.literal("%"),
-  label: z.string(),
-}).refine((data) => data.max > data.min, {
-  message: "Maximum value must be greater than minimum value",
-  path: ["max"],
-})
+const humiditySchema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+    unit: z.literal("%"),
+    label: z.string(),
+  })
+  .refine((data) => data.max > data.min, {
+    message: "Maximum value must be greater than minimum value",
+    path: ["max"],
+  })
 
-const flowSchema = z.object({
-  min: z.number(),
-  max: z.number(),
-  unit: z.literal("CFM"),
-  label: z.string(),
-}).refine((data) => data.max > data.min, {
-  message: "Maximum value must be greater than minimum value",
-  path: ["max"],
-})
+const flowSchema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+    unit: z.literal("CFM"),
+    label: z.string(),
+  })
+  .refine((data) => data.max > data.min, {
+    message: "Maximum value must be greater than minimum value",
+    path: ["max"],
+  })
 
-const powerSchema = z.object({
-  min: z.number(),
-  max: z.number(),
-  unit: z.literal("kW"),
-  label: z.string(),
-}).refine((data) => data.max > data.min, {
-  message: "Maximum value must be greater than minimum value",
-  path: ["max"],
-})
+const powerSchema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+    unit: z.literal("kW"),
+    label: z.string(),
+  })
+  .refine((data) => data.max > data.min, {
+    message: "Maximum value must be greater than minimum value",
+    path: ["max"],
+  })
 
-const positionSchema = z.object({
-  min: z.number(),
-  max: z.number(),
-  unit: z.literal("%"),
-  label: z.string(),
-}).refine((data) => data.max > data.min, {
-  message: "Maximum value must be greater than minimum value",
-  path: ["max"],
-})
+const positionSchema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+    unit: z.literal("%"),
+    label: z.string(),
+  })
+  .refine((data) => data.max > data.min, {
+    message: "Maximum value must be greater than minimum value",
+    path: ["max"],
+  })
 
-const co2Schema = z.object({
-  min: z.number(),
-  max: z.number(),
-  unit: z.literal("ppm"),
-  label: z.string(),
-}).refine((data) => data.max > data.min, {
-  message: "Maximum value must be greater than minimum value",
-  path: ["max"],
-})
+const co2Schema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+    unit: z.literal("ppm"),
+    label: z.string(),
+  })
+  .refine((data) => data.max > data.min, {
+    message: "Maximum value must be greater than minimum value",
+    path: ["max"],
+  })
 
 // Threshold type validation schemas
 export const thresholdTypesSchema = z.object({
@@ -183,29 +199,33 @@ export const equipmentSchema = z.object({
   type: z.string().min(1, "Equipment type is required"),
   locationId: z.string().min(1, "Location is required"),
   status: z.enum(["online", "offline", "error", "maintenance"]).default("offline"),
-  mqttConfig: z.object({
-    ip: z.string().default("localhost"),
-    port: z.number().default(1883),
-    username: z.string().optional(),
-    password: z.string().optional(),
-    topics: z.object({
-      metrics: z.string().default("metrics"),
-      status: z.string().default("status"),
-      control: z.string().default("control"),
-    }).default({
-      metrics: "metrics",
-      status: "status",
-      control: "control",
+  mqttConfig: z
+    .object({
+      ip: z.string().default("localhost"),
+      port: z.number().default(1883),
+      username: z.string().optional(),
+      password: z.string().optional(),
+      topics: z
+        .object({
+          metrics: z.string().default("metrics"),
+          status: z.string().default("status"),
+          control: z.string().default("control"),
+        })
+        .default({
+          metrics: "metrics",
+          status: "status",
+          control: "control",
+        }),
+    })
+    .default({
+      ip: "localhost",
+      port: 1883,
+      topics: {
+        metrics: "metrics",
+        status: "status",
+        control: "control",
+      },
     }),
-  }).default({
-    ip: "localhost",
-    port: 1883,
-    topics: {
-      metrics: "metrics",
-      status: "status",
-      control: "control",
-    }
-  }),
   thresholds: z.record(z.string(), z.record(z.string(), thresholdValueSchema)).default({}),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -214,7 +234,8 @@ export const equipmentSchema = z.object({
 // User validation
 export const userSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string()
+  password: z
+    .string()
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
@@ -369,11 +390,11 @@ export const EQUIPMENT_TYPES = {
     availableTypes: ["Supply Air", "Return Air", "Mixed Air", "Freeze Stat", "Fan", "Power", "Zone"],
     requiredThresholds: ["Supply Air", "Fan", "Power"],
   },
-  "Boiler": {
+  Boiler: {
     availableTypes: ["Water Supply", "Water Return", "Power"],
     requiredThresholds: ["Water Supply", "Power"],
   },
-  "Chiller": {
+  Chiller: {
     availableTypes: ["Water Supply", "Water Return", "Compressor", "Power"],
     requiredThresholds: ["Water Supply", "Compressor"],
   },
@@ -389,7 +410,7 @@ export const EQUIPMENT_TYPES = {
     availableTypes: ["Supply Air", "Water Supply", "Fan", "Power", "Zone"],
     requiredThresholds: ["Supply Air", "Fan"],
   },
-  "Greenhouse": {
+  Greenhouse: {
     availableTypes: ["Zone", "Supply Air", "Return Air"],
     requiredThresholds: ["Zone"],
   },
@@ -397,7 +418,7 @@ export const EQUIPMENT_TYPES = {
     availableTypes: ["Water Supply", "Water Return", "Differential Pressure"],
     requiredThresholds: ["Water Supply", "Water Return"],
   },
-  "Pump": {
+  Pump: {
     availableTypes: ["Water Supply", "Differential Pressure", "Power"],
     requiredThresholds: ["Differential Pressure", "Power"],
   },
@@ -417,7 +438,7 @@ export const EQUIPMENT_TYPES = {
     availableTypes: ["Water Supply", "Water Return", "Power"],
     requiredThresholds: ["Water Supply"],
   },
-  "Actuator": {
+  Actuator: {
     availableTypes: ["Differential Pressure", "Power"],
     requiredThresholds: ["Differential Pressure"],
   },
@@ -446,11 +467,10 @@ export type CO2 = z.infer<typeof co2Schema>
 
 // Technician specialties and levels
 export const TECHNICIAN_SPECIALTIES = {
-  "HVAC": ["Apprentice", "Journeyman"],
-  "Electrical": ["Licensed", "Apprentice", "Master"],
-  "Controls": ["Programming", "Development", "Installation", "Service"],
-  "Plumbing": ["Licensed", "Apprentice", "Master"],
-  "Fire Safety": ["Certified", "Inspector", "Engineer"]
+  "HVAC Systems": ["Beginner", "Intermediate", "Advanced"],
+  Electrical: ["Beginner", "Intermediate", "Advanced"],
+  Plumbing: ["Beginner", "Intermediate", "Advanced"],
+  Controls: ["Beginner", "Intermediate", "Advanced"],
 } as const
 
 // Task status enum
@@ -462,14 +482,19 @@ export const technicianSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format"),
   email: z.string().email("Invalid email address"),
-  specialties: z.array(
-    z.object({
-      type: z.enum(Object.keys(TECHNICIAN_SPECIALTIES) as [string, ...string[]]),
-      level: z.string(),
-    })
-  ).min(1, "At least one specialty must be selected"),
+  specialties: z
+    .array(
+      z.object({
+        type: z.enum(Object.keys(TECHNICIAN_SPECIALTIES) as [string, ...string[]]),
+        level: z.string(),
+      }),
+    )
+    .min(1, "At least one specialty must be selected"),
   assignedLocations: z.array(z.string()).min(1, "At least one location must be assigned"),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format"),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format")
+    .optional(),
   notes: z.string().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -487,11 +512,15 @@ export const taskSchema = z.object({
   priority: z.enum(["Low", "Medium", "High", "Critical"]),
   dueDate: z.date(),
   completedDate: z.date().optional(),
-  notes: z.array(z.object({
-    text: z.string(),
-    createdBy: z.string(),
-    createdAt: z.date(),
-  })).optional(),
+  notes: z
+    .array(
+      z.object({
+        text: z.string(),
+        createdBy: z.string(),
+        createdAt: z.date(),
+      }),
+    )
+    .optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 })
@@ -525,4 +554,3 @@ export function validateTask(data: unknown) {
 export type Technician = z.infer<typeof technicianSchema>
 export type Task = z.infer<typeof taskSchema>
 export type TechnicianSpecialty = keyof typeof TECHNICIAN_SPECIALTIES
-export type TaskStatus = typeof TASK_STATUS[number] 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, Settings, AlertCircle, Save, RefreshCw } from "lucide-react"
 import { useFirebase } from "@/lib/firebase-context"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth-context" // Import useAuth to check user permissions
 import { collection, doc, getDoc } from "firebase/firestore"
 import { ref, onValue, set, update } from "firebase/database"
 import { secondaryDb } from "@/lib/secondary-firebase"
@@ -46,37 +47,67 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
   const router = useRouter()
   const { toast } = useToast()
   const searchParams = useSearchParams()
+  const { user } = useAuth() // Get the current user to check permissions
 
-  // Get locationId from URL query parameters or localStorage
+  // Get locationId from URL query parameters
   const locationIdFromUrl = searchParams.get("locationId")
   const [locationId, setLocationId] = useState<string | null>(null)
 
   // Add a state for available locations
   const [availableLocations, setAvailableLocations] = useState<any[]>([])
+  const [locationKeyMapping, setLocationKeyMapping] = useState<Record<string, string>>({})
 
-  // Initialize locationId from URL or localStorage
+  // Check if the user has access to this location
+  const isAdminOrDevOps = user?.roles && (user.roles.includes("admin") || user.roles.includes("DevOps"))
+  
+  // Initialize locationId from URL and validate access
   useEffect(() => {
-    console.log("Initializing locationId", { locationIdFromUrl })
+    console.log("Initializing locationId", { locationIdFromUrl, userAssignedLocations: user?.assignedLocations })
 
-    // First try URL parameter
     if (locationIdFromUrl) {
-      console.log("Using locationId from URL:", locationIdFromUrl)
-      setLocationId(locationIdFromUrl)
-
-      // Update localStorage to match URL parameter
-      localStorage.setItem("selectedLocation", locationIdFromUrl)
+      // Check if user has permission to access this location
+      if (isAdminOrDevOps || (user?.assignedLocations && user.assignedLocations.includes(locationIdFromUrl))) {
+        console.log("Using locationId from URL:", locationIdFromUrl)
+        setLocationId(locationIdFromUrl)
+        
+        // Only update localStorage if user has access
+        localStorage.setItem("selectedLocation", locationIdFromUrl)
+      } else {
+        console.warn("User does not have access to location:", locationIdFromUrl)
+        setError("You don't have permission to access this location")
+        
+        // If user has assigned locations, redirect to their first location
+        if (user?.assignedLocations && user.assignedLocations.length > 0) {
+          const userLocation = user.assignedLocations[0]
+          console.log("Redirecting to user's assigned location:", userLocation)
+          router.replace(`/dashboard/controls?locationId=${userLocation}`)
+        } else {
+          // If no assigned locations, go back to dashboard
+          router.replace("/dashboard")
+        }
+        return
+      }
+    } else if (user?.assignedLocations && user.assignedLocations.length > 0 && !isAdminOrDevOps) {
+      // If user is not admin/DevOps and has assigned locations but no locationId in URL,
+      // redirect to their first assigned location
+      const userLocation = user.assignedLocations[0]
+      console.log("No locationId in URL, using user's first assigned location:", userLocation)
+      setLocationId(userLocation)
+      router.replace(`/dashboard/controls?locationId=${userLocation}`)
+    } else if (!isAdminOrDevOps && !user?.assignedLocations?.length) {
+      // User has no locations and is not admin
+      setError("You don't have any assigned locations")
       return
+    } else {
+      // For admins with no locationId, try localStorage
+      const savedLocation = localStorage.getItem("selectedLocation")
+      if (savedLocation) {
+        console.log("Using locationId from localStorage:", savedLocation)
+        setLocationId(savedLocation)
+      }
     }
 
-    // Then try localStorage
-    const savedLocation = localStorage.getItem("selectedLocation")
-    if (savedLocation) {
-      console.log("Using locationId from localStorage:", savedLocation)
-      setLocationId(savedLocation)
-      return
-    }
-
-    // If we reach here, we need to fetch available locations from RTDB
+    // Always fetch available locations from RTDB for mapping purposes
     if (secondaryDb) {
       const locationsRef = ref(secondaryDb, "locations")
       onValue(
@@ -84,11 +115,22 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
         (snapshot) => {
           const data = snapshot.val()
           if (data) {
-            const locationsList = Object.keys(data).map((key) => ({
-              id: data[key].id || key,
-              key: key,
-              name: data[key].name || key,
-            }))
+            const mapping: Record<string, string> = {}
+            const locationsList = Object.keys(data).map((key) => {
+              // Store mapping between Firestore ID and RTDB key
+              if (data[key].id) {
+                mapping[data[key].id] = key
+              }
+              
+              return {
+                id: data[key].id || key,
+                key: key,
+                name: data[key].name || key,
+              }
+            })
+            
+            console.log("Built location ID to RTDB key mapping:", mapping)
+            setLocationKeyMapping(mapping)
             setAvailableLocations(locationsList)
           }
         },
@@ -97,7 +139,7 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
         },
       )
     }
-  }, [locationIdFromUrl, secondaryDb])
+  }, [locationIdFromUrl, secondaryDb, user, isAdminOrDevOps, router])
 
   // Add a useEffect to handle equipment ID from URL
   useEffect(() => {
@@ -148,56 +190,46 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
     console.log(`Fetching data for location ID: ${locationId}`)
 
     try {
-      // Get all locations from RTDB
-      const locationsRef = ref(secondaryDb, "locations")
+      // Use the mapping to find the RTDB key for this locationId
+      const rtdbLocationKey = locationKeyMapping[locationId]
+      
+      if (!rtdbLocationKey) {
+        console.log(`No RTDB key found for location ID ${locationId}. Waiting for mapping to complete...`)
+        // If mapping isn't ready yet, we'll wait for it and try again when it's updated
+        return
+      }
+      
+      console.log(`Found RTDB key for location ID ${locationId}: ${rtdbLocationKey}`)
+      
+      // Get specific location directly using the mapping
+      const locationRef = ref(secondaryDb, `locations/${rtdbLocationKey}`)
 
       onValue(
-        locationsRef,
+        locationRef,
         (snapshot) => {
-          const data = snapshot.val()
-          if (!data) {
-            console.log("No locations found in RTDB")
+          const locationData = snapshot.val()
+          
+          if (!locationData) {
+            console.log(`No location data found for key ${rtdbLocationKey}`)
             setLoading(false)
-            setError("No locations found in Realtime Database")
+            setError(`Location data not found in Realtime Database`)
             return
           }
 
-          console.log("RTDB locations:", Object.keys(data))
-
-          // Find location with matching ID
-          let foundLocationData = null
-          let foundLocationKey = null
-
-          for (const [key, value] of Object.entries(data)) {
-            const locationData = value as any
-            if (locationData.id === locationId) {
-              foundLocationData = locationData
-              foundLocationKey = key
-              break
-            }
-          }
-
-          if (!foundLocationData) {
-            console.log(`Location with ID ${locationId} not found in RTDB`)
-            setLoading(false)
-            setError(`Location with ID ${locationId} not found in Realtime Database`)
-            return
-          }
-
-          console.log(`Found location in RTDB: ${foundLocationKey}`)
-          setLocationKey(foundLocationKey)
-          setLocation(foundLocationData)
+          console.log(`Found location data in RTDB for ${rtdbLocationKey}:`, locationData)
+          setLocationKey(rtdbLocationKey)
+          setLocation(locationData)
 
           // Get available systems for this location
-          if (foundLocationData.systems) {
-            const systems = Object.entries(foundLocationData.systems).map(([key, value]) => ({
+          if (locationData.systems) {
+            const systems = Object.entries(locationData.systems).map(([key, value]) => ({
               id: key,
               name: key,
               ...(value as any),
             }))
 
             console.log(
-              `Found ${systems.length} systems for location ${foundLocationKey}:`,
+              `Found ${systems.length} systems for location ${rtdbLocationKey}:`,
               systems.map((s) => s.name).join(", "),
             )
 
@@ -213,11 +245,11 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
                 setSelectedSystem(matchingSystem.id)
 
                 // Also set the realtime data for this system
-                setRealtimeData(foundLocationData.systems[matchingSystem.id])
+                setRealtimeData(locationData.systems[matchingSystem.id])
 
                 // Initialize control values if available
-                if (foundLocationData.systems[matchingSystem.id].controls) {
-                  setControlValues(foundLocationData.systems[matchingSystem.id].controls)
+                if (locationData.systems[matchingSystem.id].controls) {
+                  setControlValues(locationData.systems[matchingSystem.id].controls)
                 }
               } else {
                 console.log(`No matching system found for id ${id}`)
@@ -226,15 +258,15 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
               // If no id provided, select the first system
               console.log(`No id provided, selecting first system: ${systems[0].name}`)
               setSelectedSystem(systems[0].id)
-              setRealtimeData(foundLocationData.systems[systems[0].id])
+              setRealtimeData(locationData.systems[systems[0].id])
 
               // Initialize control values if available
-              if (foundLocationData.systems[systems[0].id].controls) {
-                setControlValues(foundLocationData.systems[systems[0].id].controls)
+              if (locationData.systems[systems[0].id].controls) {
+                setControlValues(locationData.systems[systems[0].id].controls)
               }
             }
           } else {
-            console.log(`No systems found for location ${foundLocationKey}`)
+            console.log(`No systems found for location ${rtdbLocationKey}`)
           }
 
           setLoading(false)
@@ -250,7 +282,7 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
       setLoading(false)
       setError("Failed to connect to Realtime Database")
     }
-  }, [secondaryDb, locationId, id])
+  }, [secondaryDb, locationId, id, locationKeyMapping])
 
   // Fetch equipment data from Firestore if needed
   useEffect(() => {
@@ -527,10 +559,12 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
           </Button>
           <h1 className="text-3xl font-bold">Equipment Controls</h1>
         </div>
-        <Button variant="outline" onClick={() => router.push("/dashboard/settings")} className="hover:bg-[#e6f3f1]">
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </Button>
+        {isAdminOrDevOps && (
+          <Button variant="outline" onClick={() => router.push("/dashboard/settings")} className="hover:bg-[#e6f3f1]">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
+        )}
 
         <Card>
           <CardHeader>
@@ -539,18 +573,20 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {availableLocations.map((loc) => (
-                <Card
-                  key={loc.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleLocationSelect(loc.id)}
-                >
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-lg">{loc.name}</CardTitle>
-                    <CardDescription>{loc.address || "No address"}</CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
+              {availableLocations
+                .filter(loc => isAdminOrDevOps || (user?.assignedLocations?.includes(loc.id)))
+                .map((loc) => (
+                  <Card
+                    key={loc.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleLocationSelect(loc.id)}
+                  >
+                    <CardHeader className="p-4">
+                      <CardTitle className="text-lg">{loc.name}</CardTitle>
+                      <CardDescription>{loc.address || "No address"}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -567,10 +603,12 @@ export default function EquipmentTypeControls({ type, id }: { type?: string; id?
           </Button>
           <h1 className="text-3xl font-bold">Equipment Controls</h1>
         </div>
-        <Button variant="outline" onClick={() => router.push("/dashboard/settings")} className="hover:bg-[#e6f3f1]">
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </Button>
+        {isAdminOrDevOps && (
+          <Button variant="outline" onClick={() => router.push("/dashboard/settings")} className="hover:bg-[#e6f3f1]">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
+        )}
       </div>
 
       <Card>

@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -22,6 +24,7 @@ import {
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { doc, setDoc, getFirestore } from "firebase/firestore"
+import { collection, getDocs } from "firebase/firestore"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -35,32 +38,91 @@ export default function LoginPage() {
     password: "",
     confirmPassword: "",
     name: "",
+    location: "", // Add this line
   })
   const [isSigningUp, setIsSigningUp] = useState(false)
   const { user, loginWithEmail, loginWithUsername, loginWithGoogle } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  
-  // Debug log for rendering
-  console.log("Login component rendering with method:", loginMethod);
+  const [locations, setLocations] = useState<any[]>([])
+  const db = getFirestore()
+  const [hasAdminAccess, setHasAdminAccess] = useState<((roles: string[]) => boolean) | null>(null)
 
-  // Modified user check to prevent redirect loops
+  useEffect(() => {
+    const loadHasAdminAccess = async () => {
+      try {
+        const { hasEquipmentControlAccess } = await import("@/lib/role-utils")
+        setHasAdminAccess(() => hasEquipmentControlAccess)
+      } catch (error) {
+        console.error("Failed to load hasAdminAccess:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load admin access function.",
+          variant: "destructive",
+        })
+      }
+    }
+
+    loadHasAdminAccess()
+  }, [toast])
+
+  // Debug log for rendering
+  console.log("Login component rendering with method:", loginMethod)
+
+  // Modified user check to redirect based on role and assigned locations
   useEffect(() => {
     // Add a console log to see what's happening
-    console.log("Login page - User state:", !!user);
+    console.log("Login page - User state:", !!user)
 
     // Only redirect if we have a valid user with an ID
-    if (user && user.id) {
-      console.log("Login page - Redirecting to dashboard with valid user");
-      router.push("/dashboard");
+    if (user && user.id && hasAdminAccess) {
+      console.log("Login page - User roles:", user.roles)
+      console.log("Login page - User assigned locations:", user.assignedLocations)
+
+      // Check if user is admin or has admin-like roles
+      if (Array.isArray(user.roles) && hasAdminAccess(user.roles)) {
+        console.log("Login page - Admin user, redirecting to main dashboard")
+        router.push("/dashboard")
+      }
+      // Check if user has assigned locations
+      else if (user.assignedLocations && user.assignedLocations.length > 0) {
+        const locationId = user.assignedLocations[0]
+        console.log(`Login page - Client user, redirecting to location dashboard: ${locationId}`)
+        router.push(`/dashboard/location/${locationId}`)
+      }
+      // Fallback for users without assigned locations
+      else {
+        console.log("Login page - User has no assigned locations, redirecting to main dashboard")
+        router.push("/dashboard")
+      }
     }
-  }, [user, router]);
+  }, [user, router, hasAdminAccess])
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      if (!db) return
+
+      try {
+        const locationsRef = collection(db, "locations")
+        const snapshot = await getDocs(locationsRef)
+        const locationData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        setLocations(locationData)
+      } catch (error) {
+        console.error("Error fetching locations:", error)
+      }
+    }
+
+    fetchLocations()
+  }, [db])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     // Debug log for login attempt
-    console.log("Login button clicked with method:", loginMethod, "email:", email, "username:", username);
-    
+    console.log("Login button clicked with method:", loginMethod, "email:", email, "username:", username)
+
     try {
       if (loginMethod === "email") {
         await loginWithEmail(email, password)
@@ -80,7 +142,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-      console.log("Google login button clicked");
+      console.log("Google login button clicked")
       // This will redirect to Google authentication
       await loginWithGoogle()
       // The redirect will happen, code after this won't execute immediately
@@ -107,14 +169,9 @@ export default function LoginPage() {
 
     try {
       setIsSigningUp(true)
-      const db = getFirestore()
 
       // Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        signUpData.email,
-        signUpData.password
-      )
+      const userCredential = await createUserWithEmailAndPassword(auth, signUpData.email, signUpData.password)
       const user = userCredential.user
 
       // Send email verification
@@ -127,9 +184,33 @@ export default function LoginPage() {
         name: signUpData.name,
         roles: ["user"],
         emailVerified: false,
+        assignedLocations: signUpData.location ? [signUpData.location] : [],
         createdAt: new Date(),
         updatedAt: new Date(),
       })
+
+      // Send welcome email
+      try {
+        const locationObj = locations.find((loc) => loc.id === signUpData.location)
+        const locationName = locationObj ? locationObj.name : undefined
+
+        await fetch("/api/send-signup-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: signUpData.name,
+            email: signUpData.email,
+            username: signUpData.username,
+            location: signUpData.location,
+            locationName: locationName,
+          }),
+        })
+      } catch (emailError) {
+        console.error("Error sending welcome email:", emailError)
+        // Don't fail the signup if email fails
+      }
 
       toast({
         title: "Success",
@@ -142,6 +223,7 @@ export default function LoginPage() {
         password: "",
         confirmPassword: "",
         name: "",
+        location: "",
       })
     } catch (error: any) {
       console.error("Sign up error:", error)
@@ -161,22 +243,31 @@ export default function LoginPage() {
         <Card className="w-full bg-gray-800 border-gray-700">
           <CardHeader className="space-y-4">
             <div className="flex items-center justify-center mb-6">
-              <Image src="/neural-loader.png" alt="Automata Controls Logo" width={150} height={150} className="mr-6" priority />
+              <Image
+                src="/neural-loader.png"
+                alt="Automata Controls Logo"
+                width={150}
+                height={150}
+                className="mr-6"
+                priority
+              />
               <div>
                 <h1 className="font-cinzel text-4xl text-orange-300">Automata Controls</h1>
                 <h2 className="text-2xl text-teal-200">Building Management System</h2>
               </div>
             </div>
             <CardTitle className="text-3xl text-amber-200/70 text-center">Login</CardTitle>
-            <CardDescription className="text-lg text-teal-200/80 text-center">Enter your credentials to access the system</CardDescription>
+            <CardDescription className="text-lg text-teal-200/80 text-center">
+              Enter your credentials to access the system
+            </CardDescription>
           </CardHeader>
-          <Tabs 
-            value={loginMethod} 
+          <Tabs
+            value={loginMethod}
             onValueChange={(value) => {
-              console.log("Tab clicked:", value);
-              setLoginMethod(value as "email" | "username");
-              console.log("Login method after change:", value);
-            }} 
+              console.log("Tab clicked:", value)
+              setLoginMethod(value as "email" | "username")
+              console.log("Login method after change:", value)
+            }}
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-2 h-10 mb-4 bg-gray-700">
@@ -292,6 +383,24 @@ export default function LoginPage() {
                           />
                         </div>
                         <div className="space-y-3">
+                          <Label htmlFor="signup-location" className="text-lg text-amber-200/60">
+                            Location
+                          </Label>
+                          <select
+                            id="signup-location"
+                            value={signUpData.location}
+                            onChange={(e) => setSignUpData({ ...signUpData, location: e.target.value })}
+                            className="h-12 text-lg bg-gray-700 border-gray-600 text-white w-full rounded-md px-3"
+                          >
+                            <option value="">Select a location</option>
+                            {locations.map((location) => (
+                              <option key={location.id} value={location.id}>
+                                {location.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-3">
                           <Label htmlFor="signup-email" className="text-lg text-amber-200/60">
                             Email
                           </Label>
@@ -343,7 +452,7 @@ export default function LoginPage() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                
+
                 <div className="w-full space-y-4">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -387,15 +496,15 @@ export default function LoginPage() {
                 <Button
                   type="button"
                   onClick={() => {
-                    console.log("Test auth directly");
+                    console.log("Test auth directly")
                     if (loginMethod === "email") {
                       loginWithEmail(email, password)
                         .then(() => console.log("Email login success"))
-                        .catch(err => console.error("Test email login failed:", err));
+                        .catch((err) => console.error("Test email login failed:", err))
                     } else {
                       loginWithUsername(username, password)
                         .then(() => console.log("Username login success"))
-                        .catch(err => console.error("Test username login failed:", err));
+                        .catch((err) => console.error("Test username login failed:", err))
                     }
                   }}
                   className="mt-2 bg-red-500 hover:bg-red-600"

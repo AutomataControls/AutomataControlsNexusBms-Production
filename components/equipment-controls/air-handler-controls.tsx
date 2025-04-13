@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,7 +41,6 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
   const [controlValues, setControlValues] = useState<any>({
     ...equipment.controls,
   })
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [username, setUsername] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [showAuthDialog, setShowAuthDialog] = useState<boolean>(false)
@@ -50,7 +49,44 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
   const { socket } = useSocket()
   const { toast } = useToast()
   const { db } = useFirebase()
-  const { loginWithUsername } = useAuth()
+  const { user, loginWithUsername } = useAuth()
+
+  // Derive authentication status from user object instead of local state
+  const isAuthenticated = !!user && user.roles && 
+    (user.roles.includes('DevOps') || user.roles.includes('admin'))
+
+  // Add effect to handle authentication state changes
+  useEffect(() => {
+    if (user && showAuthDialog) {
+      // Check if user has the required role
+      if (user.roles && (user.roles.includes('DevOps') || user.roles.includes('admin'))) {
+        setShowAuthDialog(false)
+        setLoginError("")
+        
+        // Apply the pending change if there is one
+        if (pendingChange) {
+          setControlValues({
+            ...controlValues,
+            [pendingChange.key]: pendingChange.value,
+          })
+          setPendingChange(null)
+        }
+
+        toast({
+          title: "Authentication Successful",
+          description: "You can now modify equipment controls",
+          className: "bg-teal-50 border-teal-200",
+        })
+      } else {
+        setLoginError("You don't have permission to modify these controls")
+        toast({
+          title: "Authentication Failed",
+          description: "Insufficient permissions",
+          variant: "destructive",
+        })
+      }
+    }
+  }, [user, showAuthDialog, pendingChange, controlValues, toast])
 
   const handleSetpointChange = (key: string, value: any) => {
     // Setpoint changes don't require authentication
@@ -61,35 +97,28 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
       })
     } else {
       // For other controls, require authentication
-      setPendingChange({ key, value })
-      setShowAuthDialog(true)
+      if (isAuthenticated) {
+        // If already authenticated, apply the change directly
+        setControlValues({
+          ...controlValues,
+          [key]: value,
+        })
+      } else {
+        // Otherwise, store the pending change and show auth dialog
+        setPendingChange({ key, value })
+        setShowAuthDialog(true)
+      }
     }
   }
 
   const handleAuthenticate = async () => {
     setLoginError("")
-    
+
     try {
-      // Use the authentication system instead of hardcoded credentials
+      // Just attempt login - the useEffect will handle success
       await loginWithUsername(username, password)
-      
-      setIsAuthenticated(true)
-      setShowAuthDialog(false)
-
-      // Apply the pending change if there is one
-      if (pendingChange) {
-        setControlValues({
-          ...controlValues,
-          [pendingChange.key]: pendingChange.value,
-        })
-        setPendingChange(null)
-      }
-
-      toast({
-        title: "Authentication Successful",
-        description: "You can now modify equipment controls",
-        className: "bg-teal-50 border-teal-200",
-      })
+      // Note: Don't manually set authenticated state here
+      // The useEffect will handle this when the user state updates
     } catch (error) {
       console.error("Authentication error:", error)
       setLoginError("Invalid username or password")
@@ -145,23 +174,23 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
     try {
       // Save to Firebase
       if (!db || !equipment.id) {
-        throw new Error("Database or equipment ID not available");
+        throw new Error("Database or equipment ID not available")
       }
-      
-      const equipmentRef = doc(db, "equipment", equipment.id);
-      
+
+      const equipmentRef = doc(db, "equipment", equipment.id)
+
       // Update the controls field in the equipment document
       await updateDoc(equipmentRef, {
         controls: controlValues,
-        lastUpdated: new Date()
-      });
-      
+        lastUpdated: new Date(),
+      })
+
       // Also send to socket if available
       if (socket) {
         socket.emit("control", {
           equipmentId: equipment.id,
           controls: controlValues,
-        });
+        })
       }
 
       toast({
@@ -423,9 +452,7 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Authentication Required</DialogTitle>
-            <DialogDescription>
-              Please enter your credentials to modify equipment controls
-            </DialogDescription>
+            <DialogDescription>Please enter your credentials to modify equipment controls</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -445,13 +472,14 @@ export function AirHandlerControls({ equipment }: AirHandlerControlsProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAuthenticate();
+                  }
+                }}
               />
             </div>
-            {loginError && (
-              <div className="text-red-500 text-sm">
-                {loginError}
-              </div>
-            )}
+            {loginError && <div className="text-red-500 text-sm">{loginError}</div>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
