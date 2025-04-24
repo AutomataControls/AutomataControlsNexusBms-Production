@@ -1,6 +1,4 @@
-// lib/firebase.ts
-// Initialize Firebase SDK with your configuration and connect to Firestore, Auth, and Storage services. Also, initialize Analytics only on the client side. Ensure that the Firebase configuration is stored in environment variables for security reasons. The `app` is
-
+'use client';
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
@@ -18,18 +16,28 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-
-// Initialize Firebase services
-const db = getFirestore(app);
-const auth = getAuth(app);
-const storage = getStorage(app);
-
-// Initialize Analytics only on client side
+let app;
+let db;
+let auth;
+let storage;
 let analytics = null;
+
 if (typeof window !== 'undefined') {
-  analytics = getAnalytics(app);
+  try {
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApp();
+    }
+    
+    // Initialize Firebase services
+    db = getFirestore(app);
+    auth = getAuth(app);
+    storage = getStorage(app);
+    analytics = getAnalytics(app);
+  } catch (error) {
+    console.error("Error initializing Firebase:", error);
+  }
 }
 
-export { app, db, auth, storage, analytics, collection, getDocs }; 
+export { app, db, auth, storage, analytics, collection, getDocs };

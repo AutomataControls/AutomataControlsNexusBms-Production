@@ -1,6 +1,5 @@
 import nodemailer from "nodemailer"
 import path from "path"
-import fs from "fs"
 
 // Function to format date in Eastern Time
 function formatDateInET(date) {
@@ -21,20 +20,18 @@ function formatDateInET(date) {
 }
 
 export default async function handler(req, res) {
-  console.log("📧 Welcome Email API route called")
+  console.log("📧 Rejection Email API route called")
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" })
   }
 
-  const { name, email, username, location, locationName } = req.body
+  const { name, email, username } = req.body
 
-  console.log("📧 Welcome Email request received:", {
+  console.log("📧 Rejection Email request received:", {
     name,
     email,
     username,
-    location, // This should be the Firestore document ID
-    locationName,
   })
 
   // Validate that email is provided
@@ -47,27 +44,6 @@ export default async function handler(req, res) {
     // Format timestamp in Eastern Time
     const timestamp = formatDateInET(new Date())
     console.log(`📧 Formatted timestamp in ET: ${timestamp}`)
-
-    // Dashboard URL - only show if location is available
-    // Regular users should only access their specific location dashboard
-    let dashboardUrl = null
-    let showDashboardButton = false
-
-    if (location) {
-      // Use the Firestore document ID for the location URL
-      dashboardUrl = process.env.NEXT_PUBLIC_APP_URL
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/location/${location}`
-        : `https://neuralbms.automatacontrols.com/dashboard/location/${location}`
-      showDashboardButton = true
-      console.log(`📧 Dashboard URL: ${dashboardUrl}`)
-    } else {
-      console.log(`📧 No location provided, dashboard button will not be shown`)
-    }
-
-    // Role request URL (this would trigger an email to DevOps)
-    const roleRequestUrl = process.env.NEXT_PUBLIC_APP_URL
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/request-role-upgrade?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name || username)}`
-      : `https://neuralbms.automatacontrols.com/api/request-role-upgrade?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name || username)}`
 
     // Check if email credentials are set
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
@@ -103,47 +79,23 @@ export default async function handler(req, res) {
     const logoPath = path.join(process.cwd(), "public", "neural-loader.png")
     console.log(`📧 Looking for logo at: ${logoPath}`)
 
-    // Check if logo file exists
-    try {
-      if (fs.existsSync(logoPath)) {
-        console.log(`📧 Logo file found at: ${logoPath}`)
-      } else {
-        console.warn(`📧 WARNING: Logo file not found at: ${logoPath}`)
-      }
-    } catch (err) {
-      console.error(`📧 ERROR checking logo file: ${err.message}`)
-    }
-
-    // Prepare dashboard button HTML - only if location is available
-    const dashboardButtonHtml = showDashboardButton
-      ? `<div style="text-align: center; margin-top: 30px;">
-           <a href="${dashboardUrl}" style="background-color: #fff2e6; color: #ff8c00; border: 1px solid #ffcc99; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-bottom: 15px;">
-             View Dashboard
-           </a>
-         </div>`
-      : ""
-
-    // Prepare dashboard text for plain text email
-    const dashboardText = showDashboardButton
-      ? `To access your location dashboard, please visit: ${dashboardUrl}\n\n`
-      : ""
-
     // Send email with improved HTML template
-    console.log(`📧 Sending welcome email to: ${email}`)
+    console.log(`📧 Sending rejection email to: ${email}`)
     const info = await transporter.sendMail({
       from: `"Automata Controls" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: `Welcome to Automata Controls Building Management System`,
-      text: `Welcome to Automata Controls!
-
+      subject: `Your Automata Controls Account Application Status`,
+      text: `Account Application Status
+      
 Name: ${name || username}
 Email: ${email}
-Location: ${locationName || "Not specified"}
-Registration Time: ${timestamp}
+Application Time: ${timestamp}
 
-Thank you for registering with Automata Controls Building Management System. Your account has been created successfully.
+Dear ${name || username},
 
-${dashboardText}If you need elevated access permissions, please contact our DevOps team.
+Thank you for your interest in the Automata Controls Building Management System. After careful review of your application, we regret to inform you that we are unable to approve your account at this time.
+
+If you believe this decision was made in error, please contact our support team at support@automatacontrols.com.
 
 Best regards,
 The Automata Controls Team`,
@@ -154,11 +106,13 @@ The Automata Controls Team`,
               <img src="cid:automata-logo" alt="Automata Controls Logo" style="width: 120px; height: auto;">
             </div>
 
-            <h2 style="color: #00FFEA; text-align: center; margin-bottom: 20px;">
-              Welcome to Automata Controls!
+            <h2 style="color: #FF6B00; text-align: center; margin-bottom: 20px;">
+              Account Application Status
             </h2>
 
-            <p style="color: #404040; margin: 10px 0;">Thank you for registering with the Automata Controls Building Management System. Your account has been created successfully.</p>
+            <p style="color: #404040; margin: 10px 0;">Dear ${name || username},</p>
+
+            <p style="color: #404040; margin: 10px 0;">Thank you for your interest in the Automata Controls Building Management System. After careful review of your application, we regret to inform you that we are unable to approve your account at this time.</p>
 
             <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
               <tr>
@@ -173,28 +127,23 @@ The Automata Controls Team`,
               </tr>
               <tr>
                 <td style="padding: 5px 0;">
-                  <span style="color: #666; font-size: 14px;">Location:</span><br>
-                  <span style="color: #333; font-weight: 500; font-size: 16px;">${locationName || "Not specified"}</span>
-                </td>
-                <td style="padding: 5px 0;">
-                  <span style="color: #666; font-size: 14px;">Registration Time:</span><br>
+                  <span style="color: #666; font-size: 14px;">Application Time:</span><br>
                   <span style="color: #333; font-weight: 500; font-size: 16px;">${timestamp}</span>
                 </td>
+                <td style="padding: 5px 0;"></td>
               </tr>
             </table>
 
-            ${dashboardButtonHtml}
-
             <div style="background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin: 20px 0; text-align: left;">
               <p style="color: #333; margin: 0 0 10px 0;">
-                <strong>Need elevated access?</strong>
+                <strong>Need assistance?</strong>
               </p>
               <p style="color: #666; margin: 0 0 15px 0; font-size: 14px;">
-                If you require additional permissions or role upgrades, click the button below to send a request to our DevOps team.
+                If you believe this decision was made in error, please contact our support team.
               </p>
               <div style="text-align: center;">
-                <a href="${roleRequestUrl}" style="background-color: #ff9800; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                  Request Role Upgrade
+                <a href="mailto:support@automatacontrols.com" style="background-color: #ff9800; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                  Contact Support
                 </a>
               </div>
             </div>
@@ -245,7 +194,7 @@ The Automata Controls Team`,
       ],
     })
 
-    console.log(`📧 Welcome email sent successfully! Message ID: ${info.messageId}`)
+    console.log(`📧 Rejection email sent successfully! Message ID: ${info.messageId}`)
 
     res.status(200).json({
       success: true,
@@ -253,7 +202,7 @@ The Automata Controls Team`,
       recipient: email,
     })
   } catch (error) {
-    console.error("📧 ERROR sending welcome email:", error)
-    res.status(500).json({ error: "Failed to send welcome email", details: error.message })
+    console.error("📧 ERROR sending rejection email:", error)
+    res.status(500).json({ error: "Failed to send rejection email", details: error.message })
   }
-}
+} 

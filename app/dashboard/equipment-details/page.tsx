@@ -25,6 +25,7 @@ import { FanCoilControls } from "@/components/equipment-controls/fan-coil-contro
 import { GreenhouseControls } from "@/components/equipment-controls/greenhouse-controls"
 import { PumpControls } from "@/components/equipment-controls/pump-controls"
 import { ActuatorControls } from "@/components/equipment-controls/actuator-controls"
+import { RTUControls } from "@/components/equipment-controls/rtu-controls"
 
 // Types for our data structure
 interface Location {
@@ -269,6 +270,20 @@ export default function EquipmentDetailsPage() {
             }
 
             if (foundSystem) {
+              // Check if any alerts should be cleared based on current metrics
+              if (foundSystem.alerts && foundSystem.metrics) {
+                const updatedAlerts = foundSystem.alerts.filter(
+                  (alert) => !shouldClearAlert(alert, foundSystem.metrics),
+                )
+
+                // If alerts changed, update them in RTDB
+                if (updatedAlerts.length !== foundSystem.alerts.length && foundLocationKey && foundSystemKey) {
+                  const alertsRef = ref(secondaryDb, `locations/${foundLocationKey}/systems/${foundSystemKey}/alerts`)
+                  update(alertsRef, { alerts: updatedAlerts })
+                  foundSystem.alerts = updatedAlerts
+                }
+              }
+
               setEquipmentData(foundSystem as System)
 
               // Initialize control values from existing data if available
@@ -501,6 +516,16 @@ export default function EquipmentDetailsPage() {
     return Object.fromEntries(Object.entries(groups).filter(([_, values]) => Object.keys(values).length > 0))
   }
 
+  // Add this new function after the groupMetrics function
+  const shouldClearAlert = (alert: string, metrics: SystemMetric) => {
+    // Clear pump command mismatch alerts if pump is running (amp reading > 12)
+    if (alert.toLowerCase().includes("pump") && alert.toLowerCase().includes("command mismatch")) {
+      const pumpKeys = Object.keys(metrics).filter((key) => key.toLowerCase().includes("amp"))
+      return pumpKeys.some((key) => Number(metrics[key]) > 12)
+    }
+    return false
+  }
+
   // Refresh data
   const handleRefresh = () => {
     setRefreshing(true)
@@ -568,6 +593,8 @@ export default function EquipmentDetailsPage() {
         return <PumpControls {...equipmentProps} />
       case "actuator":
         return <ActuatorControls {...equipmentProps} />
+      case "rtu":
+        return <RTUControls {...equipmentProps} />
       default:
         // If no specific control component matches, show a message
         return (
@@ -705,12 +732,16 @@ export default function EquipmentDetailsPage() {
               )}
 
               {equipmentData?.alerts && equipmentData.alerts.length > 0 && (
-                <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
-                  <h3 className="font-medium text-yellow-800">Alerts:</h3>
-                  <ul className="list-disc list-inside">
+                <div className="mb-4 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-800 mr-2" />
+                    <h3 className="font-medium text-yellow-800">Active Alerts</h3>
+                  </div>
+                  <ul className="space-y-2">
                     {equipmentData.alerts.map((alert, index) => (
-                      <li key={index} className="text-yellow-800">
-                        {alert}
+                      <li key={index} className="flex items-start text-yellow-800">
+                        <span className="mr-2">•</span>
+                        <span>{alert}</span>
                       </li>
                     ))}
                   </ul>

@@ -29,14 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { validateEquipment } from "@/lib/validation"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore"
 
 const EQUIPMENT_TYPES = [
@@ -51,6 +44,7 @@ const EQUIPMENT_TYPES = [
   "Greenhouse",
   "Heat Exchanger",
   "Pump",
+  "RTU",
   "Steam Bundle",
   "Supply Fan",
   "VAV Box",
@@ -59,141 +53,144 @@ const EQUIPMENT_TYPES = [
 
 // Update threshold type definitions with more specific metrics
 const THRESHOLD_TYPES = {
-  "Supply Air": { 
+  "Supply Air": {
     temperature: { label: "Temperature (°F)", min: 55, max: 75 },
     humidity: { label: "Humidity (%)", min: 30, max: 60 },
     pressure: { label: "Static Pressure (inW.C.)", min: -1, max: 1 },
     flow: { label: "Airflow (CFM)", min: 0, max: 10000 },
-    co2: { label: "CO2 Level (PPM)", min: 400, max: 1000 }
+    co2: { label: "CO2 Level (PPM)", min: 400, max: 1000 },
   },
   "Return Air": {
     temperature: { label: "Temperature (°F)", min: 68, max: 78 },
     humidity: { label: "Humidity (%)", min: 30, max: 60 },
-    co2: { label: "CO2 Level (PPM)", min: 400, max: 1000 }
+    co2: { label: "CO2 Level (PPM)", min: 400, max: 1000 },
   },
   "Outside Air": {
     temperature: { label: "Temperature (°F)", min: -20, max: 120 },
     humidity: { label: "Humidity (%)", min: 0, max: 100 },
     damperPosition: { label: "Damper Position (%)", min: 0, max: 100 },
-    co2: { label: "CO2 Level (PPM)", min: 380, max: 500 }
+    co2: { label: "CO2 Level (PPM)", min: 380, max: 500 },
   },
   "Exhaust Air": {
     temperature: { label: "Temperature (°F)", min: 55, max: 85 },
     humidity: { label: "Humidity (%)", min: 20, max: 80 },
     flow: { label: "Airflow (CFM)", min: 0, max: 10000 },
-    damperPosition: { label: "Damper Position (%)", min: 0, max: 100 }
+    damperPosition: { label: "Damper Position (%)", min: 0, max: 100 },
   },
   "Energy Recovery": {
     efficiency: { label: "Recovery Efficiency (%)", min: 0, max: 100 },
     temperature: { label: "Temperature (°F)", min: 40, max: 95 },
-    bypass: { label: "Bypass Position (%)", min: 0, max: 100 }
+    bypass: { label: "Bypass Position (%)", min: 0, max: 100 },
   },
   "Mixed Air": {
     temperature: { label: "Temperature (°F)", min: 45, max: 65 },
     humidity: { label: "Humidity (%)", min: 30, max: 60 },
-    damperPosition: { label: "Damper Position (%)", min: 0, max: 100 }
+    damperPosition: { label: "Damper Position (%)", min: 0, max: 100 },
   },
   "Water Supply": {
     temperature: { label: "Supply Water Temperature (°F)", min: 120, max: 200 },
     pressure: { label: "Supply Pressure (PSI)", min: 12, max: 60 },
     flow: { label: "Flow Rate (GPM)", min: 0, max: 500 },
-    valvePosition: { label: "Valve Position (%)", min: 0, max: 100 }
+    valvePosition: { label: "Valve Position (%)", min: 0, max: 100 },
   },
   "Water Return": {
     temperature: { label: "Return Water Temperature (°F)", min: 100, max: 180 },
     pressure: { label: "Return Pressure (PSI)", min: 8, max: 40 },
-    flow: { label: "Flow Rate (GPM)", min: 0, max: 500 }
+    flow: { label: "Flow Rate (GPM)", min: 0, max: 500 },
   },
   "Freeze Stat": {
-    temperature: { label: "Temperature (°F)", min: 35, max: 38 }
+    temperature: { label: "Temperature (°F)", min: 35, max: 38 },
   },
   "Differential Pressure": {
     pressure: { label: "Pressure (inW.C.)", min: -2, max: 2 },
-    flow: { label: "Flow Rate", min: 0, max: 100, unit: "%" }
+    flow: { label: "Flow Rate", min: 0, max: 100, unit: "%" },
   },
-  "Power": {
+  Power: {
     amps: { label: "Current (Amps)", min: 0, max: 100 },
     voltage: { label: "Voltage (V)", min: 0, max: 480 },
     power: { label: "Power (kW)", min: 0, max: 50 },
-    frequency: { label: "Frequency (Hz)", min: 0, max: 60 }
+    frequency: { label: "Frequency (Hz)", min: 0, max: 60 },
   },
-  "Fan": {
+  Fan: {
     speed: { label: "Speed (%)", min: 0, max: 100 },
     status: { label: "Status", min: 0, max: 1 },
-    runtime: { label: "Runtime (Hours)", min: 0, max: 100000 }
+    runtime: { label: "Runtime (Hours)", min: 0, max: 100000 },
   },
-  "Compressor": {
+  Compressor: {
     status: { label: "Status", min: 0, max: 1 },
     runtime: { label: "Runtime (Hours)", min: 0, max: 100000 },
     suction: { label: "Suction Pressure (PSI)", min: 0, max: 100 },
-    discharge: { label: "Discharge Pressure (PSI)", min: 100, max: 400 }
+    discharge: { label: "Discharge Pressure (PSI)", min: 100, max: 400 },
   },
-  "Steam": {
+  Steam: {
     temperature: { label: "Temperature (°F)", min: 250, max: 350 },
     pressure: { label: "Pressure (PSI)", min: 15, max: 150 },
     flow: { label: "Flow Rate (lb/hr)", min: 0, max: 1000 },
-    valvePosition: { label: "Valve Position (%)", min: 0, max: 100 }
+    valvePosition: { label: "Valve Position (%)", min: 0, max: 100 },
   },
-  "Zone": {
+  Zone: {
     temperature: { label: "Temperature (°F)", min: 65, max: 75 },
     humidity: { label: "Humidity (%)", min: 30, max: 60 },
     co2: { label: "CO2 Level (PPM)", min: 400, max: 1000 },
-    occupancy: { label: "Occupancy Status", min: 0, max: 1 }
+    occupancy: { label: "Occupancy Status", min: 0, max: 1 },
   },
-  "Boiler": {
+  Boiler: {
     temperature: { label: "Boiler Temperature (°F)", min: 140, max: 200 },
     pressure: { label: "Operating Pressure (PSI)", min: 12, max: 60 },
     waterLevel: { label: "Water Level (%)", min: 50, max: 100 },
     flame: { label: "Flame Signal (V)", min: 0, max: 5 },
-    runtime: { label: "Runtime (Hours)", min: 0, max: 100000 }
-  }
+    runtime: { label: "Runtime (Hours)", min: 0, max: 100000 },
+  },
 }
 
 // Update equipment thresholds with more specific monitoring points
 const EQUIPMENT_THRESHOLDS = {
   "Air Handler": {
-    availableTypes: ["Supply Air", "Return Air", "Mixed Air", "Freeze Stat", "Fan", "Power", "Zone"]
+    availableTypes: ["Supply Air", "Return Air", "Mixed Air", "Freeze Stat", "Fan", "Power", "Zone"],
   },
-  "Boiler": {
-    availableTypes: ["Boiler", "Water Supply", "Water Return", "Power"]
+  Boiler: {
+    availableTypes: ["Boiler", "Water Supply", "Water Return", "Power"],
   },
-  "Chiller": {
-    availableTypes: ["Water Supply", "Water Return", "Compressor", "Power"]
+  Chiller: {
+    availableTypes: ["Water Supply", "Water Return", "Compressor", "Power"],
   },
   "Cooling Tower": {
-    availableTypes: ["Water Supply", "Water Return", "Fan", "Power"]
+    availableTypes: ["Water Supply", "Water Return", "Fan", "Power"],
   },
   "Exhaust Fan": {
-    availableTypes: ["Differential Pressure", "Fan", "Power"]
+    availableTypes: ["Differential Pressure", "Fan", "Power"],
   },
   "Fan Coil": {
-    availableTypes: ["Supply Air", "Water Supply", "Fan", "Power", "Zone"]
+    availableTypes: ["Supply Air", "Water Supply", "Fan", "Power", "Zone"],
   },
-  "Greenhouse": {
-    availableTypes: ["Zone", "Supply Air", "Return Air"]
+  Greenhouse: {
+    availableTypes: ["Zone", "Supply Air", "Return Air"],
   },
   "Heat Exchanger": {
-    availableTypes: ["Water Supply", "Water Return", "Differential Pressure"]
+    availableTypes: ["Water Supply", "Water Return", "Differential Pressure"],
   },
-  "Pump": {
-    availableTypes: ["Water Supply", "Differential Pressure", "Power"]
+  Pump: {
+    availableTypes: ["Water Supply", "Differential Pressure", "Power"],
+  },
+  RTU: {
+    availableTypes: ["Supply Air", "Return Air", "Outside Air", "Compressor", "Fan", "Power", "Zone"],
   },
   "Steam Bundle": {
-    availableTypes: ["Steam", "Water Supply", "Water Return"]
+    availableTypes: ["Steam", "Water Supply", "Water Return"],
   },
   "Supply Fan": {
-    availableTypes: ["Supply Air", "Differential Pressure", "Fan", "Power"]
+    availableTypes: ["Supply Air", "Differential Pressure", "Fan", "Power"],
   },
   "VAV Box": {
-    availableTypes: ["Supply Air", "Zone", "Differential Pressure"]
+    availableTypes: ["Supply Air", "Zone", "Differential Pressure"],
   },
   "Water Heater": {
-    availableTypes: ["Water Supply", "Water Return", "Power"]
+    availableTypes: ["Water Supply", "Water Return", "Power"],
   },
-  "Actuator": {
-    availableTypes: ["Differential Pressure", "Power"]
+  Actuator: {
+    availableTypes: ["Differential Pressure", "Power"],
   },
-  "DOAS": {
+  DOAS: {
     availableTypes: [
       "Supply Air",
       "Return Air",
@@ -202,30 +199,40 @@ const EQUIPMENT_THRESHOLDS = {
       "Energy Recovery",
       "Compressor",
       "Fan",
-      "Power"
-    ]
+      "Power",
+    ],
   },
 }
 
 // Helper function to generate default system name based on equipment type
 const getDefaultSystemName = (equipmentType) => {
-  switch(equipmentType) {
-    case "Air Handler": return "AHU-1";
-    case "Boiler": return "Boilers";
-    case "Chiller": return "Chiller";
-    case "DOAS": return "DOAS-1";
-    case "Fan Coil": return "FanCoil1";
-    case "Greenhouse": return "Greenhouse";
-    case "Steam Bundle": return "SteamBundle";
-    default: return equipmentType.replace(/\s+/g, '');
+  switch (equipmentType) {
+    case "Air Handler":
+      return "AHU-1"
+    case "Boiler":
+      return "Boilers"
+    case "Chiller":
+      return "Chiller"
+    case "DOAS":
+      return "DOAS-1"
+    case "Fan Coil":
+      return "FanCoil1"
+    case "Greenhouse":
+      return "Greenhouse"
+    case "RTU":
+      return "RTU-1"
+    case "Steam Bundle":
+      return "SteamBundle"
+    default:
+      return equipmentType.replace(/\s+/g, "")
   }
-};
+}
 
 // Function to normalize location name for Firebase path
 const normalizeLocationName = (name) => {
-  if (!name) return "";
-  return name.replace(/\s+/g, '').replace(/&/g, 'And');
-};
+  if (!name) return ""
+  return name.replace(/\s+/g, "").replace(/&/g, "And")
+}
 
 // Equipment interface
 interface Equipment {
@@ -235,10 +242,10 @@ interface Equipment {
   locationId: string
   ipAddress?: string
   firebasePath: {
-    location: string  // Exact location name in Firebase RTDB
-    system: string    // Exact system name in Firebase RTDB
+    location: string // Exact location name in Firebase RTDB
+    system: string // Exact system name in Firebase RTDB
   }
-  zone?: string     // Optional zone field for applicable equipment types
+  zone?: string // Optional zone field for applicable equipment types
   thresholds: {
     [thresholdType: string]: {
       [measurement: string]: {
@@ -246,7 +253,7 @@ interface Equipment {
         max: number
       }
     }
-  },
+  }
   status?: string
   createdAt?: Date
   updatedAt?: Date
@@ -265,7 +272,7 @@ export function EquipmentSettings() {
     ipAddress: "",
     firebasePath: {
       location: "",
-      system: ""
+      system: "",
     },
     zone: "",
     thresholds: {},
@@ -286,7 +293,7 @@ export function EquipmentSettings() {
           id: doc.id,
           ...doc.data(),
         }))
-        console.log("Fetched locations for equipment settings:", locationData) 
+        console.log("Fetched locations for equipment settings:", locationData)
         setLocations(locationData)
       } catch (error) {
         console.error("Error fetching locations:", error)
@@ -333,8 +340,8 @@ export function EquipmentSettings() {
     setIsLoading(true)
     try {
       // Ensure Firebase path is properly set
-      let equipmentData = { ...newEquipment };
-      
+      let equipmentData = { ...newEquipment }
+
       // Make sure required fields are present
       if (!equipmentData.name || !equipmentData.type || !equipmentData.locationId) {
         toast({
@@ -347,16 +354,16 @@ export function EquipmentSettings() {
       }
 
       // Double-check that firebasePath is correctly populated
-      const selectedLocation = locations.find(loc => loc.id === equipmentData.locationId);
+      const selectedLocation = locations.find((loc) => loc.id === equipmentData.locationId)
       if (selectedLocation) {
-        const locationName = normalizeLocationName(selectedLocation.name);
+        const locationName = normalizeLocationName(selectedLocation.name)
         equipmentData = {
           ...equipmentData,
           firebasePath: {
-            location: locationName || '',
-            system: equipmentData.type === 'Air Handler' ? 'AHU-1' : getDefaultSystemName(equipmentData.type || '')
-          }
-        };
+            location: locationName || "",
+            system: equipmentData.type === "Air Handler" ? "AHU-1" : getDefaultSystemName(equipmentData.type || ""),
+          },
+        }
       }
 
       // Add status and timestamps
@@ -392,7 +399,7 @@ export function EquipmentSettings() {
         ipAddress: "",
         firebasePath: {
           location: "",
-          system: ""
+          system: "",
         },
         zone: "",
         thresholds: {},
@@ -410,7 +417,7 @@ export function EquipmentSettings() {
       console.error("Error adding equipment:", error)
       toast({
         title: "Error",
-        description: `Failed to add equipment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to add equipment: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       })
     } finally {
@@ -422,7 +429,7 @@ export function EquipmentSettings() {
     if (!db || !editEquipment) return
 
     setIsLoading(true)
-    
+
     try {
       // Make sure required fields are present
       if (!editEquipment.name || !editEquipment.type || !editEquipment.locationId) {
@@ -436,19 +443,19 @@ export function EquipmentSettings() {
       }
 
       // Ensure firebasePath is properly set
-      let equipmentData = { ...editEquipment };
-      
+      let equipmentData = { ...editEquipment }
+
       // Double-check that firebasePath is correctly populated
-      const selectedLocation = locations.find(loc => loc.id === equipmentData.locationId);
+      const selectedLocation = locations.find((loc) => loc.id === equipmentData.locationId)
       if (selectedLocation) {
-        const locationName = normalizeLocationName(selectedLocation.name);
+        const locationName = normalizeLocationName(selectedLocation.name)
         equipmentData = {
           ...equipmentData,
           firebasePath: {
-            location: locationName || '',
-            system: equipmentData.firebasePath?.system || getDefaultSystemName(equipmentData.type)
-          }
-        };
+            location: locationName || "",
+            system: equipmentData.firebasePath?.system || getDefaultSystemName(equipmentData.type),
+          },
+        }
       }
 
       // Add updatedAt timestamp
@@ -467,9 +474,7 @@ export function EquipmentSettings() {
 
       // Update the equipment in the local state
       setEquipment(
-        equipment.map((item) =>
-          item.id === editEquipment.id ? { ...equipmentData, id: editEquipment.id } : item,
-        ),
+        equipment.map((item) => (item.id === editEquipment.id ? { ...equipmentData, id: editEquipment.id } : item)),
       )
 
       // Close the dialog
@@ -484,7 +489,7 @@ export function EquipmentSettings() {
       console.error("Error updating equipment:", error)
       toast({
         title: "Error",
-        description: `Failed to update equipment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to update equipment: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       })
     } finally {
@@ -523,7 +528,7 @@ export function EquipmentSettings() {
   }
 
   // Update renderThresholdFields function
-  const renderThresholdFields = (equipmentType: string, isEdit: boolean = false) => {
+  const renderThresholdFields = (equipmentType: string, isEdit = false) => {
     const equipment = EQUIPMENT_THRESHOLDS[equipmentType as keyof typeof EQUIPMENT_THRESHOLDS]
     if (!equipment) return null
 
@@ -545,7 +550,7 @@ export function EquipmentSettings() {
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           type="number"
-                          step={key === 'pressure' ? "0.01" : "1"}
+                          step={key === "pressure" ? "0.01" : "1"}
                           placeholder={`Min (${config.min})`}
                           value={currentThresholds?.[thresholdType]?.[key]?.min}
                           onChange={(e) => {
@@ -558,7 +563,7 @@ export function EquipmentSettings() {
                                     ...editEquipment.thresholds[thresholdType],
                                     [key]: {
                                       ...editEquipment.thresholds[thresholdType]?.[key],
-                                      min: parseFloat(e.target.value),
+                                      min: Number.parseFloat(e.target.value),
                                     },
                                   },
                                 },
@@ -572,7 +577,7 @@ export function EquipmentSettings() {
                                     ...newEquipment.thresholds![thresholdType],
                                     [key]: {
                                       ...newEquipment.thresholds![thresholdType]?.[key],
-                                      min: parseFloat(e.target.value),
+                                      min: Number.parseFloat(e.target.value),
                                     },
                                   },
                                 },
@@ -582,7 +587,7 @@ export function EquipmentSettings() {
                         />
                         <Input
                           type="number"
-                          step={key === 'pressure' ? "0.01" : "1"}
+                          step={key === "pressure" ? "0.01" : "1"}
                           placeholder={`Max (${config.max})`}
                           value={currentThresholds?.[thresholdType]?.[key]?.max}
                           onChange={(e) => {
@@ -595,7 +600,7 @@ export function EquipmentSettings() {
                                     ...editEquipment.thresholds[thresholdType],
                                     [key]: {
                                       ...editEquipment.thresholds[thresholdType]?.[key],
-                                      max: parseFloat(e.target.value),
+                                      max: Number.parseFloat(e.target.value),
                                     },
                                   },
                                 },
@@ -609,7 +614,7 @@ export function EquipmentSettings() {
                                     ...newEquipment.thresholds![thresholdType],
                                     [key]: {
                                       ...newEquipment.thresholds![thresholdType]?.[key],
-                                      max: parseFloat(e.target.value),
+                                      max: Number.parseFloat(e.target.value),
                                     },
                                   },
                                 },
@@ -643,7 +648,9 @@ export function EquipmentSettings() {
           <DialogContent className="max-w-4xl flex flex-col h-[80vh]">
             <DialogHeader>
               <DialogTitle>Add New Equipment</DialogTitle>
-              <DialogDescription>Configure a new piece of equipment in your building management system</DialogDescription>
+              <DialogDescription>
+                Configure a new piece of equipment in your building management system
+              </DialogDescription>
             </DialogHeader>
             {/* Make the content area scrollable */}
             <div className="flex-1 overflow-y-auto pr-2">
@@ -667,18 +674,18 @@ export function EquipmentSettings() {
                         <Select
                           value={newEquipment.type}
                           onValueChange={(value) => {
-                            const selectedLocation = locations.find(loc => loc.id === newEquipment.locationId);
-                            const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : '';
-                            
+                            const selectedLocation = locations.find((loc) => loc.id === newEquipment.locationId)
+                            const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : ""
+
                             setNewEquipment({
                               ...newEquipment,
                               type: value,
                               firebasePath: {
-                                ...newEquipment.firebasePath || {},
+                                ...(newEquipment.firebasePath || {}),
                                 location: locationName,
-                                system: getDefaultSystemName(value)
-                              }
-                            });
+                                system: getDefaultSystemName(value),
+                              },
+                            })
                           }}
                         >
                           <SelectTrigger>
@@ -699,17 +706,17 @@ export function EquipmentSettings() {
                       <Select
                         value={newEquipment.locationId}
                         onValueChange={(value) => {
-                          const selectedLocation = locations.find(loc => loc.id === value);
-                          const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : '';
-                          
+                          const selectedLocation = locations.find((loc) => loc.id === value)
+                          const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : ""
+
                           setNewEquipment({
                             ...newEquipment,
                             locationId: value,
                             firebasePath: {
-                              ...newEquipment.firebasePath || {},
-                              location: locationName
-                            }
-                          });
+                              ...(newEquipment.firebasePath || {}),
+                              location: locationName,
+                            },
+                          })
                         }}
                       >
                         <SelectTrigger>
@@ -749,16 +756,14 @@ export function EquipmentSettings() {
                               ...newEquipment,
                               firebasePath: {
                                 ...newEquipment.firebasePath!,
-                                location: e.target.value
+                                location: e.target.value,
                               },
                             })
                           }
                           placeholder="e.g. AkronCarnegiePublicLibrary"
                           className="bg-gray-50"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Automatically set from selected location
-                        </p>
+                        <p className="text-xs text-muted-foreground">Automatically set from selected location</p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="firebase-system">System Name</Label>
@@ -770,7 +775,7 @@ export function EquipmentSettings() {
                               ...newEquipment,
                               firebasePath: {
                                 ...newEquipment.firebasePath!,
-                                system: e.target.value
+                                system: e.target.value,
                               },
                             })
                           }
@@ -781,9 +786,9 @@ export function EquipmentSettings() {
                         </p>
                       </div>
                     </div>
-                    
-		    {/* Add zone input for applicable equipment types */}
-                    {['Air Handler', 'Fan Coil', 'VAV Box', 'DOAS'].includes(newEquipment.type || '') && (
+
+                    {/* Add zone input for applicable equipment types */}
+                    {["Air Handler", "Fan Coil", "VAV Box", "DOAS", "RTU"].includes(newEquipment.type || "") && (
                       <div className="space-y-2">
                         <Label htmlFor="equipment-zone">Zone</Label>
                         <Input
@@ -797,9 +802,7 @@ export function EquipmentSettings() {
                           }
                           placeholder="e.g. North Wing, Room 101"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Optional zone name for this equipment
-                        </p>
+                        <p className="text-xs text-muted-foreground">Optional zone name for this equipment</p>
                       </div>
                     )}
                   </div>
@@ -809,66 +812,66 @@ export function EquipmentSettings() {
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold">Thresholds</h3>
                       <div className="space-y-4">
-                        {EQUIPMENT_THRESHOLDS[newEquipment.type as keyof typeof EQUIPMENT_THRESHOLDS]?.availableTypes.map(
-                          (thresholdType) => (
-                            <div key={thresholdType} className="space-y-4 border rounded-lg p-4">
-                              <h4 className="font-medium text-sm">{thresholdType}</h4>
-                              <div className="grid grid-cols-2 gap-4">
-                                {Object.entries(THRESHOLD_TYPES[thresholdType as keyof typeof THRESHOLD_TYPES]).map(
-                                  ([key, config]) => (
-                                    <div key={key} className="space-y-2">
-                                      <Label>{config.label}</Label>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <Input
-                                          type="number"
-                                          step={key === 'pressure' ? "0.01" : "1"}
-                                          placeholder={`Min (${config.min})`}
-                                          value={newEquipment.thresholds?.[thresholdType]?.[key]?.min || ""}
-                                          onChange={(e) =>
-                                            setNewEquipment({
-                                              ...newEquipment,
-                                              thresholds: {
-                                                ...newEquipment.thresholds,
-                                                [thresholdType]: {
-                                                  ...newEquipment.thresholds?.[thresholdType],
-                                                  [key]: {
-                                                    ...newEquipment.thresholds?.[thresholdType]?.[key],
-                                                    min: parseFloat(e.target.value),
-                                                  },
+                        {EQUIPMENT_THRESHOLDS[
+                          newEquipment.type as keyof typeof EQUIPMENT_THRESHOLDS
+                        ]?.availableTypes.map((thresholdType) => (
+                          <div key={thresholdType} className="space-y-4 border rounded-lg p-4">
+                            <h4 className="font-medium text-sm">{thresholdType}</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              {Object.entries(THRESHOLD_TYPES[thresholdType as keyof typeof THRESHOLD_TYPES]).map(
+                                ([key, config]) => (
+                                  <div key={key} className="space-y-2">
+                                    <Label>{config.label}</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <Input
+                                        type="number"
+                                        step={key === "pressure" ? "0.01" : "1"}
+                                        placeholder={`Min (${config.min})`}
+                                        value={newEquipment.thresholds?.[thresholdType]?.[key]?.min || ""}
+                                        onChange={(e) =>
+                                          setNewEquipment({
+                                            ...newEquipment,
+                                            thresholds: {
+                                              ...newEquipment.thresholds,
+                                              [thresholdType]: {
+                                                ...newEquipment.thresholds?.[thresholdType],
+                                                [key]: {
+                                                  ...newEquipment.thresholds?.[thresholdType]?.[key],
+                                                  min: Number.parseFloat(e.target.value),
                                                 },
                                               },
-                                            })
-                                          }
-                                        />
-                                        <Input
-                                          type="number"
-                                          step={key === 'pressure' ? "0.01" : "1"}
-                                          placeholder={`Max (${config.max})`}
-                                          value={newEquipment.thresholds?.[thresholdType]?.[key]?.max || ""}
-                                          onChange={(e) =>
-                                            setNewEquipment({
-                                              ...newEquipment,
-                                              thresholds: {
-                                                ...newEquipment.thresholds,
-                                                [thresholdType]: {
-                                                  ...newEquipment.thresholds?.[thresholdType],
-                                                  [key]: {
-                                                    ...newEquipment.thresholds?.[thresholdType]?.[key],
-                                                    max: parseFloat(e.target.value),
-                                                  },
+                                            },
+                                          })
+                                        }
+                                      />
+                                      <Input
+                                        type="number"
+                                        step={key === "pressure" ? "0.01" : "1"}
+                                        placeholder={`Max (${config.max})`}
+                                        value={newEquipment.thresholds?.[thresholdType]?.[key]?.max || ""}
+                                        onChange={(e) =>
+                                          setNewEquipment({
+                                            ...newEquipment,
+                                            thresholds: {
+                                              ...newEquipment.thresholds,
+                                              [thresholdType]: {
+                                                ...newEquipment.thresholds?.[thresholdType],
+                                                [key]: {
+                                                  ...newEquipment.thresholds?.[thresholdType]?.[key],
+                                                  max: Number.parseFloat(e.target.value),
                                                 },
                                               },
-                                            })
-                                          }
-                                        />
-                                      </div>
+                                            },
+                                          })
+                                        }
+                                      />
                                     </div>
-                                  )
-                                )}
-                              </div>
+                                  </div>
+                                ),
+                              )}
                             </div>
-                          )
-                        )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -920,9 +923,9 @@ export function EquipmentSettings() {
                     <TableCell>{item.type}</TableCell>
                     <TableCell>{getLocationName(item.locationId)}</TableCell>
                     <TableCell>
-                      {item.firebasePath ? 
-                        `${item.firebasePath.location}/${item.firebasePath.system}` : 
-                        "Not configured"}
+                      {item.firebasePath
+                        ? `${item.firebasePath.location}/${item.firebasePath.system}`
+                        : "Not configured"}
                     </TableCell>
                     <TableCell>{item.zone || "-"}</TableCell>
                     <TableCell>{item.ipAddress || "-"}</TableCell>
@@ -998,18 +1001,18 @@ export function EquipmentSettings() {
                     <Select
                       value={editEquipment.type}
                       onValueChange={(value) => {
-                        const selectedLocation = locations.find(loc => loc.id === editEquipment.locationId);
-                        const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : '';
-                        
+                        const selectedLocation = locations.find((loc) => loc.id === editEquipment.locationId)
+                        const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : ""
+
                         setEditEquipment({
                           ...editEquipment,
                           type: value,
                           firebasePath: {
-                            ...editEquipment.firebasePath || {},
+                            ...(editEquipment.firebasePath || {}),
                             location: locationName,
-                            system: getDefaultSystemName(value)
-                          }
-                        });
+                            system: getDefaultSystemName(value),
+                          },
+                        })
                       }}
                     >
                       <SelectTrigger>
@@ -1030,17 +1033,17 @@ export function EquipmentSettings() {
                   <Select
                     value={editEquipment.locationId}
                     onValueChange={(value) => {
-                      const selectedLocation = locations.find(loc => loc.id === value);
-                      const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : '';
-                      
+                      const selectedLocation = locations.find((loc) => loc.id === value)
+                      const locationName = selectedLocation ? normalizeLocationName(selectedLocation.name) : ""
+
                       setEditEquipment({
                         ...editEquipment,
                         locationId: value,
                         firebasePath: {
-                          ...editEquipment.firebasePath || {},
-                          location: locationName
-                        }
-                      });
+                          ...(editEquipment.firebasePath || {}),
+                          location: locationName,
+                        },
+                      })
                     }}
                   >
                     <SelectTrigger>
@@ -1060,10 +1063,12 @@ export function EquipmentSettings() {
                   <Input
                     id="edit-ip"
                     value={editEquipment.ipAddress || ""}
-                    onChange={(e) => setEditEquipment({ 
-                      ...editEquipment, 
-                      ipAddress: e.target.value 
-                    })}
+                    onChange={(e) =>
+                      setEditEquipment({
+                        ...editEquipment,
+                        ipAddress: e.target.value,
+                      })
+                    }
                     placeholder="e.g. 192.168.1.100"
                   />
                 </div>
@@ -1081,17 +1086,15 @@ export function EquipmentSettings() {
                           setEditEquipment({
                             ...editEquipment,
                             firebasePath: {
-                              ...editEquipment.firebasePath || {},
-                              location: e.target.value
+                              ...(editEquipment.firebasePath || {}),
+                              location: e.target.value,
                             },
                           })
                         }
                         placeholder="e.g. AkronCarnegiePublicLibrary"
                         className="bg-gray-50"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Automatically set from selected location
-                      </p>
+                      <p className="text-xs text-muted-foreground">Automatically set from selected location</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-firebase-system">System Name</Label>
@@ -1102,8 +1105,8 @@ export function EquipmentSettings() {
                           setEditEquipment({
                             ...editEquipment,
                             firebasePath: {
-                              ...editEquipment.firebasePath || {},
-                              system: e.target.value
+                              ...(editEquipment.firebasePath || {}),
+                              system: e.target.value,
                             },
                           })
                         }
@@ -1114,9 +1117,9 @@ export function EquipmentSettings() {
                       </p>
                     </div>
                   </div>
-                  
+
                   {/* Add zone input for edit mode */}
-                  {['Air Handler', 'Fan Coil', 'VAV Box', 'DOAS'].includes(editEquipment.type) && (
+                  {["Air Handler", "Fan Coil", "VAV Box", "DOAS", "RTU"].includes(editEquipment.type) && (
                     <div className="space-y-2">
                       <Label htmlFor="edit-equipment-zone">Zone</Label>
                       <Input
@@ -1130,9 +1133,7 @@ export function EquipmentSettings() {
                         }
                         placeholder="e.g. North Wing, Room 101"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Optional zone name for this equipment
-                      </p>
+                      <p className="text-xs text-muted-foreground">Optional zone name for this equipment</p>
                     </div>
                   )}
                 </div>
@@ -1146,8 +1147,8 @@ export function EquipmentSettings() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleEditEquipment} 
+            <Button
+              onClick={handleEditEquipment}
               disabled={!editEquipment?.name || !editEquipment?.type || !editEquipment?.locationId}
             >
               Save Changes

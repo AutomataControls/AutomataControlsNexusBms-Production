@@ -13,9 +13,28 @@ import { AuthStatus } from "@/components/auth-status"
 export function AppHeader() {
   const [date, setDate] = useState<string>("")
   const [time, setTime] = useState<string>("")
+  const [selectedLocation, setSelectedLocation] = useState<string>("")
   const router = useRouter()
   const pathname = usePathname()
   const { config } = useFirebase()
+
+  // Get the selected location from localStorage
+  useEffect(() => {
+    const savedLocation = localStorage.getItem("selectedLocation")
+    if (savedLocation) {
+      setSelectedLocation(savedLocation)
+    }
+
+    // Listen for changes to the selected location
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "selectedLocation" && e.newValue) {
+        setSelectedLocation(e.newValue)
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
+  }, [])
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -65,11 +84,8 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center space-x-6 pr-4">
-          {config?.weatherApiKey ? (
-            <WeatherDisplay />
-          ) : (
-            <WeatherDisplay defaultLocation="Fort Wayne, Indiana" defaultZipCode="46803" />
-          )}
+          {/* Pass the selected location ID to the WeatherDisplay component */}
+          <WeatherDisplay locationId={selectedLocation} defaultLocation="Fort Wayne, Indiana" defaultZipCode="46803" />
 
           <div className="flex flex-col items-end">
             <div className="text-sm font-medium text-amber-200/90">{date}</div>
@@ -107,4 +123,3 @@ export function AppHeader() {
     </header>
   )
 }
-

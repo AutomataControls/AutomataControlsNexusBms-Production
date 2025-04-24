@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -32,152 +32,531 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  ref,
+  set,
+  serverTimestamp,
+  update,
+  Database,
+  onValue,
+  off,
+  query as rtdbQuery,
+  orderByChild,
+  limitToLast,
+  DataSnapshot,
+  remove
+} from "firebase/database"
+import { secondaryDb } from "@/lib/secondary-firebase"
+import { logAuditEvent } from "@/lib/audit-logger"
 
 interface BoilerControlsProps {
-  equipment: any
+  equipment: {
+    id: string;
+    locationId: string;
+    locationName: string;
+    controls: ControlValues;
+    status: string;
+    name: string;
+    type: string;
+  }
+}
+
+interface ControlValues {
+  unitEnable: boolean;
+  operationMode: string;
+  waterTempSetpoint: number;
+  pressureSetpoint: number;
+  circulationPump: boolean;
+  burnerEnable: boolean;
+  firingRate: number;
+  burnerMode: string;
+  minFiringRate: number;
+  pilotValve: boolean;
+  mainGasValve: boolean;
+  highLimitTemp: number;
+  highLimitPressure: number;
+  lowWaterCutoff: boolean;
+  flameSafeguard: boolean;
+  purgeTime: number;
+  autoReset: boolean;
+}
+
+interface ControlHistoryEntry {
+  id: string;
+  command: string;
+  source: string;
+  status: string;
+  timestamp: number;
+  value: any;
+  previousValue?: any;
+  mode?: string;
+  userId: string;
+  userName: string;
+  details: string;
+}
+
+interface HistorySnapshot extends DataSnapshot {
+  val(): { [key: string]: ControlHistoryEntry } | null;
+}
+
+// Add type for secondaryDb
+declare module "@/lib/secondary-firebase" {
+  export const secondaryDb: Database;
 }
 
 export function BoilerControls({ equipment }: BoilerControlsProps) {
-  const [controlValues, setControlValues] = useState<any>({
-    ...equipment.controls,
+  const [controlValues, setControlValues] = useState<ControlValues>({
+    ...equipment.controls as ControlValues,
+  })
+  const [previousControlValues, setPreviousControlValues] = useState<ControlValues>({
+    ...equipment.controls as ControlValues,
   })
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [username, setUsername] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [showAuthDialog, setShowAuthDialog] = useState<boolean>(false)
   const [loginError, setLoginError] = useState<string>("")
+  const [pendingCommands, setPendingCommands] = useState<{ [key: string]: boolean }>({})
   const [pendingChange, setPendingChange] = useState<{ key: string; value: any } | null>(null)
+  const [controlHistory, setControlHistory] = useState<ControlHistoryEntry[]>([])
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const { socket } = useSocket()
   const { toast } = useToast()
   const { db } = useFirebase()
-  const { loginWithUsername } = useAuth()
+  const { loginWithUsername, user } = useAuth()
 
-  const handleSetpointChange = (key: string, value: any) => {
-    // Setpoint changes don't require authentication
-    if (key.toLowerCase().includes("setpoint")) {
-      setControlValues({
-        ...controlValues,
-        [key]: value,
-      })
-    } else {
-      // For other controls, require authentication
-      setPendingChange({ key, value })
-      setShowAuthDialog(true)
-    }
+  // Reset authentication state when component mounts or equipment changes
+  useEffect(() => {
+    setIsAuthenticated(false);
+    setLoginError("");
+    setPendingChange(null);
+  }, [equipment.id]); // Reset when equipment changes
+
+  // Check if user has required roles
+  const hasRequiredRole = () => {
+    if (!user || !user.roles) return false;
+    const allowedRoles = ["admin", "DevOps", "devops", "Facilities", "facilities"];
+    return user.roles.some(role => allowedRoles.includes(role.toLowerCase()));
   }
 
-  const handleAuthenticate = async () => {
-    setLoginError("")
-    
+  // Check if we have valid location data
+  const hasValidLocationData = () => {
+    return Boolean(equipment && equipment.locationId && equipment.locationName);
+  }
+
+  // Replace API fetch with direct RTDB subscription for control history
+  useEffect(() => {
+    if (!equipment || !equipment.locationId || !equipment.id) return;
+
+    const historyRef = ref(secondaryDb, `control_history/${equipment.locationId}/${equipment.id}`);
+
+    const handleHistoryUpdate = (snapshot: HistorySnapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        if (data) {
+          // Convert object to array and sort by timestamp descending
+          const historyArray = Object.entries(data).map(([id, entry]) => ({
+            id,
+            ...entry,
+            timestamp: entry.timestamp || Date.now()
+          }))
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, 20); // Take only the last 20 entries after sorting
+
+          setControlHistory(historyArray);
+        } else {
+          setControlHistory([]);
+        }
+      } else {
+        setControlHistory([]);
+      }
+    };
+
+    onValue(historyRef, handleHistoryUpdate);
+
+    return () => {
+      off(historyRef);
+    };
+  }, [equipment]);
+
+  const logControlEvent = async (details: string, changes?: any) => {
+    if (!hasValidLocationData()) {
+      console.warn("Cannot log event: Missing location data");
+      return;
+    }
+
     try {
-      // Use the authentication system 
-      await loginWithUsername(username, password)
-      
-      setIsAuthenticated(true)
-      setShowAuthDialog(false)
+      await logAuditEvent({
+        action: "update",
+        userId: user?.id || "",
+        userName: user?.name || "",
+        locationId: equipment.locationId,
+        locationName: equipment.locationName,
+        details,
+        path: `/equipment/${equipment.id}/controls`,
+        ...(changes && { changes })
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Set up socket listeners for command acknowledgments
+    if (socket) {
+      socket.on("command_complete", (data: { commandId: string, status: string }) => {
+        setPendingCommands(prev => ({ ...prev, [data.commandId]: false }));
+        toast({
+          title: "Command Complete",
+          description: `Control update successful`,
+          className: "bg-teal-50 border-teal-200",
+        });
+      });
+
+      socket.on("command_failed", (data: { commandId: string, error: string }) => {
+        setPendingCommands(prev => ({ ...prev, [data.commandId]: false }));
+        toast({
+          title: "Command Failed",
+          description: data.error,
+          variant: "destructive",
+        });
+      });
+
+      return () => {
+        socket.off("command_complete");
+        socket.off("command_failed");
+      };
+    }
+  }, [socket, toast]);
+
+  const sendControlCommand = async (command: string, value: any, metadata?: any) => {
+    const commandId = Date.now().toString();
+
+    // Check if authentication is required for this command
+    const isSetpointCommand = command.toLowerCase().includes("setpoint");
+    if (!isSetpointCommand && (!isAuthenticated || !hasRequiredRole())) {
+      setPendingChange({
+        key: command,
+        value: { value, metadata }
+      });
+      setShowAuthDialog(true);
+      return false;
+    }
+
+    try {
+      setPendingCommands(prev => ({ ...prev, [commandId]: true }));
+
+      // Create a descriptive detail about the command
+      const getCommandDescription = () => {
+        switch (command) {
+          case "update_water_temp_setpoint": return "Water temperature setpoint";
+          case "update_pressure_setpoint": return "Pressure setpoint";
+          case "update_unit_enable": return "Boiler enable";
+          case "update_operation_mode": return "Operation mode";
+          case "update_circulation_pump": return "Circulation pump";
+          case "update_burner_enable": return "Burner enable";
+          case "update_firing_rate": return "Firing rate";
+          case "update_burner_mode": return "Burner mode";
+          case "update_min_firing_rate": return "Minimum firing rate";
+          case "update_pilot_valve": return "Pilot valve";
+          case "update_main_gas_valve": return "Main gas valve";
+          case "update_high_limit_temp": return "High limit temperature";
+          case "update_high_limit_pressure": return "High limit pressure";
+          case "update_low_water_cutoff": return "Low water cutoff";
+          case "update_flame_safeguard": return "Flame safeguard";
+          case "update_purge_time": return "Purge time";
+          case "update_auto_reset": return "Auto reset on fault";
+          default: return command;
+        }
+      };
+
+      // If socket is available, send the command
+      if (socket) {
+        socket.emit("control", {
+          equipmentId: equipment.id,
+          commandId,
+          command,
+          value
+        });
+      }
+
+      // Save to RTDB control history with detailed information
+      if (equipment && equipment.locationId && equipment.id) {
+        const controlHistoryRef = ref(secondaryDb as Database, `control_history/${equipment.locationId}/${equipment.id}/${commandId}`);
+
+        // Format value for better display
+        const displayValue = typeof value === 'boolean' 
+          ? (value ? 'Enabled' : 'Disabled') 
+          : String(value);
+
+        // Ensure we have valid values for the history entry
+        const historyEntry = {
+          id: commandId,
+          command,
+          source: "web_dashboard",
+          status: "pending",
+          timestamp: Date.now(),
+          value: value ?? null,
+          previousValue: metadata?.previousValue ?? null,
+          mode: metadata?.mode ?? null,
+          userId: user?.id || "unknown",
+          userName: user?.name || "unknown",
+          details: `${getCommandDescription()} changed to ${displayValue}`,
+          ...(metadata ? Object.fromEntries(
+            Object.entries(metadata).filter(([_, v]) => v !== undefined)
+          ) : {})
+        };
+
+        await set(controlHistoryRef, historyEntry);
+      }
+
+      if (hasValidLocationData()) {
+        await logControlEvent(`Changed ${command} to ${value}`, { [command]: value });
+      }
+
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+
+      if (hasValidLocationData()) {
+        await logControlEvent(`Failed to change ${command} to ${value}: ${errorMessage}`);
+      }
+
+      console.error('Failed to send control command:', error);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setPendingCommands(prev => ({ ...prev, [commandId]: false }));
+    }
+  };
+
+  const handleSetpointChange = async (key: string, value: any) => {
+    // Convert key to command format
+    const command = `update_${key.replace(/([A-Z])/g, '_$1').toLowerCase()}`;
+    const previousValue = previousControlValues[key as keyof ControlValues];
+    
+    const success = await sendControlCommand(command, value, { previousValue });
+    if (success) {
+      setControlValues(prev => ({ ...prev, [key]: value }));
+    }
+  };
+
+  const handleAuthenticate = async () => {
+    setLoginError("");
+    setIsSubmitting(true);
+
+    try {
+      // Use the authentication system
+      await loginWithUsername(username, password);
+
+      setIsAuthenticated(true);
+      setShowAuthDialog(false);
 
       // Apply the pending change if there is one
       if (pendingChange) {
+        const { key, value } = pendingChange;
+        await sendControlCommand(key, value.value, value.metadata);
+        
+        // Update the UI state for the specific control
+        const controlKey = key.replace('update_', '').replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
         setControlValues({
           ...controlValues,
-          [pendingChange.key]: pendingChange.value,
-        })
-        setPendingChange(null)
+          [controlKey]: value.value
+        });
+        
+        setPendingChange(null);
       }
 
       toast({
         title: "Authentication Successful",
         description: "You can now modify equipment controls",
         className: "bg-teal-50 border-teal-200",
-      })
+      });
     } catch (error) {
-      console.error("Authentication error:", error)
-      setLoginError("Invalid username or password")
+      console.error("Authentication error:", error);
+      setLoginError("Invalid username or password");
       toast({
         title: "Authentication Failed",
         description: "Invalid username or password",
         variant: "destructive",
-      })
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  const handleApply = () => {
-    if (!isAuthenticated && Object.keys(controlValues).some((key) => !key.toLowerCase().includes("setpoint"))) {
+  const handleApply = async () => {
+    // Check if there are any non-setpoint changes
+    const hasNonSetpointChanges = Object.entries(controlValues).some(([key, value]) => {
+      return !key.toLowerCase().includes("setpoint") && 
+             previousControlValues[key as keyof ControlValues] !== value;
+    });
+
+    if (hasNonSetpointChanges && !isAuthenticated) {
       toast({
         title: "Authentication Required",
         description: "Please authenticate to apply changes to controls other than setpoints",
         variant: "destructive",
-      })
-      return
+      });
+      setShowAuthDialog(true);
+      return;
     }
 
-    // Send control values to the equipment via socket.io
+    // Apply changes one by one
+    for (const [key, value] of Object.entries(controlValues)) {
+      if (previousControlValues[key as keyof ControlValues] !== value) {
+        const command = `update_${key.replace(/([A-Z])/g, '_$1').toLowerCase()}`;
+        await sendControlCommand(command, value, {
+          previousValue: previousControlValues[key as keyof ControlValues]
+        });
+      }
+    }
+
+    // Also send to socket if available
     if (socket) {
       socket.emit("control", {
         equipmentId: equipment.id,
         controls: controlValues,
-      })
-
-      toast({
-        title: "Controls Applied",
-        description: "Changes have been applied to the equipment",
-        className: "bg-teal-50 border-teal-200",
-      })
-    } else {
-      toast({
-        title: "Connection Error",
-        description: "Unable to connect to the control system",
-        variant: "destructive",
-      })
+      });
     }
-  }
+
+    toast({
+      title: "Controls Applied",
+      description: "Changes have been applied to the equipment",
+      className: "bg-teal-50 border-teal-200",
+    });
+  };
 
   const handleSave = async () => {
-    if (!isAuthenticated && Object.keys(controlValues).some((key) => !key.toLowerCase().includes("setpoint"))) {
+    // Check if there are any non-setpoint changes
+    const hasNonSetpointChanges = Object.entries(controlValues).some(([key, value]) => {
+      return !key.toLowerCase().includes("setpoint") && 
+             previousControlValues[key as keyof ControlValues] !== value;
+    });
+
+    if (hasNonSetpointChanges && !isAuthenticated) {
       toast({
         title: "Authentication Required",
         description: "Please authenticate to save changes to controls other than setpoints",
         variant: "destructive",
-      })
-      return
+      });
+      setShowAuthDialog(true);
+      return;
     }
 
     try {
+      // Apply changes one by one
+      const changes: Array<{ key: string; newValue: any; previousValue: any }> = [];
+      
+      for (const [key, value] of Object.entries(controlValues)) {
+        if (previousControlValues[key as keyof ControlValues] !== value) {
+          const command = `save_${key.replace(/([A-Z])/g, '_$1').toLowerCase()}`;
+          await sendControlCommand(command, value, {
+            previousValue: previousControlValues[key as keyof ControlValues]
+          });
+          
+          changes.push({
+            key, 
+            newValue: value, 
+            previousValue: previousControlValues[key as keyof ControlValues]
+          });
+        }
+      }
+      
       // Save to Firebase
       if (!db || !equipment.id) {
         throw new Error("Database or equipment ID not available");
       }
-      
+
       const equipmentRef = doc(db, "equipment", equipment.id);
-      
+
       // Update the controls field in the equipment document
       await updateDoc(equipmentRef, {
         controls: controlValues,
         lastUpdated: new Date()
       });
-      
-      // Also send to socket if available
-      if (socket) {
-        socket.emit("control", {
-          equipmentId: equipment.id,
-          controls: controlValues,
-        });
+
+      // Update previous values
+      setPreviousControlValues({ ...controlValues });
+
+      if (changes.length > 0 && hasValidLocationData()) {
+        await logControlEvent("Applied and saved control updates", { changes });
       }
 
       toast({
         title: "Controls Saved",
         description: "Changes have been saved and applied to the equipment",
         className: "bg-teal-50 border-teal-200",
-      })
+      });
     } catch (error) {
-      console.error("Error saving controls:", error)
+      console.error("Error saving controls:", error);
       toast({
         title: "Save Error",
         description: "Failed to save control settings",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
+
+  const handleAcknowledgeCommand = async (commandId: string) => {
+    if (!equipment || !equipment.locationId || !equipment.id) return;
+
+    try {
+      // Update the status in the RTDB
+      const commandRef = ref(secondaryDb, `control_history/${equipment.locationId}/${equipment.id}/${commandId}`);
+      await update(commandRef, { status: "acknowledged" });
+
+      // Refresh the control history
+      const updatedHistory = controlHistory.map(item =>
+        item.id === commandId ? { ...item, status: "acknowledged" } : item
+      );
+      setControlHistory(updatedHistory);
+
+      toast({
+        title: "Command Acknowledged",
+        description: "The command has been marked as acknowledged",
+        className: "bg-teal-50 border-teal-200",
+      });
+    } catch (error) {
+      console.error("Failed to acknowledge command:", error);
+      toast({
+        title: "Error",
+        description: "Failed to acknowledge command",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCommand = async (commandId: string) => {
+    if (!equipment || !equipment.locationId || !equipment.id) return;
+
+    try {
+      // Delete the command from the RTDB
+      const commandRef = ref(secondaryDb, `control_history/${equipment.locationId}/${equipment.id}/${commandId}`);
+      await remove(commandRef);
+
+      // Remove from local state
+      const updatedHistory = controlHistory.filter(item => item.id !== commandId);
+      setControlHistory(updatedHistory);
+
+      toast({
+        title: "Command Deleted",
+        description: "The command has been removed from history",
+        className: "bg-teal-50 border-teal-200",
+      });
+    } catch (error) {
+      console.error("Failed to delete command:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete command",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -422,7 +801,7 @@ export function BoilerControls({ equipment }: BoilerControlsProps) {
               </div>
 
               <div className="flex items-center justify-between">
-                <Label htmlFor="auto-reset">Auto Reset on Fault</Label>
+		<Label htmlFor="auto-reset">Auto Reset on Fault</Label>
                 <Switch
                   id="auto-reset"
                   checked={controlValues.autoReset === true}
@@ -433,6 +812,66 @@ export function BoilerControls({ equipment }: BoilerControlsProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* History Section */}
+      {controlHistory.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Command History</CardTitle>
+            <CardDescription>Recent control commands for this boiler</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 max-h-60 overflow-y-auto">
+              {controlHistory.map((entry) => (
+                <div key={entry.id} className="p-4 border rounded-md">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium">{entry.details}</div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(entry.timestamp).toLocaleString()} by {entry.userName}
+                      </div>
+                      <div className="flex space-x-2 mt-1">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          entry.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          entry.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          entry.status === 'acknowledged' ? 'bg-blue-100 text-blue-800' :
+                          entry.status === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {entry.status}
+                        </span>
+                        {entry.previousValue !== undefined && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800">
+                            Previous: {String(entry.previousValue)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      {entry.status === 'pending' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleAcknowledgeCommand(entry.id)}
+                        >
+                          Acknowledge
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDeleteCommand(entry.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex justify-end space-x-4">
         <AlertDialog>
@@ -475,13 +914,24 @@ export function BoilerControls({ equipment }: BoilerControlsProps) {
       </div>
 
       {/* Authentication Dialog */}
-      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+      <Dialog open={showAuthDialog} onOpenChange={(open) => {
+        setShowAuthDialog(open);
+        if (!open) {
+          setPendingChange(null);
+          setLoginError("");
+          setUsername("");
+          setPassword("");
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Authentication Required</DialogTitle>
             <DialogDescription>Please authenticate to modify equipment controls other than setpoints</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {loginError && (
+              <div className="text-red-500 text-sm">{loginError}</div>
+            )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="auth-username" className="text-right">
                 Username
@@ -491,6 +941,7 @@ export function BoilerControls({ equipment }: BoilerControlsProps) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="col-span-3"
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -503,19 +954,24 @@ export function BoilerControls({ equipment }: BoilerControlsProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="col-span-3"
+                disabled={isSubmitting}
               />
             </div>
-            {loginError && (
-              <div className="col-span-4 text-center text-red-500 text-sm">
-                {loginError}
-              </div>
-            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAuthDialog(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button onClick={handleAuthenticate}>Login</Button>
+            <Button 
+              onClick={handleAuthenticate}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Authenticating..." : "Login"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

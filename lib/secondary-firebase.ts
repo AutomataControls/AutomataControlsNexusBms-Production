@@ -3,10 +3,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 
-let secondaryApp;
-let secondaryDb;
-
-// Use environment variables for configuration
 const secondaryConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -18,22 +14,26 @@ const secondaryConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-try {
-  // Initialize secondary Firebase app if not already initialized
-  if (!getApps().find(app => app.name === 'secondary')) {
-    console.log("[secondary-firebase] Initializing secondary Firebase app");
-    secondaryApp = initializeApp(secondaryConfig, 'secondary');
+let secondaryApp;
+let secondaryDb;
+
+if (typeof window !== 'undefined') {
+  try {
+    const existingApp = getApps().find(app => app.name === 'secondary');
+    if (!existingApp) {
+      console.log("[secondary-firebase] Initializing secondary Firebase app");
+      secondaryApp = initializeApp(secondaryConfig, 'secondary');
+    } else {
+      console.log("[secondary-firebase] Secondary Firebase app already initialized");
+      secondaryApp = existingApp;
+    }
     
     // Initialize Realtime Database
     secondaryDb = getDatabase(secondaryApp);
     console.log("[secondary-firebase] Secondary RTDB initialized successfully");
-  } else {
-    console.log("[secondary-firebase] Secondary Firebase app already initialized");
-    secondaryApp = getApps().find(app => app.name === 'secondary');
-    secondaryDb = getDatabase(secondaryApp);
+  } catch (error) {
+    console.error("[secondary-firebase] Error initializing secondary Firebase:", error);
   }
-} catch (error) {
-  console.error("[secondary-firebase] Error initializing secondary Firebase:", error);
 }
 
 export { secondaryApp, secondaryDb };

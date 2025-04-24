@@ -23,6 +23,10 @@ import {
   Sliders,
   Atom,
   Thermometer,
+  CloudRain,
+  ToggleLeft,
+  Sun,
+  Leaf,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
@@ -172,16 +176,41 @@ export function LocationDetails({ id }: LocationDetailsProps) {
 
   // Helper function to get equipment realtime data
   const getEquipmentRealtimeData = (equipmentId: string) => {
-    // Try direct match
+    // Try direct match first
     if (realtimeData[equipmentId]) {
       return realtimeData[equipmentId]
     }
 
-    // Try case-insensitive match
+    // Try case-insensitive match with the ID
     const lowerEquipmentId = equipmentId.toLowerCase()
     for (const [key, value] of Object.entries(realtimeData)) {
       if (key.toLowerCase() === lowerEquipmentId) {
         return value
+      }
+    }
+
+    // Try matching by name or alias
+    for (const [key, value] of Object.entries(realtimeData)) {
+      const systemData = value as any
+      if (
+        (systemData.name && systemData.name.toLowerCase() === lowerEquipmentId) ||
+        (systemData.alias && systemData.alias.toLowerCase() === lowerEquipmentId) ||
+        (systemData.zone && systemData.zone.toLowerCase() === lowerEquipmentId)
+      ) {
+        return systemData
+      }
+    }
+
+    // Try partial matches
+    for (const [key, value] of Object.entries(realtimeData)) {
+      const systemData = value as any
+      if (
+        key.toLowerCase().includes(lowerEquipmentId) ||
+        (systemData.name && systemData.name.toLowerCase().includes(lowerEquipmentId)) ||
+        (systemData.alias && systemData.alias.toLowerCase().includes(lowerEquipmentId)) ||
+        (systemData.zone && systemData.zone.toLowerCase().includes(lowerEquipmentId))
+      ) {
+        return systemData
       }
     }
 
@@ -229,10 +258,508 @@ export function LocationDetails({ id }: LocationDetailsProps) {
       return undefined
     }
 
+    // Check if this is a greenhouse-related equipment
+    const isGreenhouse =
+      equipmentItem.type?.toLowerCase().includes("greenhouse") ||
+      equipmentItem.name?.toLowerCase().includes("greenhouse") ||
+      (location?.name && location.name.toLowerCase().includes("greenhouse"))
+
+    // If this is greenhouse equipment, look for specific greenhouse metrics first
+    if (isGreenhouse) {
+      // Find global setpoint
+      const globalSetpoint = findMetric([
+        "GlobalSetpoint",
+        "Global Setpoint",
+        "Global_Setpoint",
+        "System Setpoint",
+        "SystemSetpoint",
+      ])
+
+      if (globalSetpoint !== undefined) {
+        results.push({
+          name: "Global Setpoint",
+          value: roundValue(globalSetpoint),
+          unit: "°F",
+          icon: <Atom className="h-4 w-4 text-red-500" />,
+        })
+      }
+
+      // Find average temperature
+      const averageTemp = findMetric([
+        "averagetemp",
+        "average temp",
+        "average temperature",
+        "AverageTemp",
+        "AverageTemperature",
+      ])
+
+      if (averageTemp !== undefined) {
+        results.push({
+          name: "Avg Temperature",
+          value: roundValue(averageTemp),
+          unit: "°F",
+          icon: <Thermometer className="h-4 w-4 text-orange-500" />,
+        })
+      }
+
+      // Find average humidity
+      const averageHumidity = findMetric(["averagehumidity", "average humidity", "AverageHumidity", "Average Humidity"])
+
+      if (averageHumidity !== undefined) {
+        results.push({
+          name: "Avg Humidity",
+          value: roundValue(averageHumidity),
+          unit: "%",
+          icon: <Droplet className="h-4 w-4 text-blue-500" />,
+        })
+      }
+
+      // Find zone temperatures
+      const zone1Temp = findMetric(["zones/zone1/temp", "zone1/temp", "zone1temp", "temp1"])
+
+      if (zone1Temp !== undefined) {
+        results.push({
+          name: "Zone 1 Temp",
+          value: roundValue(zone1Temp),
+          unit: "°F",
+          icon: <Thermometer className="h-4 w-4 text-red-500" />,
+        })
+      }
+
+      const zone2Temp = findMetric(["zones/zone2/temp", "zone2/temp", "zone2temp", "temp2"])
+
+      if (zone2Temp !== undefined) {
+        results.push({
+          name: "Zone 2 Temp",
+          value: roundValue(zone2Temp),
+          unit: "°F",
+          icon: <Thermometer className="h-4 w-4 text-red-500" />,
+        })
+      }
+
+      // Find zone humidity
+      const zone1Humidity = findMetric(["zones/zone1/humidity", "zone1/humidity", "zone1humidity", "humidity1"])
+
+      if (zone1Humidity !== undefined) {
+        results.push({
+          name: "Zone 1 Humidity",
+          value: roundValue(zone1Humidity),
+          unit: "%",
+          icon: <Droplet className="h-4 w-4 text-blue-500" />,
+        })
+      }
+
+      const zone2Humidity = findMetric(["zones/zone2/humidity", "zone2/humidity", "zone2humidity", "humidity2"])
+
+      if (zone2Humidity !== undefined) {
+        results.push({
+          name: "Zone 2 Humidity",
+          value: roundValue(zone2Humidity),
+          unit: "%",
+          icon: <Droplet className="h-4 w-4 text-blue-500" />,
+        })
+      }
+
+      // Find outside temperature
+      const outsideTemp = findMetric([
+        "outsideTemp",
+        "outside temp",
+        "OutsideTemp",
+        "Outside Temperature",
+        "OutsideTemperature",
+        "outdoor temp",
+        "outdoor temperature",
+      ])
+
+      if (outsideTemp !== undefined) {
+        results.push({
+          name: "Outside Temp",
+          value: roundValue(outsideTemp),
+          unit: "°F",
+          icon: <Thermometer className="h-4 w-4 text-gray-500" />,
+        })
+      }
+
+      // Find rain status
+      const isRaining = findMetric(["isRaining", "is raining", "IsRaining", "raining", "rain status"])
+
+      if (isRaining !== undefined) {
+        results.push({
+          name: "Rain Status",
+          value: isRaining === true || isRaining === "true" ? "Yes" : "No",
+          unit: "",
+          icon: (
+            <CloudRain
+              className={`h-4 w-4 ${isRaining === true || isRaining === "true" ? "text-blue-500" : "text-gray-400"}`}
+            />
+          ),
+        })
+      }
+
+      // Time of day
+      const timeOfDay = findMetric(["timeofday", "time of day", "TimeOfDay", "daypart"])
+
+      if (timeOfDay !== undefined) {
+        results.push({
+          name: "Time of Day",
+          value: typeof timeOfDay === "string" ? timeOfDay : "Unknown",
+          unit: "",
+          icon: <Sun className="h-4 w-4 text-yellow-500" />,
+        })
+      }
+
+      // Check active control status for various systems
+      const systemControls = [
+        { name: "Exhaust Fan 1", key: "ExhaustFan1ActiveControl", icon: <Fan /> },
+        { name: "Exhaust Fan 2", key: "ExhaustFan2ActiveControl", icon: <Fan /> },
+        { name: "Supply", key: "SupplyActiveControl", icon: <Fan /> },
+        { name: "FCU 1", key: "FCU1ActiveControl", icon: <Fan /> },
+        { name: "FCU 2", key: "FCU2ActiveControl", icon: <Fan /> },
+        { name: "FCU 4", key: "FCU4ActiveControl", icon: <Fan /> },
+        { name: "FCU", key: "FCUActiveControl", icon: <Fan /> },
+        { name: "Floor Heat 1", key: "FloorHeat1ActiveControl", icon: <Thermometer /> },
+        { name: "Floor Heat 2", key: "FloorHeat2ActiveControl", icon: <Thermometer /> },
+        { name: "Floor Heat", key: "FloorHeatActiveControl", icon: <Thermometer /> },
+        { name: "Exhaust", key: "ExhaustActiveControl", icon: <Fan /> },
+      ]
+
+      // Find equipment enabled status
+      const equipmentStatus = [
+        { name: "Exhaust Fan 1", key: "equipment/exhuastfan1/enabled", icon: <Fan /> },
+        { name: "Exhaust Fan 2", key: "equipment/exhaustfan2/enabled", icon: <Fan /> },
+        { name: "Supply", key: "equipment/supply/enabled", icon: <Fan /> },
+        { name: "FCU 1", key: "equipment/fcu1/enabled", icon: <Fan /> },
+        { name: "FCU 2", key: "equipment/fcu2/enabled", icon: <Fan /> },
+        { name: "FCU 3", key: "equipment/fcu3/enabled", icon: <Fan /> },
+        { name: "FCU 4", key: "equipment/fcu4/enabled", icon: <Fan /> },
+        { name: "Floor Heat 1", key: "equipment/floorheat1/enabled", icon: <Thermometer /> },
+        { name: "Floor Heat 2", key: "equipment/floorheat2/enabled", icon: <Thermometer /> },
+      ]
+
+      // Find vents status
+      const ventsStatus = [
+        { name: "Ridge Vent", key: "equipment/ridgevent/open", icon: <Leaf /> },
+        { name: "Window Vent", key: "equipment/windowvent/open", icon: <Leaf /> },
+      ]
+
+      // Find equipment-specific metrics
+      const supplyAmps = findMetric(["equipment/supply/amps", "supply/amps", "supply amps"])
+
+      if (supplyAmps !== undefined) {
+        results.push({
+          name: "Supply Amps",
+          value: roundValue(supplyAmps),
+          unit: "A",
+          icon: <Activity className="h-4 w-4 text-purple-500" />,
+        })
+      }
+
+      const exhaustFan1Amps = findMetric(["equpment/exhaustfan1/amps", "exhaustfan1/amps", "exhaust fan 1 amps"])
+
+      if (exhaustFan1Amps !== undefined) {
+        results.push({
+          name: "Exhaust 1 Amps",
+          value: roundValue(exhaustFan1Amps),
+          unit: "A",
+          icon: <Activity className="h-4 w-4 text-purple-500" />,
+        })
+      }
+
+      const exhaustFan2Amps = findMetric(["equpment/exhaustfan2/amps", "exhaustfan2/amps", "exhaust fan 2 amps"])
+
+      if (exhaustFan2Amps !== undefined) {
+        results.push({
+          name: "Exhaust 2 Amps",
+          value: roundValue(exhaustFan2Amps),
+          unit: "A",
+          icon: <Activity className="h-4 w-4 text-purple-500" />,
+        })
+      }
+
+      // Add specific active controls based on the equipment name/type
+      if (
+        equipmentItem.name?.toLowerCase().includes("exhaust") ||
+        equipmentItem.type?.toLowerCase().includes("exhaust")
+      ) {
+        // Add exhaust-specific active controls
+        for (const control of systemControls) {
+          if (control.name.toLowerCase().includes("exhaust")) {
+            const activeControl = findMetric([control.key])
+            if (activeControl !== undefined) {
+              results.push({
+                name: `${control.name} Control`,
+                value: activeControl === true || activeControl === "true" ? "Active" : "Inactive",
+                unit: "",
+                icon: (
+                  <ToggleLeft
+                    className={`h-4 w-4 ${activeControl === true || activeControl === "true" ? "text-green-500" : "text-gray-400"}`}
+                  />
+                ),
+              })
+            }
+          }
+        }
+
+        // Add exhaust enabled status
+        for (const status of equipmentStatus) {
+          if (status.name.toLowerCase().includes("exhaust")) {
+            const enabled = findMetric([status.key])
+            if (enabled !== undefined) {
+              results.push({
+                name: `${status.name}`,
+                value: enabled === true || enabled === "true" ? "Enabled" : "Disabled",
+                unit: "",
+                icon: (
+                  <ToggleLeft
+                    className={`h-4 w-4 ${enabled === true || enabled === "true" ? "text-green-500" : "text-gray-400"}`}
+                  />
+                ),
+              })
+            }
+          }
+        }
+      } else if (
+        equipmentItem.name?.toLowerCase().includes("fcu") ||
+        equipmentItem.type?.toLowerCase().includes("fcu")
+      ) {
+        // Add FCU-specific active controls
+        for (const control of systemControls) {
+          if (control.name.toLowerCase().includes("fcu")) {
+            const activeControl = findMetric([control.key])
+            if (activeControl !== undefined) {
+              results.push({
+                name: `${control.name} Control`,
+                value: activeControl === true || activeControl === "true" ? "Active" : "Inactive",
+                unit: "",
+                icon: (
+                  <ToggleLeft
+                    className={`h-4 w-4 ${activeControl === true || activeControl === "true" ? "text-green-500" : "text-gray-400"}`}
+                  />
+                ),
+              })
+            }
+          }
+        }
+
+        // Add FCU enabled status
+        for (const status of equipmentStatus) {
+          if (status.name.toLowerCase().includes("fcu")) {
+            const enabled = findMetric([status.key])
+            if (enabled !== undefined) {
+              results.push({
+                name: `${status.name}`,
+                value: enabled === true || enabled === "true" ? "Enabled" : "Disabled",
+                unit: "",
+                icon: (
+                  <ToggleLeft
+                    className={`h-4 w-4 ${enabled === true || enabled === "true" ? "text-green-500" : "text-gray-400"}`}
+                  />
+                ),
+              })
+            }
+          }
+        }
+      } else if (
+        equipmentItem.name?.toLowerCase().includes("floor") ||
+        equipmentItem.type?.toLowerCase().includes("floor heat")
+      ) {
+        // Add floor heat-specific active controls
+        for (const control of systemControls) {
+          if (control.name.toLowerCase().includes("floor")) {
+            const activeControl = findMetric([control.key])
+            if (activeControl !== undefined) {
+              results.push({
+                name: `${control.name} Control`,
+                value: activeControl === true || activeControl === "true" ? "Active" : "Inactive",
+                unit: "",
+                icon: (
+                  <ToggleLeft
+                    className={`h-4 w-4 ${activeControl === true || activeControl === "true" ? "text-green-500" : "text-gray-400"}`}
+                  />
+                ),
+              })
+            }
+          }
+        }
+
+        // Add floor heat enabled status
+        for (const status of equipmentStatus) {
+          if (status.name.toLowerCase().includes("floor")) {
+            const enabled = findMetric([status.key])
+            if (enabled !== undefined) {
+              results.push({
+                name: `${status.name}`,
+                value: enabled === true || enabled === "true" ? "Enabled" : "Disabled",
+                unit: "",
+                icon: (
+                  <ToggleLeft
+                    className={`h-4 w-4 ${enabled === true || enabled === "true" ? "text-green-500" : "text-gray-400"}`}
+                  />
+                ),
+              })
+            }
+          }
+        }
+      } else if (
+        equipmentItem.name?.toLowerCase().includes("vent") ||
+        equipmentItem.type?.toLowerCase().includes("vent")
+      ) {
+        // Add vent-specific status
+        for (const vent of ventsStatus) {
+          const isOpen = findMetric([vent.key])
+          if (isOpen !== undefined) {
+            results.push({
+              name: `${vent.name}`,
+              value: isOpen === true || isOpen === "true" ? "Open" : "Closed",
+              unit: "",
+              icon: (
+                <ToggleLeft
+                  className={`h-4 w-4 ${isOpen === true || isOpen === "true" ? "text-green-500" : "text-gray-400"}`}
+                />
+              ),
+            })
+          }
+        }
+      } else if (
+        equipmentItem.name?.toLowerCase().includes("supply") ||
+        equipmentItem.type?.toLowerCase().includes("supply")
+      ) {
+        // Add supply-specific active controls
+        for (const control of systemControls) {
+          if (control.name.toLowerCase().includes("supply")) {
+            const activeControl = findMetric([control.key])
+            if (activeControl !== undefined) {
+              results.push({
+                name: `${control.name} Control`,
+                value: activeControl === true || activeControl === "true" ? "Active" : "Inactive",
+                unit: "",
+                icon: (
+                  <ToggleLeft
+                    className={`h-4 w-4 ${activeControl === true || activeControl === "true" ? "text-green-500" : "text-gray-400"}`}
+                  />
+                ),
+              })
+            }
+          }
+        }
+
+        // Add supply enabled status
+        for (const status of equipmentStatus) {
+          if (status.name.toLowerCase().includes("supply")) {
+            const enabled = findMetric([status.key])
+            if (enabled !== undefined) {
+              results.push({
+                name: `${status.name}`,
+                value: enabled === true || enabled === "true" ? "Enabled" : "Disabled",
+                unit: "",
+                icon: (
+                  <ToggleLeft
+                    className={`h-4 w-4 ${enabled === true || enabled === "true" ? "text-green-500" : "text-gray-400"}`}
+                  />
+                ),
+              })
+            }
+          }
+        }
+      }
+
+      // If results has data and equipment is a general "greenhouse" controller, return results
+      if (
+        results.length > 0 &&
+        (equipmentItem.name?.toLowerCase().includes("controller") ||
+          equipmentItem.type?.toLowerCase().includes("controller") ||
+          equipmentItem.name?.toLowerCase().includes("greenhouse") ||
+          equipmentItem.type?.toLowerCase().includes("greenhouse"))
+      ) {
+        return results
+      }
+    }
+
     // Now update the temperature detection logic based on equipment type
     const type = equipmentItem.type?.toLowerCase() || ""
     const name = equipmentItem.name?.toLowerCase() || ""
     const locationName = equipmentItem.locationName?.toLowerCase() || ""
+
+    // Check if this is a fan coil unit to add fan status
+    const isFanCoil = type.includes("fan coil") || name.includes("fancoil") || name.includes("fan coil")
+
+    // Look for fan status if this is a fan coil unit
+    if (isFanCoil) {
+      // Look for fan status with various naming conventions
+      const fanStatus = findMetric([
+        "Fan Status",
+        "FanStatus",
+        "Supply Fan Status",
+        "SupplyFanStatus",
+        "Fan Running",
+        "FanRunning",
+        "Supply Fan Running",
+        "SupplyFanRunning",
+        "Fan State",
+        "FanState",
+        "Supply Fan State",
+        "SupplyFanState",
+        "Fan On",
+        "FanOn",
+        "Supply Fan On",
+        "SupplyFanOn",
+      ])
+
+      if (fanStatus !== undefined) {
+        const isRunning =
+          typeof fanStatus === "boolean"
+            ? fanStatus
+            : typeof fanStatus === "string" &&
+              (fanStatus.toLowerCase() === "running" ||
+                fanStatus.toLowerCase() === "on" ||
+                fanStatus.toLowerCase() === "true")
+
+        results.push({
+          name: "Fan Status",
+          value:
+            typeof fanStatus === "boolean"
+              ? fanStatus
+                ? "Running"
+                : "Off"
+              : typeof fanStatus === "string" && fanStatus.toLowerCase() === "on"
+                ? "Running"
+                : fanStatus,
+          unit: "",
+          icon: <Settings className={`h-4 w-4 ${isRunning ? "animate-spin text-blue-500" : "text-gray-500"}`} />,
+          className: isRunning ? "text-green-500 font-medium drop-shadow-sm" : "",
+        })
+      }
+
+      // Look for fan amps
+      const fanAmps = findMetric([
+        "Fan Amps",
+        "FanAmps",
+        "Supply Fan Amps",
+        "SupplyFanAmps",
+        "Fan Current",
+        "FanCurrent",
+        "Supply Fan Current",
+        "SupplyFanCurrent",
+      ])
+
+      if (fanAmps !== undefined) {
+        // Check if the value has °F in it (incorrectly labeled)
+        let ampsValue = fanAmps
+        const ampsUnit = "A"
+
+        // If the value is a string and contains °F, extract the numeric part
+        if (typeof fanAmps === "string" && fanAmps.includes("°F")) {
+          ampsValue = Number.parseFloat(fanAmps.replace("°F", ""))
+        }
+
+        results.push({
+          name: "Fan Amps",
+          value: roundValue(ampsValue),
+          unit: ampsUnit,
+          icon: <Activity className="h-4 w-4 text-purple-500" />,
+        })
+      }
+    }
 
     // Look for supply temperature with various naming conventions based on equipment type
     let supplyTempNames = [
@@ -463,25 +990,37 @@ export function LocationDetails({ id }: LocationDetailsProps) {
       })
     }
 
-    // Look for setpoint or target temperature (but not both)
-    const setpoint = findMetric(
-      [
-        "Setpoint",
-        "SetPoint",
-        "Set Point",
-        "Temperature Setpoint",
-        "TemperatureSetpoint",
-        "Temp Setpoint",
-        "TempSetpoint",
-        "Supply Setpoint",
-        "SupplySetpoint",
-        "Discharge Setpoint",
-        "DischargeSetpoint",
-        "SAT Setpoint",
-        "SATSetpoint",
-      ],
-      ["Setpoint Differential", "SetpointDifferential", "Differential"],
-    )
+    // Look for GlobalSetpoint first (highest priority)
+    const globalSetpoint = findMetric([
+      "GlobalSetpoint",
+      "Global Setpoint",
+      "Global_Setpoint",
+      "System Setpoint",
+      "SystemSetpoint",
+    ])
+
+    // If GlobalSetpoint is not found, look for regular setpoint names
+    const setpoint =
+      globalSetpoint !== undefined
+        ? undefined
+        : findMetric(
+            [
+              "Setpoint",
+              "SetPoint",
+              "Set Point",
+              "Temperature Setpoint",
+              "TemperatureSetpoint",
+              "Temp Setpoint",
+              "TempSetpoint",
+              "Supply Setpoint",
+              "SupplySetpoint",
+              "Discharge Setpoint",
+              "DischargeSetpoint",
+              "SAT Setpoint",
+              "SATSetpoint",
+            ],
+            ["Setpoint Differential", "SetpointDifferential", "Differential"],
+          )
 
     const targetTemp = findMetric([
       "Target Temperature",
@@ -493,8 +1032,15 @@ export function LocationDetails({ id }: LocationDetailsProps) {
       "TempTarget",
     ])
 
-    // Add setpoint if available, otherwise try target temp
-    if (setpoint !== undefined) {
+    // Add setpoint to results, prioritizing GlobalSetpoint, then regular setpoint, then target temp
+    if (globalSetpoint !== undefined) {
+      results.push({
+        name: "Global Setpoint",
+        value: roundValue(globalSetpoint),
+        unit: "°F",
+        icon: <Atom className="h-4 w-4 text-red-500" />,
+      })
+    } else if (setpoint !== undefined) {
       results.push({
         name: "Setpoint",
         value: roundValue(setpoint),
@@ -662,6 +1208,424 @@ export function LocationDetails({ id }: LocationDetailsProps) {
         unit: "%",
         icon: <Fan className="h-4 w-4 text-cyan-500" />,
       })
+    }
+
+    // Look for pump 1 amps and status
+    const pump1Amps = findMetric([
+      "Pump1Amps",
+      "Pump 1 Amps",
+      "Pump1 Amps",
+      "Pump_1_Amps",
+      "HWP1Amps",
+      "HW Pump 1 Amps",
+    ])
+
+    const pump1Status = findMetric([
+      "Pump1Status",
+      "Pump 1 Status",
+      "Pump1 Status",
+      "Pump_1_Status",
+      "HWP1Status",
+      "HW Pump 1 Status",
+    ])
+
+    // Look for pump 2 amps and status
+    const pump2Amps = findMetric([
+      "Pump2Amps",
+      "Pump 2 Amps",
+      "Pump2 Amps",
+      "Pump_2_Amps",
+      "HWP2Amps",
+      "HW Pump 2 Amps",
+    ])
+
+    const pump2Status = findMetric([
+      "Pump2Status",
+      "Pump 2 Status",
+      "Pump2 Status",
+      "Pump_2_Status",
+      "HWP2Status",
+      "HW Pump 2 Status",
+      "Pump2Running",
+      "Pump 2 Running",
+    ])
+
+    // Add pump 1 metrics if available
+    if (pump1Amps !== undefined) {
+      // Determine color based on amp value
+      let ampsColor = "text-red-500"
+      const ampsValue = Number(roundValue(pump1Amps))
+      if (ampsValue > 20) {
+        ampsColor = "text-green-500"
+      } else if (ampsValue >= 10) {
+        ampsColor = "text-orange-500"
+      }
+
+      results.push({
+        name: "Pump 1 Amps",
+        value: roundValue(pump1Amps),
+        unit: "A",
+        icon: <Gauge className={`h-4 w-4 ${ampsColor}`} />,
+      })
+    }
+
+    if (pump1Status !== undefined) {
+      const isRunning =
+        typeof pump1Status === "boolean"
+          ? pump1Status
+          : typeof pump1Status === "string" && pump1Status.toLowerCase() === "running"
+
+      results.push({
+        name: "Pump 1 Status",
+        value: typeof pump1Status === "boolean" ? (pump1Status ? "Running" : "Off") : pump1Status,
+        unit: "",
+        icon: <Settings className={`h-4 w-4 ${isRunning ? "animate-spin text-blue-500" : "text-gray-500"}`} />,
+        className: isRunning ? "text-green-500 font-medium drop-shadow-sm" : "",
+      })
+    }
+
+    // Add pump 2 metrics if available
+    if (pump2Amps !== undefined) {
+      // Determine color based on amp value
+      let ampsColor = "text-red-500"
+      const ampsValue = Number(roundValue(pump2Amps))
+      if (ampsValue > 20) {
+        ampsColor = "text-green-500"
+      } else if (ampsValue >= 10) {
+        ampsColor = "text-orange-500"
+      }
+
+      results.push({
+        name: "Pump 2 Amps",
+        value: roundValue(pump2Amps),
+        unit: "A",
+        icon: <Gauge className={`h-4 w-4 ${ampsColor}`} />,
+      })
+    }
+
+    if (pump2Status !== undefined) {
+      const isRunning =
+        typeof pump2Status === "boolean"
+          ? pump2Status
+          : typeof pump2Status === "string" && pump2Status.toLowerCase() === "running"
+
+      results.push({
+        name: "Pump 2 Status",
+        value: typeof pump2Status === "boolean" ? (pump2Status ? "Running" : "Off") : pump2Status,
+        unit: "",
+        icon: <Settings className={`h-4 w-4 ${isRunning ? "animate-spin text-blue-500" : "text-gray-500"}`} />,
+        className: isRunning ? "text-green-500 font-medium drop-shadow-sm" : "",
+      })
+    }
+
+    // Look for generic pump metrics if specific ones aren't found
+    if (!pump1Amps && !pump2Amps) {
+      const pumpAmps = findMetric(["PumpAmps", "Pump Amps", "Pump_Amps", "HWPumpAmps", "HW Pump Amps"])
+
+      if (pumpAmps !== undefined) {
+        // Determine color based on amp value
+        let ampsColor = "text-red-500"
+        const ampsValue = Number(roundValue(pumpAmps))
+        if (ampsValue > 20) {
+          ampsColor = "text-green-500"
+        } else if (ampsValue >= 10) {
+          ampsColor = "text-orange-500"
+        }
+
+        results.push({
+          name: "Pump Amps",
+          value: roundValue(pumpAmps),
+          unit: "A",
+          icon: <Gauge className={`h-4 w-4 ${ampsColor}`} />,
+        })
+      }
+    }
+
+    if (!pump1Status && !pump2Status) {
+      const pumpStatus = findMetric([
+        "PumpStatus",
+        "Pump Status",
+        "Pump_Status",
+        "HWPumpStatus",
+        "HW Pump Status",
+        "PumpRunning",
+        "Pump Running",
+      ])
+
+      if (pumpStatus !== undefined) {
+        const isRunning =
+          typeof pumpStatus === "boolean"
+            ? pumpStatus
+            : typeof pumpStatus === "string" && pumpStatus.toLowerCase() === "running"
+
+        results.push({
+          name: "Pump Status",
+          value: typeof pumpStatus === "boolean" ? (pumpStatus ? "Running" : "Off") : pumpStatus,
+          unit: "",
+          icon: <Settings className={`h-4 w-4 ${isRunning ? "animate-spin text-blue-500" : "text-gray-500"}`} />,
+          className: isRunning ? "text-green-500 font-medium drop-shadow-sm" : "",
+        })
+      }
+    }
+
+    // Additional metrics for greenhouse-specific equipment
+    // Look for active control statuses if not already checked earlier
+    if (!(isGreenhouse && results.length > 0)) {
+      // Check for ExhaustActiveControl
+      const exhaustActiveControl = findMetric(["ExhaustActiveControl"])
+      if (exhaustActiveControl !== undefined) {
+        results.push({
+          name: "Exhaust Control",
+          value: exhaustActiveControl === true || exhaustActiveControl === "true" ? "Active" : "Inactive",
+          unit: "",
+          icon: (
+            <ToggleLeft
+              className={`h-4 w-4 ${exhaustActiveControl === true || exhaustActiveControl === "true" ? "text-green-500" : "text-gray-400"}`}
+            />
+          ),
+        })
+      }
+
+      // Check for FCU active controls
+      const fcuActiveControls = [
+        { key: "FCU1ActiveControl", name: "FCU 1" },
+        { key: "FCU2ActiveControl", name: "FCU 2" },
+        { key: "FCU4ActiveControl", name: "FCU 4" },
+        { key: "FCUActiveControl", name: "FCU" },
+      ]
+
+      for (const control of fcuActiveControls) {
+        const activeControl = findMetric([control.key])
+        if (activeControl !== undefined) {
+          results.push({
+            name: `${control.name} Control`,
+            value: activeControl === true || activeControl === "true" ? "Active" : "Inactive",
+            unit: "",
+            icon: (
+              <ToggleLeft
+                className={`h-4 w-4 ${activeControl === true || activeControl === "true" ? "text-green-500" : "text-gray-400"}`}
+              />
+            ),
+          })
+        }
+      }
+
+      // Check for floor heat active controls
+      const floorHeatControls = [
+        { key: "FloorHeat1ActiveControl", name: "Floor Heat 1" },
+        { key: "FloorHeat2ActiveControl", name: "Floor Heat 2" },
+        { key: "FloorHeatActiveControl", name: "Floor Heat" },
+      ]
+
+      for (const control of floorHeatControls) {
+        const activeControl = findMetric([control.key])
+        if (activeControl !== undefined) {
+          results.push({
+            name: `${control.name} Control`,
+            value: activeControl === true || activeControl === "true" ? "Active" : "Inactive",
+            unit: "",
+            icon: (
+              <ToggleLeft
+                className={`h-4 w-4 ${activeControl === true || activeControl === "true" ? "text-green-500" : "text-gray-400"}`}
+              />
+            ),
+          })
+        }
+      }
+
+      // Check for supply active control
+      const supplyActiveControl = findMetric(["SupplyActiveControl"])
+      if (supplyActiveControl !== undefined) {
+        results.push({
+          name: "Supply Control",
+          value: supplyActiveControl === true || supplyActiveControl === "true" ? "Active" : "Inactive",
+          unit: "",
+          icon: (
+            <ToggleLeft
+              className={`h-4 w-4 ${supplyActiveControl === true || supplyActiveControl === "true" ? "text-green-500" : "text-gray-400"}`}
+            />
+          ),
+        })
+      }
+
+      // Check for enabled equipment
+      const enabledEquipment = [
+        { key: "equipment/exhuastfan1/enabled", name: "Exhaust Fan 1" },
+        { key: "equipment/exhaustfan2/enabled", name: "Exhaust Fan 2" },
+        { key: "equipment/supply/enabled", name: "Supply" },
+        { key: "equipment/fcu1/enabled", name: "FCU 1" },
+        { key: "equipment/fcu2/enabled", name: "FCU 2" },
+        { key: "equipment/fcu3/enabled", name: "FCU 3" },
+        { key: "equipment/fcu4/enabled", name: "FCU 4" },
+        { key: "equipment/floorheat1/enabled", name: "Floor Heat 1" },
+        { key: "equipment/floorheat2/enabled", name: "Floor Heat 2" },
+      ]
+
+      for (const item of enabledEquipment) {
+        const enabled = findMetric([item.key])
+        if (enabled !== undefined) {
+          results.push({
+            name: item.name,
+            value: enabled === true || enabled === "true" ? "Enabled" : "Disabled",
+            unit: "",
+            icon: (
+              <ToggleLeft
+                className={`h-4 w-4 ${enabled === true || enabled === "true" ? "text-green-500" : "text-gray-400"}`}
+              />
+            ),
+          })
+        }
+      }
+
+      // Check for vent status
+      const ventStatus = [
+        { key: "equipment/ridgevent/open", name: "Ridge Vent" },
+        { key: "equipment/windowvent/open", name: "Window Vent" },
+      ]
+
+      for (const vent of ventStatus) {
+        const isOpen = findMetric([vent.key])
+        if (isOpen !== undefined) {
+          results.push({
+            name: vent.name,
+            value: isOpen === true || isOpen === "true" ? "Open" : "Closed",
+            unit: "",
+            icon: (
+              <ToggleLeft
+                className={`h-4 w-4 ${isOpen === true || isOpen === "true" ? "text-green-500" : "text-gray-400"}`}
+              />
+            ),
+          })
+        }
+      }
+
+      // Check for equipment-specific amps
+      const ampsMetrics = [
+        { key: "equipment/supply/amps", name: "Supply Amps" },
+        { key: "equpment/exhaustfan1/amps", name: "Exhaust Fan 1 Amps" },
+        { key: "equpment/exhaustfan2/amps", name: "Exhaust Fan 2 Amps" },
+      ]
+
+      for (const amp of ampsMetrics) {
+        const ampValue = findMetric([amp.key])
+        if (ampValue !== undefined) {
+          results.push({
+            name: amp.name,
+            value: roundValue(ampValue),
+            unit: "A",
+            icon: <Activity className="h-4 w-4 text-purple-500" />,
+          })
+        }
+      }
+
+      // Check for zone temperatures and humidity
+      const zoneMetrics = [
+        {
+          key: "zones/zone1/temp",
+          name: "Zone 1 Temp",
+          unit: "°F",
+          icon: <Thermometer className="h-4 w-4 text-red-500" />,
+        },
+        {
+          key: "zones/zone2/temp",
+          name: "Zone 2 Temp",
+          unit: "°F",
+          icon: <Thermometer className="h-4 w-4 text-red-500" />,
+        },
+        { key: "temp1", name: "Zone 1 Temp", unit: "°F", icon: <Thermometer className="h-4 w-4 text-red-500" /> },
+        { key: "temp2", name: "Zone 2 Temp", unit: "°F", icon: <Thermometer className="h-4 w-4 text-red-500" /> },
+        {
+          key: "zones/zone1/humidity",
+          name: "Zone 1 Humidity",
+          unit: "%",
+          icon: <Droplet className="h-4 w-4 text-blue-500" />,
+        },
+        {
+          key: "zones/zone2/humidity",
+          name: "Zone 2 Humidity",
+          unit: "%",
+          icon: <Droplet className="h-4 w-4 text-blue-500" />,
+        },
+        { key: "humidity1", name: "Zone 1 Humidity", unit: "%", icon: <Droplet className="h-4 w-4 text-blue-500" /> },
+        { key: "humidity2", name: "Zone 2 Humidity", unit: "%", icon: <Droplet className="h-4 w-4 text-blue-500" /> },
+      ]
+
+      for (const zone of zoneMetrics) {
+        const value = findMetric([zone.key])
+        if (value !== undefined) {
+          results.push({
+            name: zone.name,
+            value: roundValue(value),
+            unit: zone.unit,
+            icon: zone.icon,
+          })
+        }
+      }
+
+      // Check for averages
+      const averageMetrics = [
+        {
+          key: "averagetemp",
+          name: "Avg Temperature",
+          unit: "°F",
+          icon: <Thermometer className="h-4 w-4 text-orange-500" />,
+        },
+        {
+          key: "averagehumidity",
+          name: "Avg Humidity",
+          unit: "%",
+          icon: <Droplet className="h-4 w-4 text-blue-500" />,
+        },
+      ]
+
+      for (const avg of averageMetrics) {
+        const value = findMetric([avg.key])
+        if (value !== undefined) {
+          results.push({
+            name: avg.name,
+            value: roundValue(value),
+            unit: avg.unit,
+            icon: avg.icon,
+          })
+        }
+      }
+
+      // Check for outside temperature
+      const outsideTemp = findMetric(["outsideTemp"])
+      if (outsideTemp !== undefined) {
+        results.push({
+          name: "Outside Temp",
+          value: roundValue(outsideTemp),
+          unit: "°F",
+          icon: <Thermometer className="h-4 w-4 text-gray-500" />,
+        })
+      }
+
+      // Check for rain status
+      const isRaining = findMetric(["isRaining"])
+      if (isRaining !== undefined) {
+        results.push({
+          name: "Rain Status",
+          value: isRaining === true || isRaining === "true" ? "Yes" : "No",
+          unit: "",
+          icon: (
+            <CloudRain
+              className={`h-4 w-4 ${isRaining === true || isRaining === "true" ? "text-blue-500" : "text-gray-400"}`}
+            />
+          ),
+        })
+      }
+
+      // Check for time of day
+      const timeOfDay = findMetric(["timeofday"])
+      if (timeOfDay !== undefined) {
+        results.push({
+          name: "Time of Day",
+          value: typeof timeOfDay === "string" ? timeOfDay : "Unknown",
+          unit: "",
+          icon: <Sun className="h-4 w-4 text-yellow-500" />,
+        })
+      }
     }
 
     return results
@@ -1036,6 +2000,18 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="text-base">{item.name}</CardTitle>
+                          {/* Show zone from equipment data if available */}
+                          {item.zone && (
+                            <span className="inline-block px-2 py-0.5 text-sm rounded-full bg-[#e6f3f1] text-black my-1 mr-1">
+                              {item.zone}
+                            </span>
+                          )}
+                          {/* Show alias from realtime data if available */}
+                          {rtData && rtData.alias && (
+                            <span className="inline-block px-2 py-0.5 text-sm rounded-full bg-[#e6f3f1] text-black my-1">
+                              {rtData.alias}
+                            </span>
+                          )}
                           <CardDescription>{item.type}</CardDescription>
                         </div>
                         <Badge variant={status.variant}>{status.label}</Badge>
@@ -1050,7 +2026,7 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                               {keyMetrics.map((metric, index) => (
                                 <div key={index} className="flex items-center space-x-1">
                                   {metric.icon}
-                                  <span className="text-sm font-medium">
+                                  <span className={`text-sm font-medium ${metric.className || ""}`}>
                                     {metric.name}:{" "}
                                     {metric.value !== undefined ? `${metric.value}${metric.unit}` : "N/A"}
                                   </span>

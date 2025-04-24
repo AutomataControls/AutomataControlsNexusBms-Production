@@ -1,9 +1,7 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +9,11 @@ import { useToast } from "@/components/ui/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription
+} from "@/components/ui/alert"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +61,7 @@ import {
   Trash2,
   Download,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 // Add this at the very top of the file, right after the imports
 console.log("Alarms Content component file is being loaded")
@@ -130,15 +134,26 @@ export default function AlarmsContent() {
   console.log("AlarmsContent component is rendering")
 
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { db } = useFirebase() // Only get Firestore from context
   const { user } = useAuth()
   const { toast } = useToast()
   const rtdb = secondaryDb // Use the directly imported RTDB
 
+  // Check if user has admin or DevOps privileges
+  const isAdminOrDevOps = useMemo(() => {
+    return user?.roles && (user.roles.includes("admin") || user.roles.includes("DevOps"));
+  }, [user]);
+
+  // Get locationId from URL
+  const locationIdFromUrl = searchParams.get("locationId")
+
   console.log("Firebase contexts loaded:", {
     dbExists: !!db,
     rtdbExists: !!rtdb,
     userExists: !!user,
+    locationIdFromUrl,
+    isAdminOrDevOps
   })
 
   // State
@@ -162,6 +177,42 @@ export default function AlarmsContent() {
   const [isAutoRefreshing, setIsAutoRefreshing] = useState(true) // Add state for auto-refresh
   const [personnelDataLoaded, setPersonnelDataLoaded] = useState(false)
   const [isExporting, setIsExporting] = useState(false) // Add state for export operation
+  // State to store the location ID for filtering
+  const [locationFilter, setLocationFilter] = useState<string | null>(null)
+
+  // Initialize locationFilter from URL or user's assigned location
+  useEffect(() => {
+    // First check URL parameter
+    if (locationIdFromUrl) {
+      // Verify user has access to this location
+      if (isAdminOrDevOps || (user?.assignedLocations && user.assignedLocations.includes(locationIdFromUrl))) {
+        console.log("Using locationId from URL for alarm filtering:", locationIdFromUrl);
+        setLocationFilter(locationIdFromUrl);
+      } else if (user?.assignedLocations && user.assignedLocations.length > 0) {
+        // Redirect to user's assigned location if they don't have access to the requested one
+        const userLocation = user.assignedLocations[0];
+        console.log("User doesn't have access to requested location, using assigned location:", userLocation);
+        setLocationFilter(userLocation);
+
+        // Update URL without full page reload
+        router.replace(`/dashboard/alarms?locationId=${userLocation}`, { scroll: false });
+      }
+    }
+    // For regular users with assigned locations but no URL parameter
+    else if (!isAdminOrDevOps && user?.assignedLocations && user.assignedLocations.length > 0) {
+      const userLocation = user.assignedLocations[0];
+      console.log("Regular user with assigned location:", userLocation);
+      setLocationFilter(userLocation);
+
+      // Update URL without full page reload
+      router.replace(`/dashboard/alarms?locationId=${userLocation}`, { scroll: false });
+    }
+    // For admins with no locationId in URL, don't set a location filter
+    else if (isAdminOrDevOps) {
+      console.log("Admin user, no location filter applied");
+      setLocationFilter(null);
+    }
+  }, [locationIdFromUrl, user, isAdminOrDevOps, router]);
 
   // Add this function to send alarm emails
   const sendAlarmEmail = useCallback(
@@ -247,32 +298,59 @@ export default function AlarmsContent() {
     }
   }, [rtdb])
 
-  // Fetch alarms from Firebase
+  // Fetch alarms from Firebase with location filtering
   const fetchAlarms = useCallback(async () => {
     if (!db) return
 
     setLoading(true)
     try {
-      // Create query based on filter
-      let alarmsQuery
-      const alarmsRef = collection(db, "alarms")
+      console.log("Fetching alarms with filter:", filter, "and location filter:", locationFilter);
 
+      // Create base query
+      let alarmsRef = collection(db, "alarms");
+      let queryConstraints = [];
+
+      // Add filter constraints
       if (filter === "active") {
-        // Use a simple query without orderBy to avoid composite index requirement
-        alarmsQuery = query(alarmsRef, where("active", "==", true))
+        queryConstraints.push(where("active", "==", true));
       } else if (filter === "acknowledged") {
-        alarmsQuery = query(alarmsRef, where("acknowledged", "==", true), where("active", "==", true))
+        queryConstraints.push(where("acknowledged", "==", true), where("active", "==", true));
       } else if (filter === "resolved") {
-        alarmsQuery = query(alarmsRef, where("resolved", "==", true))
-      } else {
-        // Only use orderBy on the "all" filter
-        alarmsQuery = query(alarmsRef, orderBy("timestamp", "desc"), limit(100))
+        queryConstraints.push(where("resolved", "==", true));
       }
 
-      const alarmsSnapshot = await getDocs(alarmsQuery)
+      // Add location filter for non-admin users or if a location filter is explicitly set
+      if (locationFilter) {
+        console.log("Adding location filter to query:", locationFilter);
+        queryConstraints.push(where("locationId", "==", locationFilter));
+      } else if (!isAdminOrDevOps && user?.assignedLocations && user.assignedLocations.length > 0) {
+        // If we don't have a specific location filter but user is not admin and has assigned locations
+        console.log("Non-admin without specific location filter. This should not happen as we set locationFilter in useEffect");
+      }
+
+      // Build the query
+      let alarmsQuery;
+      if (queryConstraints.length > 0) {
+        // If using "all" filter with location constraint, we need to be careful with order by
+        if (filter === "all" && locationFilter) {
+          // Using in-memory sorting for "all" filter with location constraint
+          alarmsQuery = query(alarmsRef, ...queryConstraints);
+        } else if (filter === "all") {
+          // Only use orderBy for "all" without other constraints
+          alarmsQuery = query(alarmsRef, orderBy("timestamp", "desc"), limit(100));
+        } else {
+          // Other filters with constraints
+          alarmsQuery = query(alarmsRef, ...queryConstraints);
+        }
+      } else {
+        // Default query for "all" without other constraints
+        alarmsQuery = query(alarmsRef, orderBy("timestamp", "desc"), limit(100));
+      }
+
+      const alarmsSnapshot = await getDocs(alarmsQuery);
 
       // Get all alarms and then sort them in memory
-      const alarmsData = alarmsSnapshot.docs.map((doc) => {
+      let alarmsData = alarmsSnapshot.docs.map((doc) => {
         const data = doc.data()
         return {
           id: doc.id,
@@ -291,16 +369,30 @@ export default function AlarmsContent() {
                 ? new Date(data.resolvedTimestamp)
                 : undefined,
         } as Alarm
-      })
+      });
 
-      // Sort in memory instead of in the query
-      const sortedAlarmsData = [...alarmsData].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      // If we're using a location filter but couldn't use it in the query
+      // (e.g., with the "all" filter), filter in memory
+      if (locationFilter && filter === "all") {
+        console.log("Applying location filter in memory");
+        alarmsData = alarmsData.filter(alarm => alarm.locationId === locationFilter);
+      }
+
+      // Filter for non-admin users with assigned locations
+      if (!isAdminOrDevOps && user?.assignedLocations && user.assignedLocations.length > 0) {
+        console.log("Filtering alarms for non-admin user with locations:", user.assignedLocations);
+        alarmsData = alarmsData.filter(alarm => user.assignedLocations.includes(alarm.locationId));
+      }
+
+      // Sort in memory
+      const sortedAlarmsData = [...alarmsData].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
       // Apply limit after sorting
-      const limitedAlarmsData = sortedAlarmsData.slice(0, 100)
+      const limitedAlarmsData = sortedAlarmsData.slice(0, 100);
 
-      setAlarms(limitedAlarmsData)
-      setFilteredAlarms(limitedAlarmsData)
+      console.log(`Fetched ${alarmsData.length} alarms, filtered to ${limitedAlarmsData.length}`);
+      setAlarms(limitedAlarmsData);
+      setFilteredAlarms(limitedAlarmsData);
     } catch (error) {
       console.error("Error fetching alarms:", error)
       toast({
@@ -311,7 +403,7 @@ export default function AlarmsContent() {
     } finally {
       setLoading(false)
     }
-  }, [db, filter, toast])
+  }, [db, filter, toast, locationFilter, isAdminOrDevOps, user])
 
   // Extract thresholds from equipment document
   const extractThresholdsFromEquipment = async () => {
@@ -323,7 +415,19 @@ export default function AlarmsContent() {
     try {
       console.log("🔍 Starting threshold extraction from equipment documents")
       const equipmentRef = collection(db, "equipment")
-      const equipmentSnapshot = await getDocs(equipmentRef)
+
+      // If not admin and has location filter, only get equipment for that location
+      let equipmentQuery = equipmentRef;
+      if (locationFilter && !isAdminOrDevOps) {
+        console.log(`Filtering equipment by location: ${locationFilter}`);
+        equipmentQuery = query(equipmentRef, where("locationId", "==", locationFilter));
+      } else if (!isAdminOrDevOps && user?.assignedLocations && user.assignedLocations.length > 0) {
+        // For non-admin users, only get equipment for their assigned locations
+        console.log(`Filtering equipment by user's assigned locations: ${user.assignedLocations}`);
+        // We'll filter in memory since we can't use array-contains-any with locationId
+      }
+
+      const equipmentSnapshot = await getDocs(equipmentQuery)
       console.log(`📊 Found ${equipmentSnapshot.docs.length} equipment documents to check for thresholds`)
 
       // Log the first equipment document to see its structure
@@ -336,12 +440,19 @@ export default function AlarmsContent() {
         })
       }
 
-      const thresholds: ThresholdSetting[] = []
+      let thresholds: ThresholdSetting[] = []
 
       for (const docSnapshot of equipmentSnapshot.docs) {
         const equipmentData = docSnapshot.data()
         const equipmentId = docSnapshot.id
         const locationId = equipmentData.locationId || ""
+
+        // Filter by user's assigned locations if needed
+        if (!isAdminOrDevOps && user?.assignedLocations && !user.assignedLocations.includes(locationId)) {
+          console.log(`Skipping equipment not in user's assigned locations: ${equipmentId}`);
+          continue;
+        }
+
         const systemId = equipmentData.system || equipmentData.name || ""
 
         console.log(`📌 Processing equipment: ${equipmentId}`, {
@@ -715,6 +826,17 @@ export default function AlarmsContent() {
     // For each threshold setting, check the corresponding metric
     for (const threshold of thresholdSettings) {
       try {
+        // Skip thresholds for locations the user doesn't have access to
+        if (locationFilter && threshold.locationId !== locationFilter) {
+          console.log(`Skipping threshold for location ${threshold.locationId} - user is filtered to ${locationFilter}`);
+          continue;
+        }
+
+        if (!isAdminOrDevOps && user?.assignedLocations && !user.assignedLocations.includes(threshold.locationId || '')) {
+          console.log(`Skipping threshold for location ${threshold.locationId} - not in user's assigned locations`);
+          continue;
+        }
+
         metricsChecked++
         console.log(`\n📊 Checking threshold: ${threshold.metricName} (${threshold.id})`)
         console.log(`Min: ${threshold.minThreshold}, Max: ${threshold.maxThreshold}`)
@@ -973,12 +1095,12 @@ export default function AlarmsContent() {
       console.log(`Refreshing alarms list after finding ${thresholdsExceeded} exceeded thresholds`)
       fetchAlarms()
     }
-  }, [db, rtdbData, thresholdSettings, locationTechnicians, locationUsers, getMetricValue, sendAlarmEmail, fetchAlarms])
+  }, [db, rtdbData, thresholdSettings, locationTechnicians, locationUsers, getMetricValue, sendAlarmEmail, fetchAlarms, locationFilter, isAdminOrDevOps, user])
 
   // Initial fetch
   useEffect(() => {
     fetchAlarms()
-  }, [db, filter, fetchAlarms]) // Remove fetchAlarms from here
+  }, [fetchAlarms, locationFilter])
 
   // Filter alarms based on search term and severity
   useEffect(() => {
@@ -1024,7 +1146,7 @@ export default function AlarmsContent() {
         clearInterval(refreshInterval)
       }
     }
-  }, [isAutoRefreshing, fetchAlarms]) // Remove fetchAlarms from here
+  }, [isAutoRefreshing, fetchAlarms])
 
   // Acknowledge alarm
   const acknowledgeAlarm = useCallback(
@@ -1045,11 +1167,11 @@ export default function AlarmsContent() {
           prev.map((alarm) =>
             alarm.id === alarmId
               ? {
-                  ...alarm,
-                  acknowledged: true,
-                  acknowledgedTimestamp: new Date(),
-                  acknowledgedBy: user.id,
-                }
+                ...alarm,
+                acknowledged: true,
+                acknowledgedTimestamp: new Date(),
+                acknowledgedBy: user.id,
+              }
               : alarm,
           ),
         )
@@ -1091,12 +1213,12 @@ export default function AlarmsContent() {
         prev.map((alarm) =>
           alarm.id === alarmId
             ? {
-                ...alarm,
-                active: false,
-                resolved: true,
-                resolvedTimestamp: new Date(),
-                resolvedBy: user.id,
-              }
+              ...alarm,
+              active: false,
+              resolved: true,
+              resolvedTimestamp: new Date(),
+              resolvedBy: user.id,
+            }
             : alarm,
         ),
       )
@@ -1310,6 +1432,18 @@ export default function AlarmsContent() {
     setSelectedSeverity(null)
   }
 
+  // Handle clicking on an alarm row
+  const handleEquipmentClick = (equipmentId: string, locationId: string) => {
+    console.log('handleEquipmentClick called with equipmentId:', equipmentId);
+    console.log('Using locationId from alarm:', locationId);
+    
+    // Convert locationId to a number if it's not already
+    const numericLocationId = parseInt(locationId, 10);
+    console.log('Navigating to:', `/dashboard/equipment-details?locationId=${numericLocationId}&equipmentId=${equipmentId}`);
+    
+    router.push(`/dashboard/equipment-details?locationId=${numericLocationId}&equipmentId=${equipmentId}`);
+  }
+
   // Add this useEffect to set up real-time monitoring of equipment metrics
   useEffect(() => {
     console.log("Monitoring useEffect triggered", {
@@ -1372,7 +1506,7 @@ export default function AlarmsContent() {
         clearInterval(intervalId)
       }
     }
-  }, [db, monitoringActive, checkInterval, rtdbData, thresholdsLoaded, thresholdsLoading, monitorEquipmentMetrics])
+  }, [db, monitoringActive, checkInterval, rtdbData, thresholdsLoaded, thresholdsLoading, monitorEquipmentMetrics, locationFilter])
 
   // Fetch personnel data and load thresholds only once after component mounts
   useEffect(() => {
@@ -1430,7 +1564,7 @@ export default function AlarmsContent() {
     return () => {
       isMounted = false
     }
-  }, [db, personnelDataLoaded, thresholdsLoaded, thresholdsLoading, rtdbData, monitoringActive])
+  }, [db, personnelDataLoaded, thresholdsLoaded, thresholdsLoading, rtdbData, monitoringActive, monitorEquipmentMetrics, fetchLocationPersonnel, locationFilter])
 
   // Add this function to update location names for existing alarms
   const updateLocationNames = async () => {
@@ -1559,7 +1693,16 @@ export default function AlarmsContent() {
           </TableHeader>
           <TableBody>
             {filteredAlarms.map((alarm) => (
-              <TableRow key={alarm.id}>
+              <TableRow
+                key={alarm.id}
+                className="cursor-pointer hover:bg-orange-50 text-black"
+                onClick={(e) => {
+                  console.log('TableRow clicked for alarm:', alarm);
+                  console.log('Equipment ID:', alarm.equipmentId);
+                  console.log('Location ID:', alarm.locationId);
+                  handleEquipmentClick(alarm.equipmentId, alarm.locationId);
+                }}
+              >
                 <TableCell>{getSeverityBadge(alarm.severity)}</TableCell>
                 <TableCell className="font-medium">
                   <div className="flex items-center">
@@ -1582,7 +1725,10 @@ export default function AlarmsContent() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => acknowledgeAlarm(alarm.id)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent row click event
+                          acknowledgeAlarm(alarm.id);
+                        }}
                         disabled={isRefreshing}
                       >
                         Acknowledge
@@ -1592,7 +1738,10 @@ export default function AlarmsContent() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => resolveAlarm(alarm.id)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent row click event
+                          resolveAlarm(alarm.id);
+                        }}
                         disabled={isRefreshing}
                       >
                         Resolve
@@ -1601,7 +1750,10 @@ export default function AlarmsContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteAlarm(alarm.id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent row click event
+                        deleteAlarm(alarm.id);
+                      }}
                       disabled={isRefreshing}
                       className="text-red-500 hover:text-red-700 hover:bg-red-50"
                     >
@@ -1640,10 +1792,12 @@ export default function AlarmsContent() {
             {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
             Export
           </Button>
-          <Button variant="outline" onClick={() => router.push("/dashboard/settings")} className="hover:bg-[#e6f3f1]">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
+          {isAdminOrDevOps && (
+            <Button variant="outline" onClick={() => router.push("/dashboard/settings")} className="hover:bg-[#e6f3f1]">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1658,43 +1812,20 @@ export default function AlarmsContent() {
         <Button variant="ghost" size="sm" onClick={() => setMonitoringActive(!monitoringActive)} className="ml-2">
           {monitoringActive ? "Pause" : "Resume"}
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (thresholdSettings.length === 0) {
-              // If no thresholds are loaded yet, load them first
-              const loadAndCheck = async () => {
-                const extractedThresholds = await extractThresholdsFromEquipment()
-                setThresholdSettings(extractedThresholds)
-                if (extractedThresholds.length > 0) {
-                  setTimeout(() => {
-                    monitorEquipmentMetrics().then(() => {
-                      // Refresh alarms list after check completes
-                      fetchAlarms()
-                    })
-                  }, 500)
-                }
-              }
-              loadAndCheck()
-            } else {
-              // If thresholds are already loaded, just run the check
-              monitorEquipmentMetrics().then(() => {
-                // Refresh alarms list after check completes
-                fetchAlarms()
-              })
-            }
-          }}
-          className="ml-2"
-          disabled={!rtdbData}
-        >
-          Run Check Now
-        </Button>
-        <Button variant="outline" size="sm" onClick={updateLocationNames} className="ml-2">
-          Update Locations
-        </Button>
+        {/* Remove "Run Check Now" button */}
+        {/* Remove "Update Locations" button */}
         <div className="ml-auto text-xs text-muted-foreground">{thresholdSettings.length} thresholds configured</div>
       </div>
+
+      {locationFilter && !isAdminOrDevOps && (
+        <Alert className="bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Location Filter Active</AlertTitle>
+          <AlertDescription>
+            Showing alarms for your assigned location only.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>

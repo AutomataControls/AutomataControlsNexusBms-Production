@@ -35,11 +35,26 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useAuth } from "@/lib/auth-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { collection, getDocs, query, where } from "firebase/firestore"
+import { toast } from "@/components/ui/use-toast"
+
+interface Location {
+  id: string;
+  name: string;
+  [key: string]: any;
+}
+
+interface Equipment {
+  id: string;
+  name: string;
+  type: string;
+  locationId: string;
+  [key: string]: any;
+}
 
 export function AppSidebar() {
-  const [locations, setLocations] = useState<any[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
   const [selectedLocation, setSelectedLocation] = useState<string>("")
-  const [equipment, setEquipment] = useState<any[]>([])
+  const [equipment, setEquipment] = useState<Equipment[]>([])
   const [equipmentTypes, setEquipmentTypes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [sidebarInitialized, setSidebarInitialized] = useState(false)
@@ -96,7 +111,7 @@ export function AppSidebar() {
             return snapshot.docs.map((doc) => ({
               id: doc.id,
               ...doc.data(),
-            }))
+            })) as Location[]
           }
           // Otherwise, fetch only assigned locations
           else if (user.assignedLocations && user.assignedLocations.length > 0) {
@@ -109,12 +124,12 @@ export function AppSidebar() {
               .filter((doc) => {
                 // Filter by the id field inside the document (not the document ID)
                 const locationData = doc.data();
-                return user.assignedLocations.includes(locationData.id);
+                return user.assignedLocations?.includes(locationData.id);
               })
               .map((doc) => ({
                 id: doc.id,
                 ...doc.data(),
-              }));
+              })) as Location[];
             
             console.log("Found assigned location documents:", assignedLocationDocs);
             return assignedLocationDocs;
@@ -139,7 +154,7 @@ export function AppSidebar() {
       } else {
         // Check localStorage for saved location
         const savedLocation = localStorage.getItem("selectedLocation")
-        if (savedLocation && locationData.some((loc) => loc.id === savedLocation)) {
+        if (savedLocation && locationData.some((loc: Location) => loc.id === savedLocation)) {
           setSelectedLocation(savedLocation)
         } else if (locationData.length > 0 && !selectedLocation) {
           setSelectedLocation(locationData[0].id)
@@ -182,7 +197,7 @@ export function AppSidebar() {
           return snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          }))
+          })) as Equipment[]
         },
         5, // Cache for 5 minutes
       )
@@ -190,7 +205,7 @@ export function AppSidebar() {
       setEquipment(equipmentData)
 
       // Extract unique equipment types
-      const types = Array.from(new Set(equipmentData.map((item) => item.type)))
+      const types = Array.from(new Set(equipmentData.map((item: Equipment) => item.type))) as string[];
       setEquipmentTypes(types)
     } catch (error) {
       console.error("Error fetching equipment:", error)
@@ -484,7 +499,22 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={logout} className="hover:bg-red-50 hover:text-red-600">
+                <SidebarMenuButton 
+                  onClick={async () => {
+                    try {
+                      await logout();
+                      router.push('/login');  // Add redirect to login page
+                    } catch (error) {
+                      console.error("Logout error:", error);
+                      toast({
+                        title: "Logout Error",
+                        description: "Failed to sign out. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }} 
+                  className="hover:bg-red-50 hover:text-red-600"
+                >
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>
                 </SidebarMenuButton>

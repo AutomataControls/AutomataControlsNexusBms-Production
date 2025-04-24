@@ -31,7 +31,7 @@ function formatDateInET(date) {
     second: 'numeric',
     hour12: true
   };
-  
+
   // Format the date
   return new Intl.DateTimeFormat('en-US', options).format(date);
 }
@@ -43,13 +43,13 @@ function getLocationName(locationId) {
     console.log(`📧 Found direct mapping for location ID ${locationId}: ${LOCATION_ID_MAPPING[locationId]}`)
     return LOCATION_ID_MAPPING[locationId]
   }
-  
+
   // If it's a numeric ID, add a prefix
   if (/^\d+$/.test(locationId)) {
     console.log(`📧 Location ID ${locationId} is numeric but not in mapping, adding prefix`)
     return `Location ${locationId}`
   }
-  
+
   // Otherwise, just return the ID as is
   return locationId
 }
@@ -61,16 +61,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" })
   }
 
-  const { 
-    alarmType, 
-    details, 
-    locationId, 
+  const {
+    alarmType,
+    details,
+    locationId,
     locationName: originalLocationName,
     equipmentName = "Unknown Equipment",
-    severity = "warning", 
-    alarmId, 
-    recipients, 
-    assignedTechs 
+    severity = "warning",
+    alarmId,
+    recipients,
+    assignedTechs
   } = req.body
 
   console.log("📧 Email request received:", {
@@ -87,14 +87,14 @@ export default async function handler(req, res) {
     // Resolve location name
     const displayLocationName = originalLocationName || getLocationName(locationId) || "Unknown Location"
     console.log(`📧 Using location name: ${displayLocationName}`)
-    
+
     // Format timestamp in Eastern Time
     const timestamp = formatDateInET(new Date())
     console.log(`📧 Formatted timestamp in ET: ${timestamp}`)
-    
-    // Dashboard URL
-    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL 
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/alarms` 
+
+    // Dashboard URL - kept for logging but removed from email
+    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/alarms`
       : "https://neuralbms.automatacontrols.com/dashboard/alarms"
     console.log(`📧 Dashboard URL: ${dashboardUrl}`)
 
@@ -175,23 +175,22 @@ Location: ${displayLocationName}
 Equipment: ${equipmentName}
 Details: ${details}
 Time: ${timestamp}
-Assigned Technicians: ${assignedTechs || "None"}
-Dashboard: ${dashboardUrl}`,
+Assigned Technicians: ${assignedTechs || "None"}`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; background-color: #f6f9fc;">
           <div style="background-color: white; border-radius: 5px; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
             <div style="text-align: center; margin-bottom: 20px;">
               <img src="cid:automata-logo" alt="Automata Controls Logo" style="width: 120px; height: auto;">
             </div>
-            
+
             <h2 style="color: ${getAlarmColor(severity)}; text-align: center; margin-bottom: 20px;">
               ${severity.toUpperCase()} ALARM
             </h2>
-            
+
             <h3 style="margin-top: 20px; color: #333;">${alarmType}</h3>
-            
+
             <p style="color: #404040; margin: 10px 0;">${details}</p>
-            
+
             <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
               <tr>
                 <td style="padding: 5px 0;">
@@ -214,15 +213,9 @@ Dashboard: ${dashboardUrl}`,
                 </td>
               </tr>
             </table>
-            
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="${dashboardUrl}" style="background-color: #98ffd8; color: #333; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                View in Dashboard
-              </a>
-            </div>
-            
+
             <hr style="border-color: #e1e1e1; margin: 20px 0;">
-            
+
             <div style="background-color: #1f2937; padding: 15px; border-radius: 4px; margin-top: 20px; text-align: center;">
               <span style="color: #ffe8cc; font-size: 14px; margin-right: 3px;">©</span>
               <span style="color: #cccccc; text-decoration: none; font-size: 14px; font-weight: 600; margin-right: 15px;">
@@ -237,7 +230,7 @@ Dashboard: ${dashboardUrl}`,
                 GitHub
               </a>
             </div>
-            
+
             <p style="color: #666; font-size: 12px; text-align: center; margin-top: 20px;">
               This is an automated message from the Automata Controls monitoring system.
               ${alarmId ? ` Alarm ID: ${alarmId}` : ""}
