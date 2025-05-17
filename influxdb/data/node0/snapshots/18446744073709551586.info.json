@@ -1,0 +1,53 @@
+{
+  "version": "1",
+  "node_id": "node0",
+  "next_file_id": 102,
+  "snapshot_sequence_number": 29,
+  "wal_file_sequence_number": 21209,
+  "catalog_sequence_number": 13,
+  "parquet_size_bytes": 23373,
+  "row_count": 714,
+  "min_time": 1746469200080000000,
+  "max_time": 1746470990057000000,
+  "databases": [
+    [
+      2,
+      {
+        "tables": [
+          [
+            1,
+            [
+              {
+                "id": 99,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/18-40/0000021209.parquet",
+                "size_bytes": 7802,
+                "row_count": 240,
+                "chunk_time": 1746470400000000000,
+                "min_time": 1746470400104000000,
+                "max_time": 1746470990057000000
+              },
+              {
+                "id": 100,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/18-30/0000021209.parquet",
+                "size_bytes": 7799,
+                "row_count": 240,
+                "chunk_time": 1746469800000000000,
+                "min_time": 1746469800094000000,
+                "max_time": 1746470390057000000
+              },
+              {
+                "id": 101,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/18-20/0000021209.parquet",
+                "size_bytes": 7772,
+                "row_count": 234,
+                "chunk_time": 1746469200000000000,
+                "min_time": 1746469200080000000,
+                "max_time": 1746469790057000000
+              }
+            ]
+          ]
+        ]
+      }
+    ]
+  ]
+}

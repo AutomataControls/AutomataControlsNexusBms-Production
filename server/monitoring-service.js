@@ -109,6 +109,10 @@ let checkInterval = 60000 // 1 minute in milliseconds
 let lastCheck = null
 let locationRecipients = {}
 
+// Cache for outdoor temperatures with 30-minute TTL
+const outdoorTempCache = {}
+const TEMP_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+
 // Track previous values for rate-of-change validation
 const lastValidReadings = {}
 
@@ -570,132 +574,246 @@ async function sendAlarmEmail(alarmData, alarmId) {
 // Enhanced function to get outdoor temperature for a location
 async function getOutdoorTemperature(locationId, rtdbData) {
     try {
-        console.log(`🌡️ Attempting to get outdoor temperature for location ${locationId}`)
+        console.log(`🌡️ Attempting to get outdoor temperature for location ${locationId}`);
 
-        // First try to get from RTDB directly by locationId
-        if (rtdbData && rtdbData[locationId]) {
-            // Check common paths for outdoor temperature
-            if (rtdbData[locationId].weather && rtdbData[locationId].weather.temperature !== undefined) {
-                console.log(`Found outdoor temperature in RTDB at locations/${locationId}/weather/temperature`)
-                return rtdbData[locationId].weather.temperature
-            }
-
-            if (rtdbData[locationId].outdoor && rtdbData[locationId].outdoor.temperature !== undefined) {
-                console.log(`Found outdoor temperature in RTDB at locations/${locationId}/outdoor/temperature`)
-                return rtdbData[locationId].outdoor.temperature
-            }
-
-            if (rtdbData[locationId].sensors &&
-                rtdbData[locationId].sensors.outdoor &&
-                rtdbData[locationId].sensors.outdoor.temperature !== undefined) {
-                console.log(`Found outdoor temperature in RTDB at locations/${locationId}/sensors/outdoor/temperature`)
-                return rtdbData[locationId].sensors.outdoor.temperature
-            }
+        // Check cache first
+        const now = Date.now();
+        if (outdoorTempCache[locationId] && (now - outdoorTempCache[locationId].timestamp) < TEMP_CACHE_TTL) {
+            console.log(`Using cached outdoor temperature for ${locationId}: ${outdoorTempCache[locationId].temperature}°F`);
+            return outdoorTempCache[locationId].temperature;
         }
 
-        // Search all locations in RTDB for matching locationId
-        for (const [key, value] of Object.entries(rtdbData)) {
-            if (value.id === locationId) {
-                // Check common paths for outdoor temperature
-                if (value.weather && value.weather.temperature !== undefined) {
-                    console.log(`Found outdoor temperature for ID match in RTDB at locations/${key}/weather/temperature`)
-                    return value.weather.temperature
-                }
-
-                if (value.outdoor && value.outdoor.temperature !== undefined) {
-                    console.log(`Found outdoor temperature for ID match in RTDB at locations/${key}/outdoor/temperature`)
-                    return value.outdoor.temperature
-                }
-
-                if (value.sensors &&
-                    value.sensors.outdoor &&
-                    value.sensors.outdoor.temperature !== undefined) {
-                    console.log(`Found outdoor temperature for ID match in RTDB at locations/${key}/sensors/outdoor/temperature`)
-                    return value.sensors.outdoor.temperature
-                }
-            }
-        }
-
-        // Check for equipment with outdoor temperature metrics
+        // 1. First try to get from OpenWeatherMap API (same approach as WeatherDisplay component)
         try {
-            // Get all equipment for this location
-            const equipmentQuery = query(
+            // Get location weather settings (same as in WeatherDisplay)
+            const weatherSettingsDoc = await getDoc(doc(db, "locations", locationId, "settings", "weather"));
+            let apiKey = null;
+            let zipCode = "46803"; // Default zip code
+
+            if (weatherSettingsDoc.exists()) {
+                const settings = weatherSettingsDoc.data();
+                if (settings.enabled && settings.apiKey) {
+                    apiKey = settings.apiKey;
+                    zipCode = settings.zipCode || zipCode;
+                    console.log(`Using location-specific weather settings for ${locationId}`);
+                }
+            }
+
+            // If no location-specific settings, try global config
+            if (!apiKey) {
+                // Get global weather API key
+                const configDoc = await getDoc(doc(db, "config", "global"));
+                if (configDoc.exists() && configDoc.data().weatherApiKey) {
+                    apiKey = configDoc.data().weatherApiKey;
+                    zipCode = configDoc.data().weatherZipCode || zipCode;
+                    console.log(`Using global weather settings with zip code ${zipCode}`);
+                }
+            }
+
+            // If we have an API key, make the request
+            if (apiKey) {
+                console.log(`Making OpenWeatherMap API request for zip code ${zipCode}`);
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?zip=${zipCode},us&units=imperial&appid=${apiKey}`
+                );
+
+                if (!response.ok) {
+                    throw new Error(`Weather API returned status ${response.status}`);
+                }
+
+                const data = await response.json();
+                const temperature = data.main.temp;
+                
+                console.log(`Retrieved temperature from OpenWeatherMap: ${temperature}°F`);
+                
+                // Cache the result
+                outdoorTempCache[locationId] = {
+                    temperature,
+                    timestamp: now,
+                    source: 'openweathermap'
+                };
+                
+                return temperature;
+            } else {
+                console.log(`No OpenWeatherMap API key available`);
+            }
+        } catch (error) {
+            console.error("Error fetching from OpenWeatherMap:", error);
+        }
+
+        // 2. Check for equipment with outdoor temperature sensors
+        console.log(`Checking equipment with outdoor sensors for location ${locationId}`);
+        try {
+            // Query Firestore for equipment that might have outdoor sensors
+            const outdoorSensorQuery = query(
+                collection(db, "equipment"),
+                where("locationId", "==", locationId),
+                where("type", "in", ["weather_station", "outdoor_sensor", "temperature_sensor"]),
+                limit(1)
+            );
+            
+            const sensorSnapshot = await getDocs(outdoorSensorQuery);
+            if (!sensorSnapshot.empty) {
+                const sensorEquipment = sensorSnapshot.docs[0].data();
+                const equipId = sensorSnapshot.docs[0].id;
+                console.log(`Found outdoor sensor equipment: ${equipId}`);
+                
+                // Use your existing getMetricValue function to get the temperature
+                // This assumes getMetricValue can get metrics from your storage (InfluxDB)
+                const sensorTemp = getMetricValue(locationId, equipId, 'temperature', rtdbData);
+                if (sensorTemp !== null) {
+                    console.log(`Found temperature from sensor equipment: ${sensorTemp}°F`);
+                    
+                    // Cache the result
+                    outdoorTempCache[locationId] = {
+                        temperature: sensorTemp,
+                        timestamp: now,
+                        source: 'sensor'
+                    };
+                    
+                    return sensorTemp;
+                }
+            }
+        } catch (error) {
+            console.error("Error checking for outdoor sensor equipment:", error);
+        }
+
+        // 3. Try more general equipment search
+        console.log(`Checking all equipment for outdoor temperature metrics for location ${locationId}`);
+        try {
+            const generalEquipQuery = query(
                 collection(db, "equipment"),
                 where("locationId", "==", locationId),
                 limit(20)
-            )
-
-            const equipmentSnapshot = await getDocs(equipmentQuery)
-
-            // Check each equipment for outdoor temperature metrics
-            for (const equipDoc of equipmentSnapshot.docs) {
-                const equip = equipDoc.data()
-
-                // Look for outdoor temp in the metrics object
-                if (equip.metrics && equip.metrics.outdoor &&
-                    equip.metrics.outdoor.temperature !== undefined) {
-                    console.log(`Found outdoor temperature in equipment ${equipDoc.id} metrics`)
-                    return equip.metrics.outdoor.temperature
+            );
+            
+            const equipSnapshot = await getDocs(generalEquipQuery);
+            for (const equipDoc of equipSnapshot.docs) {
+                const equipment = equipDoc.data();
+                const equipId = equipDoc.id;
+                
+                // Look for metrics that might contain outdoor temperature
+                const metricNames = ['outdoorTemp', 'outdoor_temp', 'OutdoorTemperature', 'OAT', 
+                                    'outside_temp', 'ambient_temp', 'outside_air_temperature'];
+                
+                for (const metricName of metricNames) {
+                    const tempValue = getMetricValue(locationId, equipId, metricName, rtdbData);
+                    if (tempValue !== null) {
+                        console.log(`Found outdoor temperature in equipment ${equipId} as ${metricName}: ${tempValue}°F`);
+                        
+                        // Cache the result
+                        outdoorTempCache[locationId] = {
+                            temperature: tempValue,
+                            timestamp: now,
+                            source: 'equipment_metric'
+                        };
+                        
+                        return tempValue;
+                    }
                 }
-
-                // Also check for common outdoor temperature metric names
-                if (equip.metrics) {
-                    const metrics = equip.metrics
-                    const possibleKeys = ['outdoorTemp', 'outdoor_temp', 'OutdoorTemperature',
-                        'outsideTemp', 'outside_temp', 'ambientTemp',
-                        'ambient_temp', 'environmentalTemp']
-
-                    for (const key of possibleKeys) {
-                        if (metrics[key] !== undefined) {
-                            console.log(`Found outdoor temperature in equipment ${equipDoc.id} as ${key}`)
-                            return metrics[key]
-                        }
+                
+                // Check if equipment has metrics.outdoor.temperature structure
+                if (equipment.metrics && equipment.metrics.outdoor && 
+                    equipment.metrics.outdoor.temperature !== undefined) {
+                    const tempValue = equipment.metrics.outdoor.temperature;
+                    if (tempValue !== null && !isNaN(parseFloat(tempValue))) {
+                        const temp = parseFloat(tempValue);
+                        console.log(`Found outdoor temperature in equipment ${equipId} metrics: ${temp}°F`);
+                        
+                        // Cache the result
+                        outdoorTempCache[locationId] = {
+                            temperature: temp,
+                            timestamp: now,
+                            source: 'equipment_metrics_object'
+                        };
+                        
+                        return temp;
                     }
                 }
             }
         } catch (error) {
-            console.error("Error checking equipment for outdoor temperature:", error)
+            console.error("Error checking equipment for outdoor temperature:", error);
         }
 
-        // If not in RTDB or regular equipment, check if there's a weather station in the equipment
-        const weatherStationQuery = query(
-            collection(db, "equipment"),
-            where("locationId", "==", locationId),
-            where("type", "in", ["weather_station", "outdoor_sensor", "weather_sensor"]),
-            limit(1)
-        )
-
-        const weatherStationSnapshot = await getDocs(weatherStationQuery)
-
-        if (!weatherStationSnapshot.empty) {
-            const weatherStation = weatherStationSnapshot.docs[0].data()
-            console.log(`Found weather station equipment for location ${locationId}`)
-
-            // Check different possible paths for temperature
-            if (weatherStation.currentReadings &&
-                weatherStation.currentReadings.temperature !== undefined) {
-                console.log(`Using temperature from weather station: ${weatherStation.currentReadings.temperature}`)
-                return weatherStation.currentReadings.temperature
+        // 4. Check RTDB as a fallback
+        if (rtdbData && rtdbData[locationId]) {
+            if (rtdbData[locationId].weather && rtdbData[locationId].weather.temperature !== undefined) {
+                const temp = rtdbData[locationId].weather.temperature;
+                console.log(`Found outdoor temperature in RTDB: ${temp}°F`);
+                
+                // Cache the result
+                outdoorTempCache[locationId] = {
+                    temperature: temp,
+                    timestamp: now,
+                    source: 'rtdb'
+                };
+                
+                return temp;
             }
-
-            if (weatherStation.readings &&
-                weatherStation.readings.temperature !== undefined) {
-                console.log(`Using temperature from weather station readings: ${weatherStation.readings.temperature}`)
-                return weatherStation.readings.temperature
+            
+            // Check more RTDB paths
+            if (rtdbData[locationId].outdoor && rtdbData[locationId].outdoor.temperature !== undefined) {
+                const temp = rtdbData[locationId].outdoor.temperature;
+                console.log(`Found outdoor temperature in RTDB at outdoor/temperature: ${temp}°F`);
+                
+                outdoorTempCache[locationId] = {
+                    temperature: temp,
+                    timestamp: now,
+                    source: 'rtdb_outdoor'
+                };
+                
+                return temp;
             }
-
-            if (weatherStation.metrics &&
-                weatherStation.metrics.temperature !== undefined) {
-                console.log(`Using temperature from weather station metrics: ${weatherStation.metrics.temperature}`)
-                return weatherStation.metrics.temperature
+            
+            if (rtdbData[locationId].sensors && 
+                rtdbData[locationId].sensors.outdoor && 
+                rtdbData[locationId].sensors.outdoor.temperature !== undefined) {
+                const temp = rtdbData[locationId].sensors.outdoor.temperature;
+                console.log(`Found outdoor temperature in RTDB at sensors/outdoor/temperature: ${temp}°F`);
+                
+                outdoorTempCache[locationId] = {
+                    temperature: temp,
+                    timestamp: now,
+                    source: 'rtdb_sensors'
+                };
+                
+                return temp;
             }
         }
 
-        console.log(`❌ Could not find outdoor temperature for location ${locationId}`)
-        return null // Return null if no temperature data found
+        // 5. Last resort - use a hardcoded default temp based on month
+        const month = new Date().getMonth(); // 0-11 for Jan-Dec
+        let defaultTemp;
+        
+        if (month >= 5 && month <= 8) {
+            // Summer months (Jun-Sep)
+            defaultTemp = 75;
+        } else if (month >= 9 && month <= 10) {
+            // Fall months (Oct-Nov)
+            defaultTemp = 55;
+        } else if (month >= 11 || month <= 1) {
+            // Winter months (Dec-Feb)
+            defaultTemp = 30;
+        } else {
+            // Spring months (Mar-May)
+            defaultTemp = 60;
+        }
+        
+        console.log(`❌ Could not find outdoor temperature for location ${locationId}, using seasonal default: ${defaultTemp}°F`);
+        
+        // Cache the default value with a shorter TTL (10 minutes)
+        outdoorTempCache[locationId] = {
+            temperature: defaultTemp,
+            timestamp: now,
+            source: 'seasonal_default',
+            ttl: 10 * 60 * 1000 // 10 minutes for default values
+        };
+        
+        return defaultTemp;
     } catch (error) {
-        console.error("Error getting outdoor temperature:", error)
-        return null
+        console.error("Error getting outdoor temperature:", error);
+        // Return a reasonable default value to prevent system failures
+        return 65; // Moderate default temperature
     }
 }
 
@@ -738,7 +856,18 @@ function calculateDynamicThresholds(baseMinThreshold, baseMaxThreshold, equipmen
                 } else {
                     // When outdoor temp is below 50°F, ensure boilers are in proper winter range
                     adjustedMin = Math.max(baseMinThreshold, 120) // Min should be at least 120°F
-                    adjustedMax = Math.min(baseMaxThreshold, 160) // Max should be at most 160°F
+                    adjustedMax = Math.min(baseMaxThreshold, 180) // Max should be at most 180°F
+
+                    // For very cold temps, adjust the minimum upward
+                    if (outdoorTemp < 20) {
+                        // Linear scaling: colder outdoor temp = higher minimum threshold
+                        // At 20°F outdoor, min is 120°F
+                        // At 0°F outdoor, min is 140°F
+                        // At -20°F outdoor, min is 160°F
+                        const coldAdjustment = Math.max(0, (20 - outdoorTemp)) * 1.0; // 1°F higher min per 1°F colder outdoor
+                        adjustedMin = Math.min(160, Math.max(baseMinThreshold, 120 + coldAdjustment));
+                        console.log(`Cold weather adjustment applied: +${coldAdjustment.toFixed(1)}°F to minimum threshold`);
+                    }
 
                     console.log(`Adjusted boiler thresholds for cold weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
                 }
@@ -748,7 +877,23 @@ function calculateDynamicThresholds(baseMinThreshold, baseMaxThreshold, equipmen
                 if (outdoorTemp >= 50) {
                     // Different thresholds for warm weather
                     adjustedMin = Math.min(baseMinThreshold, 70) // Can go lower in warm weather
-                    console.log(`Adjusted steam bundle min threshold for warm weather (outdoor: ${outdoorTemp}°F): ${adjustedMin}`)
+                    
+                    // Linear adjustment of maximum based on outdoor temperature
+                    // Hotter outside = lower maximum threshold
+                    if (outdoorTemp > 70) {
+                        const reductionFactor = Math.min(30, (outdoorTemp - 70) * 1.5); // 1.5°F lower per 1°F hotter
+                        adjustedMax = Math.max(140, baseMaxThreshold - reductionFactor);
+                        console.log(`Hot weather adjustment for steam bundle: -${reductionFactor.toFixed(1)}°F to maximum threshold`);
+                    }
+                    
+                    console.log(`Adjusted steam bundle thresholds for warm weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
+                } else {
+                    // Cold weather adjustments
+                    // As it gets colder, increase the minimum threshold
+                    const coldAdjustment = Math.max(0, (50 - outdoorTemp) * 0.5); // 0.5°F higher per 1°F colder
+                    adjustedMin = Math.min(120, Math.max(baseMinThreshold, baseMinThreshold + coldAdjustment));
+                    
+                    console.log(`Adjusted steam bundle thresholds for cold weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
                 }
                 break
 
@@ -765,9 +910,85 @@ function calculateDynamicThresholds(baseMinThreshold, baseMaxThreshold, equipmen
                     console.log(`Adjusted residential thresholds for mild weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
                 } else {
                     // Cold weather - heating mode
-                    adjustedMin = 100
-                    adjustedMax = 160
+                    // For residential, implement a true outdoor reset curve
+                    // As outside temp drops, supply temp increases on a linear scale
+                    
+                    // For cold weather:
+                    // At 50°F outdoor, min supply = 100°F
+                    // At 30°F outdoor, min supply = 120°F
+                    // At 10°F outdoor, min supply = 140°F
+                    // At -10°F outdoor, min supply = 160°F
+                    
+                    // Linear formula: min_supply = 100 + (50 - outdoor_temp) * (60/60) = 100 + (50 - outdoor_temp)
+                    // But limit between 100-160°F
+                    if (metricNameLower.includes('supply') || metricNameLower.includes('water')) {
+                        adjustedMin = Math.min(160, Math.max(100, 100 + Math.max(0, 50 - outdoorTemp)));
+                        adjustedMax = Math.min(180, adjustedMin + 40); // Max is 40°F above min, but not more than 180°F
+                    } else {
+                        // For return/air temps in cold weather
+                        adjustedMin = 65;
+                        adjustedMax = 85;
+                    }
+                    
                     console.log(`Adjusted residential thresholds for cold weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
+                }
+                break
+
+            case 'fan_coil':
+            case 'air_handler':
+                if (outdoorTemp >= 65) {
+                    // Cooling mode
+                    if (metricNameLower.includes('supply') || metricNameLower.includes('discharge')) {
+                        adjustedMin = 50;  // Cool supply air in cooling mode
+                        adjustedMax = 65;
+                    } else if (metricNameLower.includes('return')) {
+                        adjustedMin = 65;
+                        adjustedMax = 85;  // Higher return temps in cooling mode
+                    } else {
+                        // General air temperature
+                        adjustedMin = 55;
+                        adjustedMax = 80;
+                    }
+                } else if (outdoorTemp >= 45 && outdoorTemp < 65) {
+                    // Shoulder season
+                    adjustedMin = 60;
+                    adjustedMax = 80;
+                } else {
+                    // Heating mode
+                    if (metricNameLower.includes('supply') || metricNameLower.includes('discharge')) {
+                        // Linear reset curve for supply air in heating mode
+                        // At 45°F outdoor, min supply = 70°F
+                        // At 0°F outdoor, min supply = 110°F
+                        adjustedMin = Math.min(120, Math.max(70, 70 + (45 - Math.max(0, outdoorTemp)) * (40/45)));
+                        adjustedMax = adjustedMin + 40; // Max is 40°F above min
+                    } else if (metricNameLower.includes('return')) {
+                        adjustedMin = 65;
+                        adjustedMax = 80;
+                    } else {
+                        // General air temperature
+                        adjustedMin = 65;
+                        adjustedMax = 90;
+                    }
+                }
+                console.log(`Adjusted air system thresholds for outdoor temp ${outdoorTemp}°F: Min: ${adjustedMin}, Max: ${adjustedMax}`)
+                break
+
+            case 'chiller':
+                if (outdoorTemp >= 75) {
+                    // On very hot days, chillers work harder
+                    if (metricNameLower.includes('leaving') || metricNameLower.includes('supply')) {
+                        // Leaving water temperature can be higher on hot days
+                        const tempAdjustment = Math.min(8, (outdoorTemp - 75) * 0.4); // 0.4°F higher per 1°F hotter, max 8°F
+                        adjustedMax = Math.min(55, baseMaxThreshold + tempAdjustment);
+                        console.log(`Hot weather adjustment for chiller: +${tempAdjustment.toFixed(1)}°F to maximum threshold`);
+                    }
+                    
+                    // For condensers, adjust the maximum threshold based on outdoor temp
+                    if (metricNameLower.includes('condenser')) {
+                        // Condenser temperature is typically 10-15°F above outdoor temperature
+                        adjustedMax = Math.max(baseMaxThreshold, outdoorTemp + 15);
+                        console.log(`Adjusted condenser max threshold to outdoor + 15°F: ${adjustedMax}°F`);
+                    }
                 }
                 break
 
@@ -778,6 +999,14 @@ function calculateDynamicThresholds(baseMinThreshold, baseMaxThreshold, equipmen
                     if (baseMinThreshold > 80) { // If this seems to be a heating setpoint
                         adjustedMin = 60 // Allow it to go much lower in warm weather
                         console.log(`Applied general warm weather adjustment (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}`)
+                    }
+                } else if (outdoorTemp <= 30) {
+                    // In cold weather, increase minimum thresholds for heating equipment
+                    if (baseMinThreshold > 80) { // If this seems to be a heating setpoint
+                        // Increase min threshold by 0.5°F for each degree below 30°F
+                        const coldAdjustment = Math.max(0, (30 - outdoorTemp) * 0.5);
+                        adjustedMin = Math.min(160, Math.max(baseMinThreshold, baseMinThreshold + coldAdjustment));
+                        console.log(`Applied general cold weather adjustment (outdoor: ${outdoorTemp}°F): +${coldAdjustment.toFixed(1)}°F to Min: ${adjustedMin}`)
                     }
                 }
         }
@@ -1455,6 +1684,27 @@ async function initializeMonitoring() {
         // Load personnel data
         await fetchLocationPersonnel()
         console.log("✅ Loaded personnel data")
+
+        // Test outdoor temperature retrieval for a few locations
+        console.log("🌡️ Testing outdoor temperature retrieval...")
+        try {
+            // Get some location IDs to test with
+            const locationsSnapshot = await getDocs(collection(db, "locations"));
+            const locationIds = locationsSnapshot.docs.map(doc => doc.id).slice(0, 3); // Test first 3 locations
+            
+            // Get RTDB data
+            const locationsRef = ref(rtdb, "/locations")
+            const snapshot = await get(locationsRef)
+            const rtdbData = snapshot.val() || {}
+            
+            for (const locationId of locationIds) {
+                console.log(`Testing outdoor temperature for location: ${locationId}`);
+                const temp = await getOutdoorTemperature(locationId, rtdbData);
+                console.log(`Result for ${locationId}: ${temp !== null ? temp + '°F' : 'Temperature not found'}`);
+            }
+        } catch (tempTestError) {
+            console.error("Error testing outdoor temperature:", tempTestError);
+        }
 
         // Start monitoring
         console.log("🔄 Starting monitoring cycle...")

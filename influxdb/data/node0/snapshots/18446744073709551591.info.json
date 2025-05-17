@@ -1,0 +1,71 @@
+{
+  "version": "1",
+  "node_id": "node0",
+  "next_file_id": 84,
+  "snapshot_sequence_number": 24,
+  "wal_file_sequence_number": 17623,
+  "catalog_sequence_number": 13,
+  "parquet_size_bytes": 36331,
+  "row_count": 876,
+  "min_time": 1746458400170000000,
+  "max_time": 1746461390057000000,
+  "databases": [
+    [
+      2,
+      {
+        "tables": [
+          [
+            1,
+            [
+              {
+                "id": 79,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/16-00/0000017623.parquet",
+                "size_bytes": 7178,
+                "row_count": 162,
+                "chunk_time": 1746460800000000000,
+                "min_time": 1746460801434000000,
+                "max_time": 1746461390057000000
+              },
+              {
+                "id": 80,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/15-30/0000017623.parquet",
+                "size_bytes": 7814,
+                "row_count": 240,
+                "chunk_time": 1746459000000000000,
+                "min_time": 1746459000192000000,
+                "max_time": 1746459590056000000
+              },
+              {
+                "id": 81,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/15-50/0000017623.parquet",
+                "size_bytes": 6148,
+                "row_count": 48,
+                "chunk_time": 1746460200000000000,
+                "min_time": 1746460682608000000,
+                "max_time": 1746460790057000000
+              },
+              {
+                "id": 82,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/15-40/0000017623.parquet",
+                "size_bytes": 7373,
+                "row_count": 186,
+                "chunk_time": 1746459600000000000,
+                "min_time": 1746459600152000000,
+                "max_time": 1746460055057000000
+              },
+              {
+                "id": 83,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/15-20/0000017623.parquet",
+                "size_bytes": 7818,
+                "row_count": 240,
+                "chunk_time": 1746458400000000000,
+                "min_time": 1746458400170000000,
+                "max_time": 1746458990056000000
+              }
+            ]
+          ]
+        ]
+      }
+    ]
+  ]
+}

@@ -17,6 +17,7 @@ import {
   type DocumentData,
   setDoc,
 } from "firebase/firestore"
+import { app as firebaseApp, db as firebaseDb, initializeFirebase } from "./firebase" // Import from firebase.ts
 
 interface FirebaseConfig {
   apiKey: string
@@ -72,8 +73,18 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
   const [app, setApp] = useState<FirebaseApp | null>(null)
   const [db, setDb] = useState<Firestore | null>(null)
   const [config, setConfig] = useState<FirebaseConfig | null>(null)
+  // Add a state to track if we're in the browser
+  const [isBrowser, setIsBrowser] = useState(false)
+
+  // First, detect if we're in the browser
+  useEffect(() => {
+    setIsBrowser(true)
+  }, [])
 
   useEffect(() => {
+    // Skip initialization if not in browser
+    if (!isBrowser) return;
+    
     const loadConfig = async () => {
       try {
         // Try to load from localStorage first
@@ -109,7 +120,15 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
         }
 
         setConfig(envConfig)
-        initializeFirebase(envConfig)
+        
+        // Use the shared Firebase instance if available, otherwise initialize
+        if (firebaseApp && firebaseDb) {
+          setApp(firebaseApp);
+          setDb(firebaseDb);
+        } else {
+          // Fallback to our own initialization
+          initializeFirebase(envConfig);
+        }
 
         // After initialization is complete, try to load additional configuration from Firestore
         setTimeout(async () => {
@@ -144,7 +163,7 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     }
 
     loadConfig()
-  }, [db])
+  }, [isBrowser, db]) // Only run when isBrowser changes to true
 
   const initializeFirebase = (config: FirebaseConfig) => {
     try {
@@ -246,8 +265,10 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     lastDoc: QueryDocumentSnapshot<DocumentData> | null,
     orderByField?: string,
   ) => {
-    let q = collection(db, collectionName)
-
+    if (!db) return { data: [], lastDoc: null };
+    
+    let q;
+    
     if (orderByField) {
       if (lastDoc) {
         q = query(collection(db, collectionName), orderBy(orderByField), startAfter(lastDoc), limit(pageSize))

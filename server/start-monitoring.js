@@ -1,25 +1,22 @@
-// /server/monitoring-service.js
+// /server/start-monitoring.js
 const { initializeApp } = require('firebase/app');
-const { 
-  getFirestore, 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  query, 
-  where, 
-  limit 
+const {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  query,
+  where,
+  limit
 } = require('firebase/firestore');
 const { getDatabase, ref, onValue, get } = require('firebase/database');
-
 console.log('🔄 Initializing monitoring service...');
-
 // Debug environment variables
 console.log('Checking environment variables:');
 console.log('- NEXT_PUBLIC_FIREBASE_DATABASE_URL:', process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? 'Set' : 'Not set');
 console.log('- NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'Set' : 'Not set');
-
 // Initialize primary Firebase (for Firestore)
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -30,14 +27,11 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
-
 // Initialize secondary Firebase for RTDB
 // IMPORTANT: We need to hardcode the databaseURL if the environment variable is not available
-const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 
+const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
                    `https://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`;
-
 console.log('Using database URL:', databaseURL);
-
 const secondaryFirebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -47,27 +41,23 @@ const secondaryFirebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   databaseURL: databaseURL // Explicitly set the database URL
 };
-
 // Initialize Firebase instances
 let firebaseApp;
 let secondaryFirebaseApp;
 let db;
 let rtdb;
-
 try {
   // Initialize primary Firebase app
   firebaseApp = initializeApp(firebaseConfig);
   // Get Firestore instance using the modular API
   db = getFirestore(firebaseApp);
   console.log('✅ Primary Firebase initialized successfully');
-  
   // Initialize secondary Firebase app for RTDB
   secondaryFirebaseApp = initializeApp(secondaryFirebaseConfig, 'secondary');
   console.log('Secondary Firebase app initialized with config:', {
     projectId: secondaryFirebaseConfig.projectId,
     databaseURL: secondaryFirebaseConfig.databaseURL
   });
-  
   // Get RTDB instance using the modular API
   rtdb = getDatabase(secondaryFirebaseApp);
   console.log('✅ Secondary Firebase initialized successfully');
@@ -76,4 +66,9 @@ try {
   process.exit(1);
 }
 
-// Rest of the code remains the same...
+// Add these lines to import and start the monitoring service
+console.log('Loading monitoring service from:', require.resolve('./monitoring-service.js'));
+const monitoringService = require('./monitoring-service.js');
+
+// Start the monitoring service
+monitoringService.startMonitoring(); // Call the function by its actual name

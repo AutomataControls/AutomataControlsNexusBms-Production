@@ -1,0 +1,67 @@
+{
+  "version": "1",
+  "node_id": "node0",
+  "next_file_id": 135,
+  "snapshot_sequence_number": 39,
+  "wal_file_sequence_number": 28557,
+  "catalog_sequence_number": 13,
+  "parquet_size_bytes": 24964,
+  "row_count": 721,
+  "min_time": 1746487800191000000,
+  "max_time": 1746489591056000000,
+  "databases": [
+    [
+      2,
+      {
+        "tables": [
+          [
+            2,
+            [
+              {
+                "id": 131,
+                "path": "node0/dbs/control_logic-2/health_check-2/2025-05-05/23-30/0000028557.parquet",
+                "size_bytes": 1533,
+                "row_count": 1,
+                "chunk_time": 1746487800000000000,
+                "min_time": 1746488015080000000,
+                "max_time": 1746488015080000000
+              }
+            ]
+          ],
+          [
+            1,
+            [
+              {
+                "id": 132,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/23-50/0000028557.parquet",
+                "size_bytes": 7817,
+                "row_count": 240,
+                "chunk_time": 1746489000000000000,
+                "min_time": 1746489000181000000,
+                "max_time": 1746489591056000000
+              },
+              {
+                "id": 133,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/23-40/0000028557.parquet",
+                "size_bytes": 7808,
+                "row_count": 240,
+                "chunk_time": 1746488400000000000,
+                "min_time": 1746488400196000000,
+                "max_time": 1746488991057000000
+              },
+              {
+                "id": 134,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/23-30/0000028557.parquet",
+                "size_bytes": 7806,
+                "row_count": 240,
+                "chunk_time": 1746487800000000000,
+                "min_time": 1746487800191000000,
+                "max_time": 1746488390056000000
+              }
+            ]
+          ]
+        ]
+      }
+    ]
+  ]
+}

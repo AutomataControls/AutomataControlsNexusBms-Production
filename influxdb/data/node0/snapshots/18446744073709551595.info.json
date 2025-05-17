@@ -1,0 +1,62 @@
+{
+  "version": "1",
+  "node_id": "node0",
+  "next_file_id": 67,
+  "snapshot_sequence_number": 20,
+  "wal_file_sequence_number": 14497,
+  "catalog_sequence_number": 13,
+  "parquet_size_bytes": 29242,
+  "row_count": 739,
+  "min_time": 1746449401143000000,
+  "max_time": 1746451790056000000,
+  "databases": [
+    [
+      2,
+      {
+        "tables": [
+          [
+            1,
+            [
+              {
+                "id": 63,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/13-00/0000014497.parquet",
+                "size_bytes": 7715,
+                "row_count": 235,
+                "chunk_time": 1746450000000000000,
+                "min_time": 1746450001088000000,
+                "max_time": 1746450594057000000
+              },
+              {
+                "id": 64,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/13-10/0000014497.parquet",
+                "size_bytes": 5987,
+                "row_count": 30,
+                "chunk_time": 1746450600000000000,
+                "min_time": 1746450601269000000,
+                "max_time": 1746450666068000000
+              },
+              {
+                "id": 65,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/12-50/0000014497.parquet",
+                "size_bytes": 7793,
+                "row_count": 240,
+                "chunk_time": 1746449400000000000,
+                "min_time": 1746449401143000000,
+                "max_time": 1746449991057000000
+              },
+              {
+                "id": 66,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-05/13-20/0000014497.parquet",
+                "size_bytes": 7747,
+                "row_count": 234,
+                "chunk_time": 1746451200000000000,
+                "min_time": 1746451217677000000,
+                "max_time": 1746451790056000000
+              }
+            ]
+          ]
+        ]
+      }
+    ]
+  ]
+}

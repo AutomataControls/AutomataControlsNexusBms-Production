@@ -1,0 +1,1983 @@
+{
+  "locationCount": 16,
+  "systemCount": 62,
+  "metricCount": 617,
+  "uniqueMetricNames": {
+    "Active Switch State": {
+      "count": 10,
+      "type": "string",
+      "examples": [
+        "cooling",
+        "cooling",
+        "cooling",
+        "heating",
+        "heating"
+      ]
+    },
+    "Cooling Differential": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        8.090000000000003,
+        0.12999999999999545
+      ]
+    },
+    "Cooling Enabled": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        0,
+        1,
+        true
+      ]
+    },
+    "DX Enabled": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        false,
+        true
+      ]
+    },
+    "Discharge Air": {
+      "count": 6,
+      "type": "number",
+      "examples": [
+        79.09,
+        75.97,
+        73.05,
+        62.708,
+        63.7648753
+      ]
+    },
+    "Fan Status": {
+      "count": 25,
+      "type": "string",
+      "examples": [
+        "On",
+        true,
+        true,
+        true,
+        "On"
+      ]
+    },
+    "HVAC State": {
+      "count": 10,
+      "type": "string",
+      "examples": [
+        "cooling",
+        "cooling",
+        "off",
+        "off",
+        "off"
+      ]
+    },
+    "Heating Actuator": {
+      "count": 6,
+      "type": "number",
+      "examples": [
+        10,
+        0,
+        0,
+        100,
+        0
+      ]
+    },
+    "Last Enable Time": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        1746994022564
+      ]
+    },
+    "Last Stage 1 Time": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        0,
+        0
+      ]
+    },
+    "Last Stage 2 Time": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        0,
+        0
+      ]
+    },
+    "Mixed Air": {
+      "count": 7,
+      "type": "number",
+      "examples": [
+        77.96,
+        76.02,
+        60.34,
+        64.91,
+        74.44
+      ]
+    },
+    "Occupancy Set For Day": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        false
+      ]
+    },
+    "Outdoor Air Actuator": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        15,
+        10,
+        25
+      ]
+    },
+    "Outdoor Air Temperature": {
+      "count": 21,
+      "type": "number",
+      "examples": [
+        74.84,
+        79.5,
+        78.05,
+        74.84,
+        72.86
+      ]
+    },
+    "Outdoor Humidity": {
+      "count": 14,
+      "type": "number",
+      "examples": [
+        33,
+        33,
+        33,
+        33,
+        43
+      ]
+    },
+    "Outdoor Wind Speed": {
+      "count": 14,
+      "type": "number",
+      "examples": [
+        5.12,
+        5.12,
+        5.12,
+        5.12,
+        7.2
+      ]
+    },
+    "Return Air": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        78.55,
+        73.37,
+        71.18
+      ]
+    },
+    "Return Air Actuator": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        85,
+        90,
+        75
+      ]
+    },
+    "Stage 1 Enabled": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        0,
+        0,
+        false
+      ]
+    },
+    "Stage 2 Enabled": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        0,
+        0,
+        false
+      ]
+    },
+    "Target Temperature": {
+      "count": 14,
+      "type": "number",
+      "examples": [
+        71,
+        73,
+        71.5,
+        125,
+        70
+      ]
+    },
+    "VFD Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        true
+      ]
+    },
+    "VFD Speed": {
+      "count": 7,
+      "type": "number",
+      "examples": [
+        8,
+        55.2,
+        98,
+        92,
+        6.139
+      ]
+    },
+    "DX Enable": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Freeze Stat": {
+      "count": 12,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    },
+    "Mixed Air Temperature": {
+      "count": 7,
+      "type": "number",
+      "examples": [
+        74.04,
+        72.07,
+        79.82,
+        76.74,
+        84.47
+      ]
+    },
+    "North Upstairs": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "73.15"
+      ]
+    },
+    "Setpoint Differential": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        -4.680000000000007,
+        0.4099999999999966
+      ]
+    },
+    "Thermostat Ambient Temperature": {
+      "count": 4,
+      "type": "string",
+      "examples": [
+        "73.15",
+        "71.40",
+        126.05,
+        "74.88"
+      ]
+    },
+    "Thermostat Away": {
+      "count": 4,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    "Thermostat Mode": {
+      "count": 4,
+      "type": "string",
+      "examples": [
+        "cooling",
+        "cooling",
+        "heating",
+        "heating"
+      ]
+    },
+    "Thermostat Switch State": {
+      "count": 4,
+      "type": "string",
+      "examples": [
+        "cooling",
+        "off",
+        "off",
+        "heating"
+      ]
+    },
+    "Thermostat Target Temperature": {
+      "count": 4,
+      "type": "number",
+      "examples": [
+        73,
+        71.5,
+        80,
+        75
+      ]
+    },
+    "Alarm Status": {
+      "count": 4,
+      "type": "string",
+      "examples": [
+        "Clear",
+        "Clear",
+        "Clear",
+        "H20ReturnHighAlarm, H20SupplyHighAlarm"
+      ]
+    },
+    "Heating Differential": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        1.8100000000000023
+      ]
+    },
+    "South Office": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "71.40"
+      ]
+    },
+    "Supply": {
+      "count": 11,
+      "type": "number",
+      "examples": [
+        73.05,
+        72.29,
+        71.37,
+        54.67,
+        72.11
+      ]
+    },
+    "Boiler Loop Temperature": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        126.05
+      ]
+    },
+    "Differential Pressure": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        22.76,
+        23.55,
+        23.61
+      ]
+    },
+    "H2O Return": {
+      "count": 8,
+      "type": "number",
+      "examples": [
+        126.95,
+        89.97,
+        89.97,
+        89.97,
+        "103.69"
+      ]
+    },
+    "H2O Supply": {
+      "count": 8,
+      "type": "number",
+      "examples": [
+        126.05,
+        85.02,
+        85.02,
+        85.02,
+        "102.66"
+      ]
+    },
+    "HW Pump 1 Status": {
+      "count": 4,
+      "type": "boolean",
+      "examples": [
+        true,
+        true,
+        "Off",
+        "Off"
+      ]
+    },
+    "HW Pump 2 Status": {
+      "count": 4,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        "Off",
+        "Off"
+      ]
+    },
+    "Last Enabled Pump": {
+      "count": 3,
+      "type": "string",
+      "examples": [
+        "Pump1",
+        "Pump1",
+        "Pump1"
+      ]
+    },
+    "Building Pressure": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        -0.299,
+        -0.39936000000000005,
+        4.97
+      ]
+    },
+    "Exhaust Fan Amps": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        1.328,
+        1.19
+      ]
+    },
+    "Exhaust Fan Status": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        true,
+        true
+      ]
+    },
+    "Exhaust VFD Speed": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        58.5
+      ]
+    },
+    "Freeze Status": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        true,
+        true
+      ]
+    },
+    "HOA Mode": {
+      "count": 8,
+      "type": "string",
+      "examples": [
+        "Auto",
+        "Auto",
+        "Auto",
+        "Auto",
+        "Auto"
+      ]
+    },
+    "Last Cooling State": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        1
+      ]
+    },
+    "Last Heating State": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        1
+      ]
+    },
+    "OA Actuator": {
+      "count": 16,
+      "type": "number",
+      "examples": [
+        99,
+        100,
+        10,
+        100,
+        1
+      ]
+    },
+    "Occupied Scheduled": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        true,
+        true
+      ]
+    },
+    "Outdoor Temperature": {
+      "count": 8,
+      "type": "number",
+      "examples": [
+        73.51,
+        72.95,
+        79.32,
+        74.14,
+        74.14
+      ]
+    },
+    "Smoke Detector Shutdown": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Space Humidity": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        36.6,
+        46.83,
+        48.9
+      ]
+    },
+    "Space RH 1": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        35.7,
+        45.7
+      ]
+    },
+    "Space RH 2": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        34.5,
+        44.7
+      ]
+    },
+    "Space Temperature": {
+      "count": 5,
+      "type": "number",
+      "examples": [
+        73.75,
+        67.22,
+        76.47,
+        75.25,
+        83.25
+      ]
+    },
+    "Space Temperature 1": {
+      "count": 4,
+      "type": "number",
+      "examples": [
+        73.4,
+        66.8,
+        74.7,
+        75.25
+      ]
+    },
+    "Space Temperature 2": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        74.1,
+        67.5,
+        78.24
+      ]
+    },
+    "Supply Fan Amps": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        4.93,
+        5.05
+      ]
+    },
+    "Supply Temperature": {
+      "count": 11,
+      "type": "number",
+      "examples": [
+        73.95,
+        77.27,
+        54.71,
+        53.08,
+        77.33
+      ]
+    },
+    "Exhaust Fan VFD Speed": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        54
+      ]
+    },
+    "Heating Enabled": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        1
+      ]
+    },
+    "Space RH 3": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        46
+      ]
+    },
+    "Space RH 4": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        45.7
+      ]
+    },
+    "Space RH 5": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        44.78
+      ]
+    },
+    "Space Temperature 3": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        66.7
+      ]
+    },
+    "Space Temperature 4": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        67.3
+      ]
+    },
+    "Space Temperature 5": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        67.8
+      ]
+    },
+    "Element MUA1": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        62.708
+      ]
+    },
+    "Freeze Trip": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        false,
+        false
+      ]
+    },
+    "Intake Air": {
+      "count": 2,
+      "type": "string",
+      "examples": [
+        "72.86",
+        72.86
+      ]
+    },
+    "Lab RH": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        52,
+        39.581500000000005
+      ]
+    },
+    "Lab Temperature": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        70.26,
+        71.705
+      ]
+    },
+    "CW Actuator": {
+      "count": 8,
+      "type": "number",
+      "examples": [
+        100,
+        4.617599999999996,
+        0,
+        0,
+        0
+      ]
+    },
+    "Freezestat": {
+      "count": 10,
+      "type": "boolean",
+      "examples": [
+        true,
+        1,
+        1,
+        0,
+        true
+      ]
+    },
+    "HW Actuator": {
+      "count": 7,
+      "type": "number",
+      "examples": [
+        0,
+        0,
+        18.6396,
+        0,
+        0
+      ]
+    },
+    "Humidity": {
+      "count": 6,
+      "type": "number",
+      "examples": [
+        45,
+        49,
+        43,
+        43,
+        43
+      ]
+    },
+    "Integral": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0
+      ]
+    },
+    "Last Error": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        -22.290000000000006
+      ]
+    },
+    "Occupied": {
+      "count": 6,
+      "type": "boolean",
+      "examples": [
+        false,
+        "unoccupied",
+        "unoccupied",
+        true,
+        true
+      ]
+    },
+    "Outdoor Air": {
+      "count": 7,
+      "type": "number",
+      "examples": [
+        73.76,
+        73.76,
+        73.76,
+        73.76,
+        73.76
+      ]
+    },
+    "Setpoint": {
+      "count": 10,
+      "type": "number",
+      "examples": [
+        50,
+        71,
+        72.5,
+        72.5,
+        73
+      ]
+    },
+    "VFD": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        46.08
+      ]
+    },
+    "Boiler 1 Enable": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        false,
+        false
+      ]
+    },
+    "Heating Loop Return Temperature": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        160.025,
+        160.025
+      ]
+    },
+    "Heating Loop Supply Temperature": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        156.3116,
+        156.425
+      ]
+    },
+    "CW Pump 1 Enable": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        false
+      ]
+    },
+    "CW Pump 1 Status": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        false
+      ]
+    },
+    "CW Pump 2 Enable": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        false
+      ]
+    },
+    "CW Pump 2 Status": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        true,
+        true,
+        true
+      ]
+    },
+    "Chiller 1 Enable": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        false,
+        false
+      ]
+    },
+    "Equipment States Last Update": {
+      "count": 3,
+      "type": "string",
+      "examples": [
+        "2025-04-06T18:58:38.804Z",
+        "2025-04-06T18:58:38.804Z",
+        "2025-04-06T18:58:38.804Z"
+      ]
+    },
+    "H2O Return Temperature": {
+      "count": 4,
+      "type": "number",
+      "examples": [
+        55.04,
+        55.04,
+        55.04,
+        56.4125
+      ]
+    },
+    "H2O Supply Temperature": {
+      "count": 4,
+      "type": "number",
+      "examples": [
+        46.92,
+        46.92,
+        46.92,
+        53.375
+      ]
+    },
+    "Thermostat Last Update": {
+      "count": 3,
+      "type": "string",
+      "examples": [
+        "2025-05-11T20:49:45.736Z",
+        "2025-05-11T20:49:45.736Z",
+        "2025-05-11T20:50:00.739Z"
+      ]
+    },
+    "Chiller 2 Enable": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        true,
+        true
+      ]
+    },
+    "Boiler 2 Enable": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Boiler 3 Enable": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Boiler 4 Enable": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "HW Pump 1 Enable": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "HW Pump 2 Enable": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Amps": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        5.08,
+        0.17
+      ]
+    },
+    "CW Pump Active": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        true,
+        false
+      ]
+    },
+    "DM H2O Return": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        116.46,
+        116.46,
+        116.46
+      ]
+    },
+    "DM H2O Supply": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        119.46,
+        119.46,
+        119.46
+      ]
+    },
+    "DM Target Temperature": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        121,
+        121,
+        121
+      ]
+    },
+    "DM Temperature Differential": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        -1.4300000000000068,
+        -1.4300000000000068,
+        -1.4300000000000068
+      ]
+    },
+    "GlobalSetpoint": {
+      "count": 8,
+      "type": "number",
+      "examples": [
+        72.5,
+        72.5,
+        74,
+        74,
+        74
+      ]
+    },
+    "HWP1Amps": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0.02
+      ]
+    },
+    "HWP2Amps": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        10.41
+      ]
+    },
+    "HWP2Status": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "Running"
+      ]
+    },
+    "Ambient Temperature": {
+      "count": 5,
+      "type": "number",
+      "examples": [
+        0,
+        102.66,
+        102.66,
+        "53.38",
+        "70.36"
+      ]
+    },
+    "Pump 1 Status": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        false
+      ]
+    },
+    "Pump 2 Status": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        false,
+        false,
+        false
+      ]
+    },
+    "Boiler 1 Status": {
+      "count": 2,
+      "type": "string",
+      "examples": [
+        "Off",
+        "Off"
+      ]
+    },
+    "Boiler 2 Status": {
+      "count": 3,
+      "type": "string",
+      "examples": [
+        "Off",
+        "Off",
+        false
+      ]
+    },
+    "Pump Discharge Pressure": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        1.29,
+        1.29
+      ]
+    },
+    "VFD Status": {
+      "count": 2,
+      "type": "string",
+      "examples": [
+        "Off",
+        "Off"
+      ]
+    },
+    "Cooling Actuator": {
+      "count": 3,
+      "type": "number",
+      "examples": [
+        100,
+        100,
+        0
+      ]
+    },
+    "Fan Amps": {
+      "count": 8,
+      "type": "number",
+      "examples": [
+        5.6,
+        7.14,
+        6.54,
+        0.02,
+        0.02
+      ]
+    },
+    "Fan Enabled": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        true,
+        true,
+        true
+      ]
+    },
+    "Fan Running": {
+      "count": 3,
+      "type": "boolean",
+      "examples": [
+        true,
+        true,
+        true
+      ]
+    },
+    "Pump Amps": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        3.8
+      ]
+    },
+    "Pump Running": {
+      "count": 2,
+      "type": "boolean",
+      "examples": [
+        true,
+        false
+      ]
+    },
+    "Global Setpoint": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        75,
+        85
+      ]
+    },
+    "Heating Stage 1 Amps": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0.03
+      ]
+    },
+    "Heating Stage 1 Status": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        true
+      ]
+    },
+    "Heating Stage 2 Amps": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0.04
+      ]
+    },
+    "Heating Stage 2 Status": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        true
+      ]
+    },
+    "Outdoor Actuator": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        7,
+        10
+      ]
+    },
+    "Return Actuator": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        65,
+        100
+      ]
+    },
+    "Return Temperature": {
+      "count": 5,
+      "type": "number",
+      "examples": [
+        80.28,
+        73.86,
+        84.97,
+        237.76,
+        61.97
+      ]
+    },
+    "Dehumidification Active": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Last Preheat Error": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0.04000000000000625
+      ]
+    },
+    "Last Pump State": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0
+      ]
+    },
+    "Last Reheat Error": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0.04000000000000625
+      ]
+    },
+    "Last Simulated Pressure": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        0.099,
+        0.102
+      ]
+    },
+    "Preheat Integral": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        100
+      ]
+    },
+    "Preheat Valve": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0
+      ]
+    },
+    "Reheat Integral": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        100
+      ]
+    },
+    "Reheat Valve": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0
+      ]
+    },
+    "SpaceTemp": {
+      "count": 5,
+      "type": "number",
+      "examples": [
+        72.91,
+        72.91,
+        72.91,
+        72.91,
+        73.74
+      ]
+    },
+    "spaceTemp": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        67.85
+      ]
+    },
+    "Pump 1 Amps": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        0.01,
+        0.01
+      ]
+    },
+    "Pump 2 Amps": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        0.01,
+        0.01
+      ]
+    },
+    "OneThird Actuator": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0
+      ]
+    },
+    "Pump 2 Running": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "TwoThirds Actuator": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0
+      ]
+    },
+    "Valve 1 Active": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Valve 1 Percent": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0
+      ]
+    },
+    "Valve 2 Active": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Valve 2 Percent": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        0
+      ]
+    },
+    "Circuit 1 SLT": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "40.55"
+      ]
+    },
+    "Circuit 2 SLT": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "48.43"
+      ]
+    },
+    "Pump 4 Status": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Pump Pressure": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        13.28
+      ]
+    },
+    "Pump Pressure (alt)": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        13.28
+      ]
+    },
+    "VAV Pump Status": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "return": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        56.525
+      ]
+    },
+    "supply": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        53.375
+      ]
+    },
+    "Mechanical Cooling Alarm Active": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "RPI CPU %": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        65.731
+      ]
+    },
+    "RPI Core Temperature": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        65.731
+      ]
+    },
+    "Average Temperature": {
+      "count": 2,
+      "type": "string",
+      "examples": [
+        "74.88",
+        86.67
+      ]
+    },
+    "Cooling Alarm": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "Normal"
+      ]
+    },
+    "Downstairs Environment": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "-40.09"
+      ]
+    },
+    "H2O Alarm": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "Normal"
+      ]
+    },
+    "Heating Alarm": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "Normal"
+      ]
+    },
+    "Last Valid BME280 Reading": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        -40.05
+      ]
+    },
+    "Last Valid Thermistor Reading": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        64.86
+      ]
+    },
+    "Upstairs Environment": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "75.02"
+      ]
+    },
+    "Active Pump": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "Pump2"
+      ]
+    },
+    "H2O Supply Alt": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        68.55799999999999
+      ]
+    },
+    "Supply Air": {
+      "count": 2,
+      "type": "number",
+      "examples": [
+        70.358,
+        65.1
+      ]
+    },
+    "Cooling Modulation Logic Status": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "Cooling Status Holding"
+      ]
+    },
+    "Cooling Setpoint Differential": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        -0.12000000000000455
+      ]
+    },
+    "Heating Modulation Logic Status": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "Heating Active"
+      ]
+    },
+    "Heating Setpoint Differential": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        7.400000000000006
+      ]
+    },
+    "Last No Alarm Time": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        1746996383
+      ]
+    },
+    "Average Humidity": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        37.95
+      ]
+    },
+    "Exhaust Active Control": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Exhaust Fan 1 Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Exhaust Fan 2 Active Control": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Exhaust Fan 2 Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "FCU 1 Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "FCU 2 Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "FCU 3 Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "FCU 4 Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Floor Heat 2 Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Floor Heat Active Control": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Humidity 1": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        39.6
+      ]
+    },
+    "Humidity 2": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        36.6
+      ]
+    },
+    "Is Raining": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Outside Temperature": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        74.86
+      ]
+    },
+    "Supply Active Control": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        false
+      ]
+    },
+    "Supply Enabled": {
+      "count": 1,
+      "type": "boolean",
+      "examples": [
+        true
+      ]
+    },
+    "Temperature 1": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        84.44
+      ]
+    },
+    "Temperature 2": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        88.72
+      ]
+    },
+    "Time of Day": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "Afternoon"
+      ]
+    },
+    "Vent Active Control": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        61
+      ]
+    },
+    "Zone 1 Humidity": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        39.6
+      ]
+    },
+    "Zone 1 Temperature": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        84.44
+      ]
+    },
+    "Zone 2 Humidity": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        36.6
+      ]
+    },
+    "Zone 2 Temperature": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        88.72
+      ]
+    },
+    "Compressor Status": {
+      "count": 1,
+      "type": "string",
+      "examples": [
+        "On"
+      ]
+    },
+    "North Zone": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        69.67
+      ]
+    },
+    "Return": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        77.19800000000001
+      ]
+    },
+    "South Zone": {
+      "count": 1,
+      "type": "number",
+      "examples": [
+        69.8554
+      ]
+    }
+  },
+  "metricsByType": {
+    "temperature": [
+      "Outdoor Air Temperature",
+      "Target Temperature",
+      "Mixed Air Temperature",
+      "Thermostat Ambient Temperature",
+      "Thermostat Target Temperature",
+      "Boiler Loop Temperature",
+      "Outdoor Temperature",
+      "Space Temperature",
+      "Space Temperature 1",
+      "Space Temperature 2",
+      "Supply Temperature",
+      "Space Temperature 3",
+      "Space Temperature 4",
+      "Space Temperature 5",
+      "Lab Temperature",
+      "Heating Loop Return Temperature",
+      "Heating Loop Supply Temperature",
+      "H2O Return Temperature",
+      "H2O Supply Temperature",
+      "DM Target Temperature",
+      "DM Temperature Differential",
+      "Ambient Temperature",
+      "Return Temperature",
+      "SpaceTemp",
+      "spaceTemp",
+      "RPI Core Temperature",
+      "Average Temperature",
+      "Outside Temperature",
+      "Temperature 1",
+      "Temperature 2",
+      "Zone 1 Temperature",
+      "Zone 2 Temperature"
+    ],
+    "humidity": [
+      "Outdoor Humidity",
+      "Space Humidity",
+      "Humidity",
+      "Dehumidification Active",
+      "Average Humidity",
+      "Humidity 1",
+      "Humidity 2",
+      "Zone 1 Humidity",
+      "Zone 2 Humidity"
+    ],
+    "pressure": [
+      "Differential Pressure",
+      "Building Pressure",
+      "Pump Discharge Pressure",
+      "Last Simulated Pressure",
+      "Pump Pressure",
+      "Pump Pressure (alt)",
+      "Compressor Status"
+    ],
+    "speed": [
+      "Outdoor Wind Speed",
+      "VFD Speed",
+      "Exhaust VFD Speed",
+      "Exhaust Fan VFD Speed"
+    ],
+    "position": [
+      "Preheat Valve",
+      "Reheat Valve",
+      "Valve 1 Active",
+      "Valve 1 Percent",
+      "Valve 2 Active",
+      "Valve 2 Percent"
+    ],
+    "setpoint": [
+      "Setpoint Differential",
+      "Setpoint",
+      "GlobalSetpoint",
+      "Global Setpoint",
+      "Cooling Setpoint Differential",
+      "Heating Setpoint Differential"
+    ],
+    "other": [
+      "Active Switch State",
+      "Cooling Differential",
+      "Cooling Enabled",
+      "DX Enabled",
+      "Discharge Air",
+      "Fan Status",
+      "HVAC State",
+      "Heating Actuator",
+      "Last Enable Time",
+      "Last Stage 1 Time",
+      "Last Stage 2 Time",
+      "Mixed Air",
+      "Occupancy Set For Day",
+      "Outdoor Air Actuator",
+      "Return Air",
+      "Return Air Actuator",
+      "Stage 1 Enabled",
+      "Stage 2 Enabled",
+      "VFD Enabled",
+      "DX Enable",
+      "Freeze Stat",
+      "North Upstairs",
+      "Thermostat Away",
+      "Thermostat Mode",
+      "Thermostat Switch State",
+      "Alarm Status",
+      "Heating Differential",
+      "South Office",
+      "Supply",
+      "H2O Return",
+      "H2O Supply",
+      "HW Pump 1 Status",
+      "HW Pump 2 Status",
+      "Last Enabled Pump",
+      "Exhaust Fan Amps",
+      "Exhaust Fan Status",
+      "Freeze Status",
+      "HOA Mode",
+      "Last Cooling State",
+      "Last Heating State",
+      "OA Actuator",
+      "Occupied Scheduled",
+      "Smoke Detector Shutdown",
+      "Space RH 1",
+      "Space RH 2",
+      "Supply Fan Amps",
+      "Heating Enabled",
+      "Space RH 3",
+      "Space RH 4",
+      "Space RH 5",
+      "Element MUA1",
+      "Freeze Trip",
+      "Intake Air",
+      "Lab RH",
+      "CW Actuator",
+      "Freezestat",
+      "HW Actuator",
+      "Integral",
+      "Last Error",
+      "Occupied",
+      "Outdoor Air",
+      "VFD",
+      "Boiler 1 Enable",
+      "CW Pump 1 Enable",
+      "CW Pump 1 Status",
+      "CW Pump 2 Enable",
+      "CW Pump 2 Status",
+      "Chiller 1 Enable",
+      "Equipment States Last Update",
+      "Thermostat Last Update",
+      "Chiller 2 Enable",
+      "Boiler 2 Enable",
+      "Boiler 3 Enable",
+      "Boiler 4 Enable",
+      "HW Pump 1 Enable",
+      "HW Pump 2 Enable",
+      "Amps",
+      "CW Pump Active",
+      "DM H2O Return",
+      "DM H2O Supply",
+      "HWP1Amps",
+      "HWP2Amps",
+      "HWP2Status",
+      "Pump 1 Status",
+      "Pump 2 Status",
+      "Boiler 1 Status",
+      "Boiler 2 Status",
+      "VFD Status",
+      "Cooling Actuator",
+      "Fan Amps",
+      "Fan Enabled",
+      "Fan Running",
+      "Pump Amps",
+      "Pump Running",
+      "Heating Stage 1 Amps",
+      "Heating Stage 1 Status",
+      "Heating Stage 2 Amps",
+      "Heating Stage 2 Status",
+      "Outdoor Actuator",
+      "Return Actuator",
+      "Last Preheat Error",
+      "Last Pump State",
+      "Last Reheat Error",
+      "Preheat Integral",
+      "Reheat Integral",
+      "Pump 1 Amps",
+      "Pump 2 Amps",
+      "OneThird Actuator",
+      "Pump 2 Running",
+      "TwoThirds Actuator",
+      "Circuit 1 SLT",
+      "Circuit 2 SLT",
+      "Pump 4 Status",
+      "VAV Pump Status",
+      "return",
+      "supply",
+      "Mechanical Cooling Alarm Active",
+      "RPI CPU %",
+      "Cooling Alarm",
+      "Downstairs Environment",
+      "H2O Alarm",
+      "Heating Alarm",
+      "Last Valid BME280 Reading",
+      "Last Valid Thermistor Reading",
+      "Upstairs Environment",
+      "Active Pump",
+      "H2O Supply Alt",
+      "Supply Air",
+      "Cooling Modulation Logic Status",
+      "Heating Modulation Logic Status",
+      "Last No Alarm Time",
+      "Exhaust Active Control",
+      "Exhaust Fan 1 Enabled",
+      "Exhaust Fan 2 Active Control",
+      "Exhaust Fan 2 Enabled",
+      "FCU 1 Enabled",
+      "FCU 2 Enabled",
+      "FCU 3 Enabled",
+      "FCU 4 Enabled",
+      "Floor Heat 2 Enabled",
+      "Floor Heat Active Control",
+      "Is Raining",
+      "Supply Active Control",
+      "Supply Enabled",
+      "Time of Day",
+      "Vent Active Control",
+      "North Zone",
+      "Return",
+      "South Zone"
+    ]
+  }
+}

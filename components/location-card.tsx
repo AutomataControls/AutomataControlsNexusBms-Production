@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, memo } from "react"
+import React, { useState, useEffect } from "react"
+const { memo } = React;
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

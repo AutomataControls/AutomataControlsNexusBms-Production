@@ -1,0 +1,200 @@
+      temperatureSetpoint: 72, // This will be overridden if we found a pending setpoint
+      operationMode: "auto",
+      unitEnable: true,
+      outdoorDamperPosition: 0,
+      customLogicEnabled: true,
+      pidControllers: {
+        cooling: {
+          enabled: true,
+          kd: 0.01,
+          ki: 0.03,
+          kp: 1,
+          outputMax: 100,
+          outputMin: 0,
+          reverseActing: false,
+          maxIntegral: 10,
+        },
+        heating: {
+          enabled: true,
+          kd: 0.01,
+          ki: 0.03,
+          kp: 1,
+          outputMax: 100,
+          outputMin: 0,
+          reverseActing: true,
+          maxIntegral: 10,
+        },
+        outdoorDamper: {
+          enabled: false,
+          kd: 0.01,
+          ki: 0.1,
+          kp: 1,
+          outputMax: 100,
+          outputMin: 0,
+          reverseActing: false,
+          maxIntegral: 10,
+        },
+      },
+      waterTempSetpoint: 180,
+    }
+
+    // If we found a pending user setpoint, override the default
+    if (pendingUserSetpoint !== null) {
+      defaultValues.temperatureSetpoint = pendingUserSetpoint
+      console.log(`Setting default temperature setpoint to pending user value: ${pendingUserSetpoint}°F`)
+    }
+
+    return defaultValues
+  }
+}
+
+// Also modify the sendControlCommand function to update the cache when sending commands
+export async function sendControlCommand(command: string, commandData: any) {
+  try {
+    // Use your production URL from the environment variables
+    const baseUrl = "https://neuralbms.automatacontrols.com"
+    const response = await fetch(`${baseUrl}/api/control-commands`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        command,
+        ...commandData,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to send command: ${response.status} ${response.statusText}`)
+    }
+
+    // Update the cache with the new command value
+    const { equipmentId, locationId, value, commandType } = commandData
+    if (equipmentId && locationId && commandType) {
+      const cacheKey = `${locationId}_${equipmentId}`
+      const cachedData = controlValuesCache.get(cacheKey)
+
+      if (cachedData) {
+        // Update the specific field in the cached values
+        cachedData.values[commandType] = value
+        cachedData.timestamp = Date.now()
+        controlValuesCache.set(cacheKey, cachedData)
+        console.log(`Updated cache for ${equipmentId} with new ${commandType} = ${value}`)
+      }
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error(`Error sending control command: ${error}`)
+    return { success: false, error: String(error) }
+  }
+}
+
+// Helper function for evaluating custom logic - SIMPLIFIED TO USE EQUIPMENT-SPECIFIC FUNCTIONS
+export function evaluateCustomLogic(sandbox: any, pidState: any, equipmentType?: string): LogicEvaluation | null {
+  try {
+    console.log(`Evaluating logic for equipment type: ${equipmentType || "unknown"}`)
+
+    // Get the control function for this equipment type
+    const controlFunction = getControlFunction(equipmentType || "")
+
+    if (!controlFunction) {
+      console.error(`No control function found for equipment type: ${equipmentType}`)
+      return {
+        error: `No control function available for equipment type: ${equipmentType}`,
+        result: null,
+        hasChanges: false,
+        timestamp: Date.now(),
+      }
+    }
+
+    // Get the location ID for location-based control
+    const locationId = sandbox.settings.locationId || "4" // Default to Huntington if not specified
+
+    // Determine which temperature to use based on location
+    let currentTemp
+    let temperatureSourceLabel
+    let temperatureSourceField
+
+    // First check if we have the Supply field from the database view
+    if (sandbox.metrics.Supply !== undefined) {
+      currentTemp = sandbox.metrics.Supply
+      temperatureSourceField = "Supply"
+      temperatureSourceLabel = "SUPPLY"
+    }
+    // Then check if we have the measurement field from the database view
+    else if (sandbox.metrics.measurement !== undefined) {
+      currentTemp = sandbox.metrics.measurement
+      temperatureSourceField = "measurement"
+      temperatureSourceLabel = "MEASUREMENT"
+    }
+    // Otherwise use location-based fallbacks
+    else if (locationId === "4") {
+      // Heritage Pointe of Huntington - use supply temperature
+      const tempFields = [
+        "SupplyTemp",
+        "supplyTemp",
+        "supplyTemperature",
+        "SupplyTemperature",
+        "discharge",
+        "Discharge",
+        "dischargeTemp",
+        "DischargeTemp",
+        "dischargeTemperature",
+        "DischargeTemperature",
+        "SAT",
+        "sat",
+      ]
+
+      // Find the first field that exists in metrics
+      temperatureSourceField = tempFields.find((field) => sandbox.metrics[field] !== undefined)
+      currentTemp = temperatureSourceField ? sandbox.metrics[temperatureSourceField] : 55
+      temperatureSourceLabel = "SUPPLY"
+    } else {
+      // Warren (locationId: "1") or other locations - use zone temperature
+      const tempFields = [
+        "roomTemp",
+        "RoomTemp",
+        "roomTemperature",
+        "RoomTemperature",
+        "spaceTemp",
+        "SpaceTemp",
+        "zoneTemp",
+        "ZoneTemp",
+        "ZoneTemperature",
+        "zone_temperature",
+        "room_temperature",
+      ]
+
+      // Find the first field that exists in metrics
+      temperatureSourceField = tempFields.find((field) => sandbox.metrics[field] !== undefined)
+      currentTemp = temperatureSourceField ? sandbox.metrics[temperatureSourceField] : 72
+      temperatureSourceLabel = "SPACE"
+    }
+
+    console.log(
+      `Equipment ID: ${sandbox.settings.equipmentId}, Location: ${locationId}, System: ${sandbox.metrics.system || "unknown"}`,
+    )
+    console.log(
+      `Using ${temperatureSourceLabel} temperature from field "${temperatureSourceField || "default"}" with value: ${currentTemp}°F`,
+    )
+    console.log(`Supply: ${sandbox.metrics.Supply || "N/A"}°F, Measurement: ${sandbox.metrics.measurement || "N/A"}°F`)
+
+    // Call the control function with the appropriate parameters
+    const result = controlFunction(sandbox.metrics, sandbox.settings, currentTemp, pidState)
+
+    return {
+      result,
+      hasChanges: true,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    console.error("Error in evaluateCustomLogic:", error)
+    return {
+      error: error instanceof Error ? error.message : "Unknown error",
+      result: null,
+      hasChanges: false,
+      timestamp: Date.now(),
+    }
+  }
+}

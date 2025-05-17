@@ -1,0 +1,378 @@
+{
+  "version": "1",
+  "node_id": "node0",
+  "next_file_id": 9989,
+  "snapshot_sequence_number": 420,
+  "wal_file_sequence_number": 279798,
+  "catalog_sequence_number": 62,
+  "parquet_size_bytes": 126599,
+  "row_count": 1940,
+  "min_time": 1747381201073339632,
+  "max_time": 1747381793547035867,
+  "databases": [
+    [
+      3,
+      {
+        "tables": [
+          [
+            6,
+            [
+              {
+                "id": 9964,
+                "path": "node0/dbs/Locations-3/update_temperatureSetpoint-6/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4494,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381201589056858,
+                "max_time": 1747381792420025738
+              }
+            ]
+          ],
+          [
+            5,
+            [
+              {
+                "id": 9966,
+                "path": "node0/dbs/Locations-3/update_fanSpeed-5/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4856,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381201280183327,
+                "max_time": 1747381792218193407
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "id": 9967,
+                "path": "node0/dbs/Locations-3/update_heatingValvePosition-2/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4500,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381201169615040,
+                "max_time": 1747381792076058647
+              }
+            ]
+          ],
+          [
+            0,
+            [
+              {
+                "id": 9969,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 20743,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381213624472805,
+                "max_time": 1747381776725839669
+              }
+            ]
+          ],
+          [
+            3,
+            [
+              {
+                "id": 9970,
+                "path": "node0/dbs/Locations-3/update_fanEnabled-3/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4796,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381201369526978,
+                "max_time": 1747381792149416196
+              }
+            ]
+          ],
+          [
+            12,
+            [
+              {
+                "id": 9971,
+                "path": "node0/dbs/Locations-3/update_firingRate-12/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4098,
+                "row_count": 20,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381212364493263,
+                "max_time": 1747381780199689781
+              }
+            ]
+          ],
+          [
+            11,
+            [
+              {
+                "id": 9973,
+                "path": "node0/dbs/Locations-3/update_temperatureSource-11/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 3879,
+                "row_count": 40,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381205331030238,
+                "max_time": 1747381788977078694
+              }
+            ]
+          ],
+          [
+            13,
+            [
+              {
+                "id": 9980,
+                "path": "node0/dbs/Locations-3/update_waterTempSetpoint-13/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 3700,
+                "row_count": 20,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381212442714259,
+                "max_time": 1747381780292970319
+              }
+            ]
+          ],
+          [
+            9,
+            [
+              {
+                "id": 9984,
+                "path": "node0/dbs/Locations-3/update_isLead-9/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 3826,
+                "row_count": 40,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381205425307408,
+                "max_time": 1747381789059886126
+              }
+            ]
+          ],
+          [
+            7,
+            [
+              {
+                "id": 9985,
+                "path": "node0/dbs/Locations-3/update_unitEnable-7/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4859,
+                "row_count": 160,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381201905607009,
+                "max_time": 1747381792506450227
+              }
+            ]
+          ],
+          [
+            10,
+            [
+              {
+                "id": 9986,
+                "path": "node0/dbs/Locations-3/update_pumpRuntime-10/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4452,
+                "row_count": 40,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381205538358040,
+                "max_time": 1747381789139944988
+              }
+            ]
+          ],
+          [
+            8,
+            [
+              {
+                "id": 9987,
+                "path": "node0/dbs/Locations-3/update_coolingValvePosition-8/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4499,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381201073339632,
+                "max_time": 1747381791993363329
+              }
+            ]
+          ],
+          [
+            4,
+            [
+              {
+                "id": 9988,
+                "path": "node0/dbs/Locations-3/update_outdoorDamperPosition-4/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4969,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381201476870991,
+                "max_time": 1747381792317679033
+              }
+            ]
+          ]
+        ]
+      }
+    ],
+    [
+      4,
+      {
+        "tables": [
+          [
+            8,
+            [
+              {
+                "id": 9965,
+                "path": "node0/dbs/ControlCommands-4/update_pumpRuntime-8/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4452,
+                "row_count": 40,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381206369000510,
+                "max_time": 1747381790227098017
+              }
+            ]
+          ],
+          [
+            9,
+            [
+              {
+                "id": 9968,
+                "path": "node0/dbs/ControlCommands-4/update_isLead-9/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 3826,
+                "row_count": 40,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381206274552442,
+                "max_time": 1747381790146353031
+              }
+            ]
+          ],
+          [
+            3,
+            [
+              {
+                "id": 9972,
+                "path": "node0/dbs/ControlCommands-4/update_heatingValvePosition-3/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4501,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381202907961246,
+                "max_time": 1747381793547035867
+              }
+            ]
+          ],
+          [
+            7,
+            [
+              {
+                "id": 9974,
+                "path": "node0/dbs/ControlCommands-4/update_temperatureSetpoint-7/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4493,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381203165432802,
+                "max_time": 1747381793395509892
+              }
+            ]
+          ],
+          [
+            12,
+            [
+              {
+                "id": 9975,
+                "path": "node0/dbs/ControlCommands-4/update_waterTempSetpoint-12/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 3700,
+                "row_count": 20,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381213364826535,
+                "max_time": 1747381781232022347
+              }
+            ]
+          ],
+          [
+            1,
+            [
+              {
+                "id": 9976,
+                "path": "node0/dbs/ControlCommands-4/update_fanEnabled-1/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4796,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381203055936227,
+                "max_time": 1747381793312484160
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "id": 9977,
+                "path": "node0/dbs/ControlCommands-4/update_unitEnable-2/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4864,
+                "row_count": 160,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381202519804656,
+                "max_time": 1747381793172545359
+              }
+            ]
+          ],
+          [
+            4,
+            [
+              {
+                "id": 9978,
+                "path": "node0/dbs/ControlCommands-4/update_outdoorDamperPosition-4/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4964,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381202774635782,
+                "max_time": 1747381793466490062
+              }
+            ]
+          ],
+          [
+            10,
+            [
+              {
+                "id": 9979,
+                "path": "node0/dbs/ControlCommands-4/update_temperatureSource-10/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 3879,
+                "row_count": 40,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381206444098369,
+                "max_time": 1747381789262329278
+              }
+            ]
+          ],
+          [
+            6,
+            [
+              {
+                "id": 9981,
+                "path": "node0/dbs/ControlCommands-4/update_coolingValvePosition-6/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4501,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381202666348279,
+                "max_time": 1747381792668660209
+              }
+            ]
+          ],
+          [
+            11,
+            [
+              {
+                "id": 9982,
+                "path": "node0/dbs/ControlCommands-4/update_firingRate-11/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4098,
+                "row_count": 20,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381213169304456,
+                "max_time": 1747381781148222106
+              }
+            ]
+          ],
+          [
+            5,
+            [
+              {
+                "id": 9983,
+                "path": "node0/dbs/ControlCommands-4/update_fanSpeed-5/2025-05-16/07-40/0000279798.parquet",
+                "size_bytes": 4854,
+                "row_count": 100,
+                "chunk_time": 1747381200000000000,
+                "min_time": 1747381203289116804,
+                "max_time": 1747381793242211913
+              }
+            ]
+          ]
+        ]
+      }
+    ]
+  ]
+}

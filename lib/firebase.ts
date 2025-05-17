@@ -1,10 +1,10 @@
-'use client';
+"use client"
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAnalytics } from 'firebase/analytics';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, getApps, getApp } from "firebase/app"
+import { getAnalytics } from "firebase/analytics"
+import { getFirestore, collection, getDocs } from "firebase/firestore"
+import { getAuth } from "firebase/auth"
+import { getStorage } from "firebase/storage"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -14,30 +14,24 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
+}
 
-let app;
-let db;
-let auth;
-let storage;
-let analytics = null;
+// Initialize Firebase immediately, not conditionally
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp()
 
-if (typeof window !== 'undefined') {
+// Initialize Firebase services
+const db = getFirestore(app)
+const auth = getAuth(app)
+const storage = getStorage(app)
+
+// Only initialize analytics in the browser
+let analytics = null
+if (typeof window !== "undefined") {
   try {
-    if (!getApps().length) {
-      app = initializeApp(firebaseConfig);
-    } else {
-      app = getApp();
-    }
-    
-    // Initialize Firebase services
-    db = getFirestore(app);
-    auth = getAuth(app);
-    storage = getStorage(app);
-    analytics = getAnalytics(app);
+    analytics = getAnalytics(app)
   } catch (error) {
-    console.error("Error initializing Firebase:", error);
+    console.error("Error initializing Firebase Analytics:", error)
   }
 }
 
-export { app, db, auth, storage, analytics, collection, getDocs };
+export { app, db, auth, storage, analytics, collection, getDocs }

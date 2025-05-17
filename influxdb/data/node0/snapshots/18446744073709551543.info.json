@@ -1,0 +1,682 @@
+{
+  "version": "1",
+  "node_id": "node0",
+  "next_file_id": 299,
+  "snapshot_sequence_number": 72,
+  "wal_file_sequence_number": 52404,
+  "catalog_sequence_number": 32,
+  "parquet_size_bytes": 553431,
+  "row_count": 1416,
+  "min_time": 1746547801129000000,
+  "max_time": 1747089559166016813,
+  "databases": [
+    [
+      2,
+      {
+        "tables": [
+          [
+            1,
+            [
+              {
+                "id": 236,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-06/16-20/0000052404.parquet",
+                "size_bytes": 6612,
+                "row_count": 96,
+                "chunk_time": 1746548400000000000,
+                "min_time": 1746548400960000000,
+                "max_time": 1746548632174000000
+              },
+              {
+                "id": 238,
+                "path": "node0/dbs/control_logic-2/control_history-1/2025-05-06/16-10/0000052404.parquet",
+                "size_bytes": 7780,
+                "row_count": 240,
+                "chunk_time": 1746547800000000000,
+                "min_time": 1746547801129000000,
+                "max_time": 1746548390057000000
+              }
+            ]
+          ]
+        ]
+      }
+    ],
+    [
+      3,
+      {
+        "tables": [
+          [
+            6,
+            [
+              {
+                "id": 237,
+                "path": "node0/dbs/Locations-3/update_temperatureSetpoint-6/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 4255,
+                "row_count": 66,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089415968372516,
+                "max_time": 1747089532614330531
+              }
+            ]
+          ],
+          [
+            0,
+            [
+              {
+                "id": 239,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/18-40/0000052404.parquet",
+                "size_bytes": 10664,
+                "row_count": 10,
+                "chunk_time": 1747075200000000000,
+                "min_time": 1747075219098229197,
+                "max_time": 1747075759089209933
+              },
+              {
+                "id": 241,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/16-10/0000052404.parquet",
+                "size_bytes": 10666,
+                "row_count": 12,
+                "chunk_time": 1747066200000000000,
+                "min_time": 1747066217804431803,
+                "max_time": 1747066759051818172
+              },
+              {
+                "id": 242,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/21-10/0000052404.parquet",
+                "size_bytes": 10631,
+                "row_count": 10,
+                "chunk_time": 1747084200000000000,
+                "min_time": 1747084219165076183,
+                "max_time": 1747084759164143435
+              },
+              {
+                "id": 243,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/16-20/0000052404.parquet",
+                "size_bytes": 10635,
+                "row_count": 10,
+                "chunk_time": 1747066800000000000,
+                "min_time": 1747066819051548404,
+                "max_time": 1747067359040596021
+              },
+              {
+                "id": 244,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/17-30/0000052404.parquet",
+                "size_bytes": 10667,
+                "row_count": 10,
+                "chunk_time": 1747071000000000000,
+                "min_time": 1747071019081079116,
+                "max_time": 1747071559095593641
+              },
+              {
+                "id": 246,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/16-30/0000052404.parquet",
+                "size_bytes": 10650,
+                "row_count": 10,
+                "chunk_time": 1747067400000000000,
+                "min_time": 1747067419044594959,
+                "max_time": 1747067959126958994
+              },
+              {
+                "id": 247,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/17-20/0000052404.parquet",
+                "size_bytes": 10637,
+                "row_count": 10,
+                "chunk_time": 1747070400000000000,
+                "min_time": 1747070419056438146,
+                "max_time": 1747070959071622798
+              },
+              {
+                "id": 248,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/17-40/0000052404.parquet",
+                "size_bytes": 10663,
+                "row_count": 10,
+                "chunk_time": 1747071600000000000,
+                "min_time": 1747071619065683368,
+                "max_time": 1747072159070017577
+              },
+              {
+                "id": 252,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 10667,
+                "row_count": 10,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089019156742203,
+                "max_time": 1747089559166016813
+              },
+              {
+                "id": 253,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/17-50/0000052404.parquet",
+                "size_bytes": 10650,
+                "row_count": 10,
+                "chunk_time": 1747072200000000000,
+                "min_time": 1747072219080617301,
+                "max_time": 1747072759083649793
+              },
+              {
+                "id": 254,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/17-00/0000052404.parquet",
+                "size_bytes": 10649,
+                "row_count": 10,
+                "chunk_time": 1747069200000000000,
+                "min_time": 1747069219059148154,
+                "max_time": 1747069759058509266
+              },
+              {
+                "id": 255,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/19-10/0000052404.parquet",
+                "size_bytes": 10675,
+                "row_count": 10,
+                "chunk_time": 1747077000000000000,
+                "min_time": 1747077019102020357,
+                "max_time": 1747077559113436761
+              },
+              {
+                "id": 256,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/21-20/0000052404.parquet",
+                "size_bytes": 10648,
+                "row_count": 10,
+                "chunk_time": 1747084800000000000,
+                "min_time": 1747084819168802034,
+                "max_time": 1747085359180724077
+              },
+              {
+                "id": 258,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/18-00/0000052404.parquet",
+                "size_bytes": 10674,
+                "row_count": 10,
+                "chunk_time": 1747072800000000000,
+                "min_time": 1747072819080429131,
+                "max_time": 1747073359078678209
+              },
+              {
+                "id": 259,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/18-10/0000052404.parquet",
+                "size_bytes": 10684,
+                "row_count": 10,
+                "chunk_time": 1747073400000000000,
+                "min_time": 1747073419074539513,
+                "max_time": 1747073959078312448
+              },
+              {
+                "id": 261,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/16-40/0000052404.parquet",
+                "size_bytes": 10678,
+                "row_count": 10,
+                "chunk_time": 1747068000000000000,
+                "min_time": 1747068019042039093,
+                "max_time": 1747068559054627292
+              },
+              {
+                "id": 264,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/21-30/0000052404.parquet",
+                "size_bytes": 10651,
+                "row_count": 10,
+                "chunk_time": 1747085400000000000,
+                "min_time": 1747085419181079095,
+                "max_time": 1747085959188831122
+              },
+              {
+                "id": 265,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/17-10/0000052404.parquet",
+                "size_bytes": 10657,
+                "row_count": 10,
+                "chunk_time": 1747069800000000000,
+                "min_time": 1747069819062199003,
+                "max_time": 1747070359077093840
+              },
+              {
+                "id": 266,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/18-50/0000052404.parquet",
+                "size_bytes": 10663,
+                "row_count": 10,
+                "chunk_time": 1747075800000000000,
+                "min_time": 1747075819097485223,
+                "max_time": 1747076359090247580
+              },
+              {
+                "id": 267,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/16-50/0000052404.parquet",
+                "size_bytes": 10641,
+                "row_count": 10,
+                "chunk_time": 1747068600000000000,
+                "min_time": 1747068619047291091,
+                "max_time": 1747069159057887522
+              },
+              {
+                "id": 269,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/19-30/0000052404.parquet",
+                "size_bytes": 10651,
+                "row_count": 10,
+                "chunk_time": 1747078200000000000,
+                "min_time": 1747078219120170992,
+                "max_time": 1747078759106908311
+              },
+              {
+                "id": 270,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/18-20/0000052404.parquet",
+                "size_bytes": 10674,
+                "row_count": 10,
+                "chunk_time": 1747074000000000000,
+                "min_time": 1747074019087631655,
+                "max_time": 1747074559094563570
+              },
+              {
+                "id": 271,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/21-40/0000052404.parquet",
+                "size_bytes": 10645,
+                "row_count": 10,
+                "chunk_time": 1747086000000000000,
+                "min_time": 1747086019188027364,
+                "max_time": 1747086559165398436
+              },
+              {
+                "id": 273,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/19-40/0000052404.parquet",
+                "size_bytes": 10644,
+                "row_count": 10,
+                "chunk_time": 1747078800000000000,
+                "min_time": 1747078819107846104,
+                "max_time": 1747079359114910180
+              },
+              {
+                "id": 275,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/19-00/0000052404.parquet",
+                "size_bytes": 10645,
+                "row_count": 10,
+                "chunk_time": 1747076400000000000,
+                "min_time": 1747076419095374897,
+                "max_time": 1747076959110918851
+              },
+              {
+                "id": 276,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/18-30/0000052404.parquet",
+                "size_bytes": 10664,
+                "row_count": 10,
+                "chunk_time": 1747074600000000000,
+                "min_time": 1747074619101534688,
+                "max_time": 1747075159108076332
+              },
+              {
+                "id": 277,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/21-50/0000052404.parquet",
+                "size_bytes": 10653,
+                "row_count": 10,
+                "chunk_time": 1747086600000000000,
+                "min_time": 1747086619161822911,
+                "max_time": 1747087159156413096
+              },
+              {
+                "id": 278,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/19-50/0000052404.parquet",
+                "size_bytes": 10651,
+                "row_count": 10,
+                "chunk_time": 1747079400000000000,
+                "min_time": 1747079419108514914,
+                "max_time": 1747079959114246377
+              },
+              {
+                "id": 279,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/20-10/0000052404.parquet",
+                "size_bytes": 10643,
+                "row_count": 10,
+                "chunk_time": 1747080600000000000,
+                "min_time": 1747080619112147132,
+                "max_time": 1747081159125988296
+              },
+              {
+                "id": 280,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/20-00/0000052404.parquet",
+                "size_bytes": 10655,
+                "row_count": 10,
+                "chunk_time": 1747080000000000000,
+                "min_time": 1747080019125257281,
+                "max_time": 1747080559124777836
+              },
+              {
+                "id": 281,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/19-20/0000052404.parquet",
+                "size_bytes": 10664,
+                "row_count": 10,
+                "chunk_time": 1747077600000000000,
+                "min_time": 1747077619111653036,
+                "max_time": 1747078159112789904
+              },
+              {
+                "id": 282,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/22-00/0000052404.parquet",
+                "size_bytes": 10640,
+                "row_count": 10,
+                "chunk_time": 1747087200000000000,
+                "min_time": 1747087219152721333,
+                "max_time": 1747087759143738006
+              },
+              {
+                "id": 284,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/15-10/0000052404.parquet",
+                "size_bytes": 10871,
+                "row_count": 12,
+                "chunk_time": 1747062600000000000,
+                "min_time": 1747062739040559120,
+                "max_time": 1747063159023382991
+              },
+              {
+                "id": 285,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/20-20/0000052404.parquet",
+                "size_bytes": 10681,
+                "row_count": 10,
+                "chunk_time": 1747081200000000000,
+                "min_time": 1747081219125785431,
+                "max_time": 1747081759132364080
+              },
+              {
+                "id": 287,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/15-30/0000052404.parquet",
+                "size_bytes": 10669,
+                "row_count": 10,
+                "chunk_time": 1747063800000000000,
+                "min_time": 1747063839788813564,
+                "max_time": 1747064359037239086
+              },
+              {
+                "id": 288,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/22-10/0000052404.parquet",
+                "size_bytes": 10663,
+                "row_count": 10,
+                "chunk_time": 1747087800000000000,
+                "min_time": 1747087819171649174,
+                "max_time": 1747088359152476450
+              },
+              {
+                "id": 289,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/20-30/0000052404.parquet",
+                "size_bytes": 10663,
+                "row_count": 10,
+                "chunk_time": 1747081800000000000,
+                "min_time": 1747081819138537380,
+                "max_time": 1747082359139434599
+              },
+              {
+                "id": 290,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/22-20/0000052404.parquet",
+                "size_bytes": 10646,
+                "row_count": 10,
+                "chunk_time": 1747088400000000000,
+                "min_time": 1747088419145606536,
+                "max_time": 1747088959166173263
+              },
+              {
+                "id": 291,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/15-00/0000052404.parquet",
+                "size_bytes": 9196,
+                "row_count": 1,
+                "chunk_time": 1747062000000000000,
+                "min_time": 1747062236805056695,
+                "max_time": 1747062236805056695
+              },
+              {
+                "id": 292,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/21-00/0000052404.parquet",
+                "size_bytes": 10663,
+                "row_count": 10,
+                "chunk_time": 1747083600000000000,
+                "min_time": 1747083619158980296,
+                "max_time": 1747084159177234655
+              },
+              {
+                "id": 293,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/16-00/0000052404.parquet",
+                "size_bytes": 10694,
+                "row_count": 11,
+                "chunk_time": 1747065600000000000,
+                "min_time": 1747065619037553350,
+                "max_time": 1747066193131734822
+              },
+              {
+                "id": 294,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/20-40/0000052404.parquet",
+                "size_bytes": 10665,
+                "row_count": 10,
+                "chunk_time": 1747082400000000000,
+                "min_time": 1747082419166224050,
+                "max_time": 1747082959144113100
+              },
+              {
+                "id": 295,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/15-50/0000052404.parquet",
+                "size_bytes": 10637,
+                "row_count": 10,
+                "chunk_time": 1747065000000000000,
+                "min_time": 1747065019032092902,
+                "max_time": 1747065559029266410
+              },
+              {
+                "id": 296,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/20-50/0000052404.parquet",
+                "size_bytes": 10645,
+                "row_count": 10,
+                "chunk_time": 1747083000000000000,
+                "min_time": 1747083019159696970,
+                "max_time": 1747083559268615932
+              },
+              {
+                "id": 297,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/15-20/0000052404.parquet",
+                "size_bytes": 9401,
+                "row_count": 9,
+                "chunk_time": 1747063200000000000,
+                "min_time": 1747063219092774085,
+                "max_time": 1747063639036737740
+              },
+              {
+                "id": 298,
+                "path": "node0/dbs/Locations-3/metrics-0/2025-05-12/15-40/0000052404.parquet",
+                "size_bytes": 10633,
+                "row_count": 10,
+                "chunk_time": 1747064400000000000,
+                "min_time": 1747064419026487957,
+                "max_time": 1747064959032387531
+              }
+            ]
+          ],
+          [
+            5,
+            [
+              {
+                "id": 240,
+                "path": "node0/dbs/Locations-3/update_fanSpeed-5/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 3666,
+                "row_count": 66,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089415968034724,
+                "max_time": 1747089532614122321
+              }
+            ]
+          ],
+          [
+            3,
+            [
+              {
+                "id": 249,
+                "path": "node0/dbs/Locations-3/update_fanEnabled-3/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 3609,
+                "row_count": 66,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089415966879106,
+                "max_time": 1747089532583644396
+              }
+            ]
+          ],
+          [
+            11,
+            [
+              {
+                "id": 250,
+                "path": "node0/dbs/Locations-3/update_temperatureSource-11/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 3791,
+                "row_count": 28,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089416776810932,
+                "max_time": 1747089533803484024
+              }
+            ]
+          ],
+          [
+            13,
+            [
+              {
+                "id": 251,
+                "path": "node0/dbs/Locations-3/update_waterTempSetpoint-13/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 3652,
+                "row_count": 15,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089426677358968,
+                "max_time": 1747089530883668437
+              }
+            ]
+          ],
+          [
+            4,
+            [
+              {
+                "id": 257,
+                "path": "node0/dbs/Locations-3/update_outdoorDamperPosition-4/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 3779,
+                "row_count": 66,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089415967929668,
+                "max_time": 1747089532614328981
+              }
+            ]
+          ],
+          [
+            10,
+            [
+              {
+                "id": 260,
+                "path": "node0/dbs/Locations-3/update_pumpRuntime-10/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 3324,
+                "row_count": 28,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089416776674104,
+                "max_time": 1747089533803666068
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "id": 262,
+                "path": "node0/dbs/Locations-3/update_heatingValvePosition-2/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 4268,
+                "row_count": 67,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089415966327701,
+                "max_time": 1747089534146112003
+              }
+            ]
+          ],
+          [
+            8,
+            [
+              {
+                "id": 263,
+                "path": "node0/dbs/Locations-3/update_coolingValvePosition-8/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 4238,
+                "row_count": 66,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089415969137289,
+                "max_time": 1747089532583689821
+              }
+            ]
+          ],
+          [
+            1,
+            [
+              {
+                "id": 268,
+                "path": "node0/dbs/Locations-3/test-1/2025-05-12/15-20/0000052404.parquet",
+                "size_bytes": 1950,
+                "row_count": 3,
+                "chunk_time": 1747063200000000000,
+                "min_time": 1747063734889367200,
+                "max_time": 1747063759024601925
+              },
+              {
+                "id": 274,
+                "path": "node0/dbs/Locations-3/test-1/2025-05-12/15-30/0000052404.parquet",
+                "size_bytes": 1932,
+                "row_count": 1,
+                "chunk_time": 1747063800000000000,
+                "min_time": 1747063819035379703,
+                "max_time": 1747063819035379703
+              }
+            ]
+          ],
+          [
+            12,
+            [
+              {
+                "id": 272,
+                "path": "node0/dbs/Locations-3/update_firingRate-12/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 3136,
+                "row_count": 15,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089426646501567,
+                "max_time": 1747089530873411040
+              }
+            ]
+          ],
+          [
+            7,
+            [
+              {
+                "id": 283,
+                "path": "node0/dbs/Locations-3/update_unitEnable-7/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 4455,
+                "row_count": 109,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089415969039293,
+                "max_time": 1747089533774240256
+              }
+            ]
+          ],
+          [
+            9,
+            [
+              {
+                "id": 286,
+                "path": "node0/dbs/Locations-3/update_isLead-9/2025-05-12/22-30/0000052404.parquet",
+                "size_bytes": 3713,
+                "row_count": 28,
+                "chunk_time": 1747089000000000000,
+                "min_time": 1747089416776246670,
+                "max_time": 1747089533803720424
+              }
+            ]
+          ]
+        ]
+      }
+    ],
+    [
+      1,
+      {
+        "tables": [
+          [
+            1,
+            [
+              {
+                "id": 245,
+                "path": "node0/dbs/bms_data-1/test_measurement-1/2025-05-12/14-40/0000052404.parquet",
+                "size_bytes": 1565,
+                "row_count": 1,
+                "chunk_time": 1747060800000000000,
+                "min_time": 1747061020426886439,
+                "max_time": 1747061020426886439
+              }
+            ]
+          ]
+        ]
+      }
+    ]
+  ]
+}

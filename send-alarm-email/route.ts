@@ -7,6 +7,12 @@ import { getFirestore, collection, query, where, getDocs, limit } from "firebase
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// Enable detailed email debugging
+const DEBUG_EMAIL = true;
+
+// Default recipients who should always receive alarm emails
+const DEFAULT_RECIPIENTS = ['agjewell@currenthvac.net'];
+
 // Initialize Firebase for RTDB access
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -48,7 +54,7 @@ function formatDateInET(date: Date): string {
     second: 'numeric',
     hour12: true
   };
-  
+
   // Format the date
   return new Intl.DateTimeFormat('en-US', options).format(date);
 }
@@ -160,12 +166,12 @@ async function getLocationNameFromId(locationId: string): Promise<string | null>
     }
 
     console.log(`No location found for ID: ${locationId} after exhaustive search`)
-    
+
     // Final fallback: If it's a numeric ID, use our mapping or prefix with "Location"
     if (/^\d+$/.test(locationId)) {
       return LOCATION_ID_MAPPING[locationId] || `Location ${locationId}`
     }
-    
+
     return locationId
   } catch (error) {
     console.error("Error getting location name:", error)
@@ -174,7 +180,31 @@ async function getLocationNameFromId(locationId: string): Promise<string | null>
   }
 }
 
-// Update the POST function to ensure we're properly formatting the location name
+// Improved function to check if an email belongs to a technician
+function isTechnician(email: string): boolean {
+  // Convert email to lowercase for case-insensitive comparison
+  const emailLower = email.toLowerCase();
+  
+  // Log for debugging
+  console.log(`Checking if ${emailLower} is a technician email`);
+  
+  // Check against specific domains
+  const isTech = emailLower.endsWith('@automatacontrols.com') || 
+                emailLower.endsWith('@currenthvac.net') || 
+                emailLower.endsWith('@currenthvac.com');
+  
+  console.log(`Result: ${isTech ? 'IS a technician' : 'is NOT a technician'}`);
+  
+  return isTech;
+}
+
+// Function to validate email address format
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+// Update the POST function to send individual emails to each recipient
 export async function POST(request: Request) {
   try {
     const data = await request.json()
@@ -212,7 +242,7 @@ export async function POST(request: Request) {
     // IMPORTANT: Always try to resolve the location name, even if we already have one
     if (locationId) {
       console.log(`Looking up location name for ID: ${locationId}`)
-      
+
       // First check our hardcoded mapping
       if (LOCATION_ID_MAPPING[locationId]) {
         displayLocationName = LOCATION_ID_MAPPING[locationId]
@@ -243,35 +273,78 @@ export async function POST(request: Request) {
     console.log("Final location name for email:", displayLocationName)
     console.log("Final equipment name for email:", displayEquipmentName)
 
-    // Log the complete email data for debugging
-    console.log("Sending email with the following data:", {
-      from: "Automata Controls DevOps <DevOps@automatacontrols.com>",
-      to: recipients,
-      subject: `ALERT: ${severity.toUpperCase()} - ${alarmType} at ${displayLocationName}`,
-      logoUrl: `${process.env.APP_URL || "http://localhost:3000"}/neural-loader.png`,
-      appUrl: process.env.APP_URL,
-      publicAppUrl: process.env.NEXT_PUBLIC_APP_URL,
-      timestamp: timestamp,
-    })
+    // Track success and failures for all recipient emails
+    const emailResults = []
+    const emailErrors = []
+    
+    // Filter out invalid email addresses from the provided recipients
+    let validRecipients = Array.isArray(recipients) 
+      ? recipients.filter(email => isValidEmail(email))
+      : (typeof recipients === 'string' && isValidEmail(recipients) ? [recipients] : [])
+    
+    // Add default recipients (always include these)
+    DEFAULT_RECIPIENTS.forEach(defaultEmail => {
+      if (!validRecipients.includes(defaultEmail)) {
+        validRecipients.push(defaultEmail);
+        console.log(`Added default recipient: ${defaultEmail}`);
+      }
+    });
+    
+    if (validRecipients.length === 0) {
+      console.error("No valid recipients found:", recipients)
+      return NextResponse.json({ 
+        success: false, 
+        error: "No valid recipients provided" 
+      }, { status: 400 })
+    }
+    
+    console.log(`Valid recipients (${validRecipients.length}):`, validRecipients)
+    
+    // Send individual emails to each recipient with the appropriate isTechnician flag
+    for (const recipient of validRecipients) {
+      // Determine if this recipient is a technician
+      const recipientIsTechnician = isTechnician(recipient)
+      console.log(`Sending email to ${recipient} (isTechnician: ${recipientIsTechnician})`)
+      
+      try {
+        if (DEBUG_EMAIL) {
+          console.log("-------------------------------------");
+          console.log("EMAIL DEBUGGING - ATTEMPT STARTED");
+          console.log(`Sending to: ${recipient}`);
+          console.log(`Is technician: ${recipientIsTechnician}`);
+          console.log("Using AlarmNotification props:", {
+            alarmType,
+            severity,
+            details: details?.substring(0, 50) + (details?.length > 50 ? '...' : ''),
+            locationName: displayLocationName,
+            locationId: locationId || "",
+            equipmentName: displayEquipmentName,
+            timestamp,
+            assignedTechs,
+            alarmId,
+            isTechnician: recipientIsTechnician
+          });
+        }
 
-    // Send email with updated sender address
-    const { data: emailData, error } = await resend.emails.send({
-      from: "Automata Controls DevOps <DevOps@automatacontrols.com>",
-      to: recipients,
-      subject: `ALERT: ${severity.toUpperCase()} - ${alarmType} at ${displayLocationName}`,
-      react: AlarmNotification({
-        alarmType,
-        severity,
-        details,
-        locationName: displayLocationName,
-        locationId: locationId || "",
-        equipmentName: displayEquipmentName,
-        timestamp,
-        assignedTechs,
-        dashboardUrl,
-        alarmId,
-      }),
-      text: `${severity.toUpperCase()} ALARM: ${alarmType}
+        // Send email with updated sender address and isTechnician flag
+        const { data: emailData, error } = await resend.emails.send({
+          from: "Automata Controls DevOps <DevOps@automatacontrols.com>",
+          to: recipient,
+          subject: `ALERT: ${severity.toUpperCase()} - ${alarmType} at ${displayLocationName}`,
+          react: AlarmNotification({
+            alarmType,
+            severity,
+            details,
+            locationName: displayLocationName,
+            locationId: locationId || "",
+            equipmentName: displayEquipmentName,
+            timestamp,
+            assignedTechs,
+            dashboardUrl,
+            alarmId,
+            isTechnician: recipientIsTechnician, // Pass the isTechnician flag
+          }),
+          text: `${severity.toUpperCase()} ALARM: ${alarmType}
 
 ${details}
 
@@ -280,16 +353,56 @@ Equipment: ${displayEquipmentName}
 Time: ${timestamp}
 Assigned to: ${assignedTechs}
 Alarm ID: ${alarmId}
+${recipientIsTechnician ? `\nView in dashboard: ${dashboardUrl}` : ''}`, // Conditionally include the dashboard link in the text version
+        })
 
-View in dashboard: ${dashboardUrl}`,
-    })
+        if (DEBUG_EMAIL) {
+          console.log("Resend API Response:", { data: emailData, error });
+        }
 
-    if (error) {
-      console.error("Email sending error:", error)
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+        if (error) {
+          console.error(`❌ EMAIL ERROR for ${recipient}:`, error);
+          emailErrors.push({ recipient, error: error.message });
+        } else {
+          console.log(`✅ EMAIL SENT SUCCESSFULLY to ${recipient} with ID: ${emailData?.id}`);
+          emailResults.push({ recipient, messageId: emailData?.id });
+        }
+        
+        if (DEBUG_EMAIL) {
+          console.log("EMAIL DEBUGGING - ATTEMPT COMPLETED");
+          console.log("-------------------------------------");
+        }
+      } catch (emailError: any) {
+        console.error(`❌ EXCEPTION during email sending to ${recipient}:`, emailError);
+        console.error(emailError.stack || "No stack trace available");
+        emailErrors.push({ recipient, error: emailError.message });
+      }
     }
 
-    return NextResponse.json({ success: true, messageId: emailData?.id })
+    // Return results
+    if (emailErrors.length > 0) {
+      // Return partial success if some emails were sent successfully
+      if (emailResults.length > 0) {
+        return NextResponse.json({ 
+          success: true, 
+          partial: true, 
+          successful: emailResults, 
+          failed: emailErrors 
+        }, { status: 207 }) // 207 Multi-Status
+      }
+      // Return error if all emails failed
+      return NextResponse.json({ 
+        success: false, 
+        error: "Failed to send emails", 
+        details: emailErrors 
+      }, { status: 500 })
+    }
+
+    // All emails sent successfully
+    return NextResponse.json({ 
+      success: true, 
+      results: emailResults 
+    })
   } catch (error: any) {
     console.error("Error in send-alarm-email API:", error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })

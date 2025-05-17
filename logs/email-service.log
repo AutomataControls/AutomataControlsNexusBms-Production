@@ -1,0 +1,100 @@
+[2025-05-17T21:42:42.254Z] [INFO] Alarm Email API route called {"timestamp":"9:42:42 PM"}
+[2025-05-17T21:42:42.257Z] [INFO] Alarm email request received {"method":"POST","url":"/api/send-alarm-email","headers":{"content-type":"application/json","user-agent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)"},"body":{"alarmType":"Supply Air temperature Threshold Exceeded","severity":"warning","locationId":"5","recipientCount":4}}
+[2025-05-17T21:42:42.258Z] [INFO] Using location name: Hopebridge Autism Center  
+[2025-05-17T21:42:42.259Z] [INFO] Using 4 provided recipients 
+[2025-05-17T21:42:42.260Z] [INFO] Added always-include recipient: agjewell@currenthvac.net 
+[2025-05-17T21:42:42.260Z] [INFO] Final recipient list (5) {"recipients":["njhogan@currenthvac.net","ljbedwell@currenthvac.net","DevOps@automatacontrols.com","byoung@hopebridge.com","agjewell@currenthvac.net"]}
+[2025-05-17T21:42:42.260Z] [INFO] Attempting to send emails via Resend API 
+[2025-05-17T21:42:42.260Z] [INFO] Sending email to njhogan@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:42:44.234Z] [INFO] Email sent successfully via Resend API to njhogan@currenthvac.net {"messageId":"9bc1c91e-fd46-46a2-a374-65e165d7f891"}
+[2025-05-17T21:42:44.234Z] [INFO] Email sent successfully to njhogan@currenthvac.net {"recipient":"njhogan@currenthvac.net","method":"resend","messageId":"9bc1c91e-fd46-46a2-a374-65e165d7f891"}
+[2025-05-17T21:42:44.235Z] [INFO] Sending email to ljbedwell@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:42:44.948Z] [INFO] Email sent successfully via Resend API to ljbedwell@currenthvac.net {"messageId":"44100406-82a7-4aa0-9474-9758b10e319b"}
+[2025-05-17T21:42:44.949Z] [INFO] Email sent successfully to ljbedwell@currenthvac.net {"recipient":"ljbedwell@currenthvac.net","method":"resend","messageId":"44100406-82a7-4aa0-9474-9758b10e319b"}
+[2025-05-17T21:42:44.949Z] [INFO] Sending email to DevOps@automatacontrols.com {"isTechnician":true}
+[2025-05-17T21:42:45.378Z] [INFO] Email sent successfully via Resend API to DevOps@automatacontrols.com {"messageId":"76096c3c-3b4f-451b-8e34-7a498fe16197"}
+[2025-05-17T21:42:45.378Z] [INFO] Email sent successfully to DevOps@automatacontrols.com {"recipient":"DevOps@automatacontrols.com","method":"resend","messageId":"76096c3c-3b4f-451b-8e34-7a498fe16197"}
+[2025-05-17T21:42:45.378Z] [INFO] Sending email to byoung@hopebridge.com {"isTechnician":false}
+[2025-05-17T21:42:45.930Z] [INFO] Email sent successfully via Resend API to byoung@hopebridge.com {"messageId":"cd55425e-367e-431f-bbde-cb5a0e9be09f"}
+[2025-05-17T21:42:45.930Z] [INFO] Email sent successfully to byoung@hopebridge.com {"recipient":"byoung@hopebridge.com","method":"resend","messageId":"cd55425e-367e-431f-bbde-cb5a0e9be09f"}
+[2025-05-17T21:42:45.930Z] [INFO] Sending email to agjewell@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:42:46.061Z] [ERROR] Resend API error for agjewell@currenthvac.net {"error":{"statusCode":429,"name":"rate_limit_exceeded","message":"Too many requests. You can only make 2 requests per second. See rate limit response headers for more information. Or contact support to increase rate limit."}}
+[2025-05-17T21:42:46.061Z] [ERROR] Failed to send email to agjewell@currenthvac.net {"recipient":"agjewell@currenthvac.net","method":"resend","error":"Too many requests. You can only make 2 requests per second. See rate limit response headers for more information. Or contact support to increase rate limit."}
+[2025-05-17T21:42:46.061Z] [INFO] Successfully sent at least one email via Resend API 
+[2025-05-17T21:42:46.062Z] [INFO] Email successfully sent to at least 4 recipients 
+[2025-05-17T21:42:46.062Z] [WARN] Some recipients failed: 1 
+[2025-05-17T21:42:48.622Z] [INFO] Alarm Email API route called {"timestamp":"9:42:48 PM"}
+[2025-05-17T21:42:48.623Z] [INFO] Alarm email request received {"method":"POST","url":"/api/send-alarm-email","headers":{"content-type":"application/json","user-agent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)"},"body":{"alarmType":"Boiler temperature Threshold Exceeded","severity":"warning","locationId":"5","recipientCount":4}}
+[2025-05-17T21:42:48.624Z] [INFO] Using location name: Hopebridge Autism Center  
+[2025-05-17T21:42:48.624Z] [INFO] Using 4 provided recipients 
+[2025-05-17T21:42:48.625Z] [INFO] Added always-include recipient: agjewell@currenthvac.net 
+[2025-05-17T21:42:48.625Z] [INFO] Final recipient list (5) {"recipients":["njhogan@currenthvac.net","ljbedwell@currenthvac.net","DevOps@automatacontrols.com","byoung@hopebridge.com","agjewell@currenthvac.net"]}
+[2025-05-17T21:42:48.625Z] [INFO] Attempting to send emails via Resend API 
+[2025-05-17T21:42:48.625Z] [INFO] Sending email to njhogan@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:42:49.193Z] [INFO] Email sent successfully via Resend API to njhogan@currenthvac.net {"messageId":"30a68210-2622-441f-b2c7-b34cf84183ab"}
+[2025-05-17T21:42:49.193Z] [INFO] Email sent successfully to njhogan@currenthvac.net {"recipient":"njhogan@currenthvac.net","method":"resend","messageId":"30a68210-2622-441f-b2c7-b34cf84183ab"}
+[2025-05-17T21:42:49.193Z] [INFO] Sending email to ljbedwell@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:42:49.712Z] [INFO] Email sent successfully via Resend API to ljbedwell@currenthvac.net {"messageId":"f818d60d-8378-4652-a990-1aac1de6204f"}
+[2025-05-17T21:42:49.713Z] [INFO] Email sent successfully to ljbedwell@currenthvac.net {"recipient":"ljbedwell@currenthvac.net","method":"resend","messageId":"f818d60d-8378-4652-a990-1aac1de6204f"}
+[2025-05-17T21:42:49.713Z] [INFO] Sending email to DevOps@automatacontrols.com {"isTechnician":true}
+[2025-05-17T21:42:49.981Z] [INFO] Email sent successfully via Resend API to DevOps@automatacontrols.com {"messageId":"3b9e244c-5092-4187-9d85-0a60a557ad01"}
+[2025-05-17T21:42:49.982Z] [INFO] Email sent successfully to DevOps@automatacontrols.com {"recipient":"DevOps@automatacontrols.com","method":"resend","messageId":"3b9e244c-5092-4187-9d85-0a60a557ad01"}
+[2025-05-17T21:42:49.982Z] [INFO] Sending email to byoung@hopebridge.com {"isTechnician":false}
+[2025-05-17T21:42:50.400Z] [INFO] Email sent successfully via Resend API to byoung@hopebridge.com {"messageId":"8da0a573-9bf5-43cb-a884-5487186dbd6b"}
+[2025-05-17T21:42:50.400Z] [INFO] Email sent successfully to byoung@hopebridge.com {"recipient":"byoung@hopebridge.com","method":"resend","messageId":"8da0a573-9bf5-43cb-a884-5487186dbd6b"}
+[2025-05-17T21:42:50.400Z] [INFO] Sending email to agjewell@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:42:50.456Z] [ERROR] Resend API error for agjewell@currenthvac.net {"error":{"statusCode":429,"name":"rate_limit_exceeded","message":"Too many requests. You can only make 2 requests per second. See rate limit response headers for more information. Or contact support to increase rate limit."}}
+[2025-05-17T21:42:50.457Z] [ERROR] Failed to send email to agjewell@currenthvac.net {"recipient":"agjewell@currenthvac.net","method":"resend","error":"Too many requests. You can only make 2 requests per second. See rate limit response headers for more information. Or contact support to increase rate limit."}
+[2025-05-17T21:42:50.457Z] [INFO] Successfully sent at least one email via Resend API 
+[2025-05-17T21:42:50.457Z] [INFO] Email successfully sent to at least 4 recipients 
+[2025-05-17T21:42:50.457Z] [WARN] Some recipients failed: 1 
+[2025-05-17T21:56:27.462Z] [INFO] Alarm Email API route called {"timestamp":"9:56:27 PM"}
+[2025-05-17T21:56:27.462Z] [INFO] Alarm email request received {"method":"POST","url":"/api/send-alarm-email","headers":{"content-type":"application/json","user-agent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)"},"body":{"alarmType":"Supply Air temperature Threshold Exceeded","severity":"warning","locationId":"5","recipientCount":4}}
+[2025-05-17T21:56:27.463Z] [INFO] Using location name: Hopebridge Autism Center  
+[2025-05-17T21:56:27.464Z] [INFO] Using 4 provided recipients 
+[2025-05-17T21:56:27.464Z] [INFO] Added always-include recipient: agjewell@currenthvac.net 
+[2025-05-17T21:56:27.465Z] [INFO] Final recipient list (5) {"recipients":["njhogan@currenthvac.net","ljbedwell@currenthvac.net","DevOps@automatacontrols.com","byoung@hopebridge.com","agjewell@currenthvac.net"]}
+[2025-05-17T21:56:27.465Z] [INFO] Attempting to send emails via Resend API 
+[2025-05-17T21:56:27.465Z] [INFO] Sending email to njhogan@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:56:27.912Z] [INFO] Email sent successfully via Resend API to njhogan@currenthvac.net {"messageId":"cec792f1-750c-4eef-8c8e-a7e0a026f621"}
+[2025-05-17T21:56:27.912Z] [INFO] Email sent successfully to njhogan@currenthvac.net {"recipient":"njhogan@currenthvac.net","method":"resend","messageId":"cec792f1-750c-4eef-8c8e-a7e0a026f621"}
+[2025-05-17T21:56:27.913Z] [INFO] Sending email to ljbedwell@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:56:28.363Z] [INFO] Email sent successfully via Resend API to ljbedwell@currenthvac.net {"messageId":"0ffbe99c-f176-498a-b87b-7eb7953e1024"}
+[2025-05-17T21:56:28.364Z] [INFO] Email sent successfully to ljbedwell@currenthvac.net {"recipient":"ljbedwell@currenthvac.net","method":"resend","messageId":"0ffbe99c-f176-498a-b87b-7eb7953e1024"}
+[2025-05-17T21:56:28.364Z] [INFO] Sending email to DevOps@automatacontrols.com {"isTechnician":true}
+[2025-05-17T21:56:28.653Z] [ERROR] Resend API error for DevOps@automatacontrols.com {"error":{"statusCode":429,"name":"rate_limit_exceeded","message":"Too many requests. You can only make 2 requests per second. See rate limit response headers for more information. Or contact support to increase rate limit."}}
+[2025-05-17T21:56:28.653Z] [ERROR] Failed to send email to DevOps@automatacontrols.com {"recipient":"DevOps@automatacontrols.com","method":"resend","error":"Too many requests. You can only make 2 requests per second. See rate limit response headers for more information. Or contact support to increase rate limit."}
+[2025-05-17T21:56:28.654Z] [INFO] Sending email to byoung@hopebridge.com {"isTechnician":false}
+[2025-05-17T21:56:29.042Z] [INFO] Email sent successfully via Resend API to byoung@hopebridge.com {"messageId":"4ba8fe65-317b-4a46-98d6-6790d8f8564d"}
+[2025-05-17T21:56:29.042Z] [INFO] Email sent successfully to byoung@hopebridge.com {"recipient":"byoung@hopebridge.com","method":"resend","messageId":"4ba8fe65-317b-4a46-98d6-6790d8f8564d"}
+[2025-05-17T21:56:29.042Z] [INFO] Sending email to agjewell@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:56:29.396Z] [INFO] Email sent successfully via Resend API to agjewell@currenthvac.net {"messageId":"3abb3e28-dc33-4269-b152-9f67f7797b41"}
+[2025-05-17T21:56:29.396Z] [INFO] Email sent successfully to agjewell@currenthvac.net {"recipient":"agjewell@currenthvac.net","method":"resend","messageId":"3abb3e28-dc33-4269-b152-9f67f7797b41"}
+[2025-05-17T21:56:29.396Z] [INFO] Successfully sent at least one email via Resend API 
+[2025-05-17T21:56:29.396Z] [INFO] Email successfully sent to at least 4 recipients 
+[2025-05-17T21:56:29.396Z] [WARN] Some recipients failed: 1 
+[2025-05-17T21:56:31.337Z] [INFO] Alarm Email API route called {"timestamp":"9:56:31 PM"}
+[2025-05-17T21:56:31.338Z] [INFO] Alarm email request received {"method":"POST","url":"/api/send-alarm-email","headers":{"content-type":"application/json","user-agent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)"},"body":{"alarmType":"Boiler temperature Threshold Exceeded","severity":"warning","locationId":"5","recipientCount":4}}
+[2025-05-17T21:56:31.338Z] [INFO] Using location name: Hopebridge Autism Center  
+[2025-05-17T21:56:31.339Z] [INFO] Using 4 provided recipients 
+[2025-05-17T21:56:31.339Z] [INFO] Added always-include recipient: agjewell@currenthvac.net 
+[2025-05-17T21:56:31.339Z] [INFO] Final recipient list (5) {"recipients":["njhogan@currenthvac.net","ljbedwell@currenthvac.net","DevOps@automatacontrols.com","byoung@hopebridge.com","agjewell@currenthvac.net"]}
+[2025-05-17T21:56:31.340Z] [INFO] Attempting to send emails via Resend API 
+[2025-05-17T21:56:31.340Z] [INFO] Sending email to njhogan@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:56:31.682Z] [INFO] Email sent successfully via Resend API to njhogan@currenthvac.net {"messageId":"04124032-8527-41af-abb6-071de3c91492"}
+[2025-05-17T21:56:31.683Z] [INFO] Email sent successfully to njhogan@currenthvac.net {"recipient":"njhogan@currenthvac.net","method":"resend","messageId":"04124032-8527-41af-abb6-071de3c91492"}
+[2025-05-17T21:56:31.683Z] [INFO] Sending email to ljbedwell@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:56:32.583Z] [INFO] Email sent successfully via Resend API to ljbedwell@currenthvac.net {"messageId":"be1305d7-64ff-46e1-bd19-72972d7f9eea"}
+[2025-05-17T21:56:32.584Z] [INFO] Email sent successfully to ljbedwell@currenthvac.net {"recipient":"ljbedwell@currenthvac.net","method":"resend","messageId":"be1305d7-64ff-46e1-bd19-72972d7f9eea"}
+[2025-05-17T21:56:32.584Z] [INFO] Sending email to DevOps@automatacontrols.com {"isTechnician":true}
+[2025-05-17T21:56:33.020Z] [INFO] Email sent successfully via Resend API to DevOps@automatacontrols.com {"messageId":"969f9746-d3b6-46ac-bd91-28d78ce0b9d7"}
+[2025-05-17T21:56:33.020Z] [INFO] Email sent successfully to DevOps@automatacontrols.com {"recipient":"DevOps@automatacontrols.com","method":"resend","messageId":"969f9746-d3b6-46ac-bd91-28d78ce0b9d7"}
+[2025-05-17T21:56:33.020Z] [INFO] Sending email to byoung@hopebridge.com {"isTechnician":false}
+[2025-05-17T21:56:33.378Z] [INFO] Email sent successfully via Resend API to byoung@hopebridge.com {"messageId":"277d8f4e-b5d7-45be-b1d4-5bf5a3d25a0f"}
+[2025-05-17T21:56:33.378Z] [INFO] Email sent successfully to byoung@hopebridge.com {"recipient":"byoung@hopebridge.com","method":"resend","messageId":"277d8f4e-b5d7-45be-b1d4-5bf5a3d25a0f"}
+[2025-05-17T21:56:33.378Z] [INFO] Sending email to agjewell@currenthvac.net {"isTechnician":true}
+[2025-05-17T21:56:33.431Z] [ERROR] Resend API error for agjewell@currenthvac.net {"error":{"statusCode":429,"name":"rate_limit_exceeded","message":"Too many requests. You can only make 2 requests per second. See rate limit response headers for more information. Or contact support to increase rate limit."}}
+[2025-05-17T21:56:33.432Z] [ERROR] Failed to send email to agjewell@currenthvac.net {"recipient":"agjewell@currenthvac.net","method":"resend","error":"Too many requests. You can only make 2 requests per second. See rate limit response headers for more information. Or contact support to increase rate limit."}
+[2025-05-17T21:56:33.432Z] [INFO] Successfully sent at least one email via Resend API 
+[2025-05-17T21:56:33.432Z] [INFO] Email successfully sent to at least 4 recipients 
+[2025-05-17T21:56:33.432Z] [WARN] Some recipients failed: 1 

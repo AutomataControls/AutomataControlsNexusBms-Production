@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px; margin: 10px 0; cursor: pointer; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Test Control Commands API</h1>
+    
+    <button onclick="testSingleCommand()">Test Single Command</button>
+    <button onclick="testCompleteState()">Test Complete State</button>
+    
+    <h2>Response:</h2>
+    <pre id="response">Results will appear here...</pre>
+
+    <script>
+        function testSingleCommand() {
+            fetch('/api/control-commands', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    command: "update_fanEnabled",
+                    commandType: "fanEnabled",
+                    equipmentId: "test-equipment-01",
+                    locationId: "test-location-01",
+                    timestamp: Date.now(),
+                    value: true,
+                    source: "test",
+                    status: "completed",
+                    userId: "test-user",
+                    userName: "Test User",
+                    details: "Testing critical command writing"
+                })
+            })
+            .then(res => res.json())
+            .then(result => {
+                document.getElementById('response').textContent = JSON.stringify(result, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('response').textContent = 'Error: ' + error;
+            });
+        }
+
+        function testCompleteState() {
+            fetch('/api/control-commands', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    command: "update_complete_state",
+                    equipmentId: "test-equipment-01",
+                    locationId: "test-location-01",
+                    timestamp: Date.now(),
+                    value: {
+                        fanEnabled: true,
+                        unitEnable: true,
+                        coolingValvePosition: 75,
+                        heatingValvePosition: 10,
+                        outdoorDamperPosition: 50,
+                        temperatureSetpoint: 72
+                    },
+                    source: "test",
+                    status: "completed"
+                })
+            })
+            .then(res => res.json())
+            .then(result => {
+                document.getElementById('response').textContent = JSON.stringify(result, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('response').textContent = 'Error: ' + error;
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+[
+  {
+    "alarmId": "pHgmC6mkt9m4adlmjuuz",
+    "alarmName": "Boiler temperature Threshold Exceeded",
+    "metricName": "Boiler temperature",
+    "equipmentId": "k04HDjmrjhG4VjEa9Js1",
+    "equipmentName": "Boiler-2",
+    "locationId": "5",
+    "locationName": "Hopebridge Autism Center ",
+    "systemId": "Boiler-2",
+    "reportedValue": 61.52,
+    "thresholdValue": null,
+    "matchingThreshold": {
+      "id": "k04HDjmrjhG4VjEa9Js1-Boiler-temperature",
+      "metricName": "Boiler temperature",
+      "minThreshold": 65,
+      "maxThreshold": 160
+    },
+    "metricResults": [],
+    "valueMatches": [],
+    "potentialIssue": "No metric match found",
+    "suspectedWrongMetric": false
+  }
+]
