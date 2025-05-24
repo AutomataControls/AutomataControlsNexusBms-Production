@@ -1,4 +1,6 @@
+// /opt/productionapp/app/api/control-history/route.ts - With Redis caching
 import { type NextRequest, NextResponse } from "next/server"
+import { connection } from "@/lib/queues" // Reuse your existing Redis connection
 
 export const runtime = "nodejs"
 
@@ -6,17 +8,48 @@ export const runtime = "nodejs"
 const INFLUXDB_URL = "http://localhost:8181"
 const INFLUXDB_DATABASE = "Locations"
 
+// Cache TTL in seconds (2 minutes for history data)
+const CACHE_TTL = 120
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url)
     const equipmentId = url.searchParams.get("equipmentId")
     const locationId = url.searchParams.get("locationId")
     const limit = url.searchParams.get("limit") || "20"
+    // Add a parameter to bypass cache if needed
+    const noCache = url.searchParams.get("noCache") === "true"
 
-    console.log("Fetching control history for:", { equipmentId, locationId, limit })
+    console.log("Fetching control history for:", { equipmentId, locationId, limit, noCache })
 
     if (!equipmentId || !locationId) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 })
+    }
+
+    // Generate cache key
+    const cacheKey = `control:history:${locationId}:${equipmentId}:${limit}`
+
+    // Try to get from cache first (unless noCache is true)
+    if (!noCache) {
+      try {
+        const cachedData = await connection.get(cacheKey)
+        if (cachedData) {
+          console.log(`Cache hit for control history (${locationId}, ${equipmentId}, limit=${limit})`)
+          const parsedData = JSON.parse(cachedData)
+          
+          // Add cache header to response
+          return NextResponse.json(parsedData, {
+            headers: {
+              "X-Cache": "HIT",
+              "X-Cache-TTL": CACHE_TTL.toString()
+            }
+          })
+        }
+        console.log(`Cache miss for control history (${locationId}, ${equipmentId}, limit=${limit})`)
+      } catch (cacheError) {
+        console.warn("Redis cache error:", cacheError)
+        // Continue to fetch from InfluxDB if cache fails
+      }
     }
 
     // Log the configuration
@@ -123,7 +156,29 @@ export async function GET(req: NextRequest) {
 
       if (sqlQuery === '') {
         console.log("No valid tables found, returning default history");
-        return NextResponse.json(defaultHistory, { status: 200 });
+        
+        // Cache the default history
+        if (!noCache) {
+          try {
+            await connection.set(
+              cacheKey, 
+              JSON.stringify(defaultHistory), 
+              "EX", 
+              CACHE_TTL
+            )
+            console.log(`Cached default history for (${locationId}, ${equipmentId}, limit=${limit})`)
+          } catch (cacheError) {
+            console.warn("Redis cache error when storing default history:", cacheError)
+          }
+        }
+        
+        return NextResponse.json(defaultHistory, { 
+          headers: {
+            "X-Cache": "MISS",
+            "X-Cache-TTL": CACHE_TTL.toString()
+          },
+          status: 200 
+        });
       }
 
       // Execute the SQL query
@@ -186,18 +241,84 @@ export async function GET(req: NextRequest) {
         });
 
         console.log(`Returning ${history.length} control history entries from database`);
-        return NextResponse.json(history, { status: 200 });
+        
+        // Cache the history
+        if (!noCache) {
+          try {
+            await connection.set(
+              cacheKey, 
+              JSON.stringify(history), 
+              "EX", 
+              CACHE_TTL
+            )
+            console.log(`Cached ${history.length} history entries for (${locationId}, ${equipmentId}, limit=${limit})`)
+          } catch (cacheError) {
+            console.warn("Redis cache error when storing history:", cacheError)
+          }
+        }
+        
+        return NextResponse.json(history, { 
+          headers: {
+            "X-Cache": "MISS",
+            "X-Cache-TTL": CACHE_TTL.toString()
+          },
+          status: 200 
+        });
       }
 
       // If no data found, return default history
       console.log("No control history found in database, returning default");
-      return NextResponse.json(defaultHistory, { status: 200 });
+      
+      // Cache the default history
+      if (!noCache) {
+        try {
+          await connection.set(
+            cacheKey, 
+            JSON.stringify(defaultHistory), 
+            "EX", 
+            CACHE_TTL
+          )
+          console.log(`Cached default history for (${locationId}, ${equipmentId}, limit=${limit})`)
+        } catch (cacheError) {
+          console.warn("Redis cache error when storing default history:", cacheError)
+        }
+      }
+      
+      return NextResponse.json(defaultHistory, { 
+        headers: {
+          "X-Cache": "MISS",
+          "X-Cache-TTL": CACHE_TTL.toString()
+        },
+        status: 200 
+      });
     } catch (queryError) {
       console.error("Error querying InfluxDB:", queryError);
 
       // Return default history if database query fails
       console.log("Returning default control history due to error");
-      return NextResponse.json(defaultHistory, { status: 200 });
+      
+      // Cache the default history even on error
+      if (!noCache) {
+        try {
+          await connection.set(
+            cacheKey, 
+            JSON.stringify(defaultHistory), 
+            "EX", 
+            CACHE_TTL
+          )
+          console.log(`Cached default history (error case) for (${locationId}, ${equipmentId}, limit=${limit})`)
+        } catch (cacheError) {
+          console.warn("Redis cache error when storing default history:", cacheError)
+        }
+      }
+      
+      return NextResponse.json(defaultHistory, { 
+        headers: {
+          "X-Cache": "MISS",
+          "X-Cache-TTL": CACHE_TTL.toString()
+        },
+        status: 200 
+      });
     }
   } catch (error) {
     console.error("Error fetching control history from InfluxDB:", error);

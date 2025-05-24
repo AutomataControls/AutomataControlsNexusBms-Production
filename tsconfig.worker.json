@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmitOnError": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "outDir": "./dist",
+    "noImplicitAny": false,
+    "strict": false,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["worker.ts", "lib/queues.ts"],
+  "exclude": ["node_modules", "dist"]
+}

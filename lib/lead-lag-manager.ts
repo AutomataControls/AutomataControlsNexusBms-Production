@@ -1,5 +1,24 @@
 // lib/lead-lag-manager.ts
 import { NextResponse } from 'next/server';
+import Redis from 'ioredis';
+import { promisify } from 'util';
+import { exec as execCallback } from 'child_process';
+
+// Promisify exec for async/await usage
+const exec = promisify(execCallback);
+
+// Redis client setup
+const redis = new Redis({
+  host: 'localhost',
+  port: 6379,
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => Math.min(times * 50, 2000)
+});
+
+// Cache TTL settings
+const GROUP_CACHE_TTL = 5 * 60; // 5 minutes
+const EQUIPMENT_STATUS_CACHE_TTL = 30; // 30 seconds
+const LEAD_LAG_STATUS_CACHE_TTL = 60; // 1 minute
 
 // Firebase Admin initialization
 let admin: any = null;
@@ -240,11 +259,119 @@ export async function performScheduledChangeovers() {
 }
 
 /**
- * Get equipment groups from Firestore (primary) or InfluxDB (fallback)
+ * Get lead-lag status for a specific equipment, optimized with Redis caching
+ * @param locationId - Location ID (string)
+ * @param equipmentId - Equipment ID to check
+ * @returns Promise with lead-lag status and control decision
+ */
+export async function getLeadLagStatus(locationId: string, equipmentId: string) {
+  try {
+    // Check Redis cache first
+    const cacheKey = `lead-lag-status:${locationId}:${equipmentId}`;
+    const cachedStatus = await redis.get(cacheKey);
+
+    if (cachedStatus) {
+      return JSON.parse(cachedStatus);
+    }
+
+    // Find equipment groups for this equipment
+    const groups = await findEquipmentGroups(equipmentId);
+
+    if (!groups || groups.length === 0) {
+      // Equipment not in any lead-lag group - should run normally
+      const result = {
+        isLead: true,
+        shouldRun: true,
+        reason: "Equipment not in lead-lag group - running independently",
+        groupId: null
+      };
+
+      // Cache the result (shorter TTL for standalone equipment)
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', LEAD_LAG_STATUS_CACHE_TTL);
+      return result;
+    }
+
+    // Get the first group (equipment should only be in one group)
+    const group = groups[0];
+
+    if (!group.equipmentIds || group.equipmentIds.length === 0) {
+      const result = {
+        isLead: true,
+        shouldRun: true,
+        reason: "No equipment found in group - running independently",
+        groupId: group.id
+      };
+
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', LEAD_LAG_STATUS_CACHE_TTL);
+      return result;
+    }
+
+    // Check if this equipment is the current lead
+    const isCurrentLead = group.leadEquipmentId === equipmentId;
+    const isMarkedAsLead = group.isLead === true;
+
+    // Determine if equipment should run based on lead-lag logic
+    let result;
+    if (isCurrentLead && isMarkedAsLead) {
+      result = {
+        isLead: true,
+        shouldRun: true,
+        reason: `Lead equipment in group ${group.id}`,
+        groupId: group.id
+      };
+    } else if (!isCurrentLead && !isMarkedAsLead) {
+      result = {
+        isLead: false,
+        shouldRun: false,
+        reason: `Lag equipment in standby - group ${group.id}`,
+        groupId: group.id
+      };
+    } else {
+      // Mismatch between leadEquipmentId and isLead flag - needs investigation
+      console.warn(`Lead-lag mismatch for ${equipmentId}: leadEquipmentId=${group.leadEquipmentId}, isLead=${isMarkedAsLead}`);
+
+      // Default to running if marked as lead OR if it's the leadEquipmentId
+      const shouldRun = isCurrentLead || isMarkedAsLead;
+
+      result = {
+        isLead: isCurrentLead,
+        shouldRun: shouldRun,
+        reason: `Lead-lag status mismatch - ${shouldRun ? 'allowing to run' : 'keeping in standby'}`,
+        groupId: group.id
+      };
+    }
+
+    // Cache the result
+    await redis.set(cacheKey, JSON.stringify(result), 'EX', LEAD_LAG_STATUS_CACHE_TTL);
+    return result;
+
+  } catch (error) {
+    console.error(`Error getting lead-lag status for ${equipmentId}:`, error);
+
+    // On error, default to allowing equipment to run to avoid system shutdown
+    return {
+      isLead: true,
+      shouldRun: true,
+      reason: `Error checking lead-lag status: ${error.message} - defaulting to run`,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Get equipment groups from Firestore with Redis caching
  */
 async function getEquipmentGroups(): Promise<EquipmentGroup[]> {
   try {
-    // Try Firestore first
+    // Check Redis cache first
+    const cacheKey = 'equipment-groups';
+    const cachedGroups = await redis.get(cacheKey);
+
+    if (cachedGroups) {
+      return JSON.parse(cachedGroups);
+    }
+
+    // Try Firestore if cache miss
     if (firestoreInitialized && admin) {
       console.log("Fetching equipment groups from Firestore");
 
@@ -261,11 +388,9 @@ async function getEquipmentGroups(): Promise<EquipmentGroup[]> {
 
         groupsSnapshot.forEach(doc => {
           const data = doc.data();
-          console.log(`Processing group: ${doc.id}, data:`, data);
 
           // Get equipment IDs, handling potential spaces in field names
           const equipmentIds = data['equipmentIds'] || data['equipmentIds '] || [];
-          console.log(`Group ${doc.id}, equipmentIds:`, equipmentIds);
 
           // Get lead equipment ID, handling potential spaces
           const leadEquipmentId = data['leadEquipmentId'] || data['leadEquipmentId '] || '';
@@ -321,6 +446,10 @@ async function getEquipmentGroups(): Promise<EquipmentGroup[]> {
 
         if (groups.length > 0) {
           console.log(`Successfully retrieved ${groups.length} equipment groups from Firestore`);
+
+          // Cache the groups
+          await redis.set(cacheKey, JSON.stringify(groups), 'EX', GROUP_CACHE_TTL);
+
           return groups;
         }
       }
@@ -330,7 +459,14 @@ async function getEquipmentGroups(): Promise<EquipmentGroup[]> {
 
     // Fall back to InfluxDB if Firestore failed or returned no results
     console.log("Falling back to InfluxDB for equipment groups");
-    return getEquipmentGroupsFromInfluxDB();
+    const influxGroups = await getEquipmentGroupsFromInfluxDB();
+
+    if (influxGroups.length > 0) {
+      // Cache the groups from InfluxDB too
+      await redis.set(cacheKey, JSON.stringify(influxGroups), 'EX', GROUP_CACHE_TTL);
+    }
+
+    return influxGroups;
   } catch (error) {
     console.error("Error fetching equipment groups from Firestore:", error);
 
@@ -345,30 +481,26 @@ async function getEquipmentGroups(): Promise<EquipmentGroup[]> {
  */
 async function getEquipmentGroupsFromInfluxDB(): Promise<EquipmentGroup[]> {
   try {
-    // Define the SQL query to get equipment groups - UPDATED to use proper INTERVAL syntax
-    const sqlQuery = `SELECT * FROM "equipment_groups"
-                      WHERE time > now() - INTERVAL '1 hour'
-                      ORDER BY time DESC LIMIT 100`;
+    // Optimized SQL query to get equipment groups - with field selection and smaller time range
+    // FIXED: Convert multi-line query to single line if needed
+    const sqlQuery = "SELECT group_id, name, type, location_id, equipment_ids, lead_equipment_id, rotation_enabled, rotation_interval_hours, last_rotation_timestamp, failover_enabled FROM \"equipment_groups\" WHERE time > now() - INTERVAL '10 minute' ORDER BY time DESC LIMIT 20";
 
-    // Execute the query using the new InfluxDB 3 SQL endpoint
-    const response = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        q: sqlQuery,
-        db: INFLUXDB_DATABASE,
-      }),
+    // FIXED: Properly format the JSON payload using JSON.stringify
+    const payload = JSON.stringify({
+      q: sqlQuery,
+      db: INFLUXDB_DATABASE
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`InfluxDB query failed: ${response.status} - ${errorText}`);
+    // Execute the query using the new InfluxDB 3 SQL endpoint directly with curl for better performance
+    // FIXED: Use the properly formatted JSON payload
+    const { stdout, stderr } = await exec(`curl -s -X POST "${INFLUXDB_URL}/api/v3/query_sql" -H "Content-Type: application/json" -d '${payload}'`);
+
+    if (stderr) {
+      console.error(`InfluxDB error: ${stderr}`);
     }
 
     // Parse the JSON response
-    const data = await response.json();
+    const data = JSON.parse(stdout);
     const groups: EquipmentGroup[] = [];
 
     if (Array.isArray(data) && data.length > 0) {
@@ -415,91 +547,83 @@ async function getEquipmentGroupsFromInfluxDB(): Promise<EquipmentGroup[]> {
 }
 
 /**
- * Get equipment status from InfluxDB
- * UPDATED to use InfluxDB 3 SQL API with proper field handling and smaller time range
+ * Get equipment status from InfluxDB with Redis caching
  */
 async function getEquipmentStatus(equipmentId: string): Promise<EquipmentStatus> {
   try {
-    // Define the SQL query to get equipment status - UPDATED to use proper INTERVAL syntax
-    const sqlQuery = `
-      SELECT * FROM "metrics"
-      WHERE "equipmentId"='${equipmentId}'
-      AND time > now() - INTERVAL '5 minutes'
-      ORDER BY time DESC
-      LIMIT 10
-    `;
+    // Check Redis cache first
+    const cacheKey = `equipment-status:${equipmentId}`;
+    const cachedStatus = await redis.get(cacheKey);
+
+    if (cachedStatus) {
+      return JSON.parse(cachedStatus);
+    }
+
+    // Cache miss - need to fetch from InfluxDB
+    // FIXED: Use a single-line query without newlines to avoid JSON parsing errors
+    const sqlQuery = "SELECT time, system, Fan_Status, HWP1_Status, HWP2_Status, Freezestat, H20Supply FROM \"metrics\" WHERE \"equipmentId\"='" + equipmentId + "' AND time > now() - INTERVAL '5 minutes' ORDER BY time DESC LIMIT 5";
 
     console.log(`Checking status for equipment: ${equipmentId}`);
 
-    // Execute the query using InfluxDB 3 SQL endpoint
-    const response = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        q: sqlQuery,
-        db: INFLUXDB_DATABASE,
-      }),
+    // FIXED: Properly format the JSON payload using JSON.stringify
+    const payload = JSON.stringify({
+      q: sqlQuery,
+      db: INFLUXDB_DATABASE
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log(`Query failed for ${equipmentId}: ${response.status} - ${errorText}`);
+    // Use curl directly for better performance with local InfluxDB
+    // FIXED: Use the properly formatted JSON payload
+    const { stdout, stderr } = await exec(`curl -s -X POST "${INFLUXDB_URL}/api/v3/query_sql" -H "Content-Type: application/json" -d '${payload}'`);
 
-      // Use alternate query - UPDATED to use proper INTERVAL syntax
-      const alternateQuery = `SELECT * FROM "metrics"
-                             WHERE time > now() - INTERVAL '5 minutes'
-                             LIMIT 1`;
+    if (stderr) {
+      console.error(`InfluxDB error for ${equipmentId}: ${stderr}`);
 
-      console.log(`Trying alternate query for ${equipmentId}`);
-
-      const altResponse = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          q: alternateQuery,
-          db: INFLUXDB_DATABASE,
-        }),
+      // Try a simpler query as fallback
+      const simpleQuery = "SELECT time FROM \"metrics\" WHERE time > now() - INTERVAL '5 minutes' LIMIT 1";
+      
+      // FIXED: Also properly format the fallback JSON payload
+      const fallbackPayload = JSON.stringify({
+        q: simpleQuery,
+        db: INFLUXDB_DATABASE
       });
 
-      if (!altResponse.ok) {
-        const altErrorText = await altResponse.text();
-        throw new Error(`Both queries failed: ${altErrorText}`);
+      const { stdout: altStdout, stderr: altStderr } = await exec(`curl -s -X POST "${INFLUXDB_URL}/api/v3/query_sql" -H "Content-Type: application/json" -d '${fallbackPayload}'`);
+
+      if (altStderr) {
+        throw new Error(`Both queries failed: ${altStderr}`);
       }
 
-      const altData = await altResponse.json();
-      // If we get any data at all from the database, it's likely reachable
+      const altData = JSON.parse(altStdout);
       const isHealthy = Array.isArray(altData) && altData.length > 0;
 
-      console.log(`Equipment ${equipmentId} alternate status check: ${isHealthy ? 'HEALTHY (DB is reachable)' : 'UNHEALTHY (no data)'}`);
-
-      return {
+      const status = {
         equipmentId,
         isHealthy,
         lastUpdated: Date.now()
       };
+
+      // Cache even the fallback result
+      await redis.set(cacheKey, JSON.stringify(status), 'EX', EQUIPMENT_STATUS_CACHE_TTL);
+      return status;
     }
 
     // Parse the JSON response
-    const data = await response.json();
+    const data = JSON.parse(stdout);
 
     // Check if we got any data back
     if (!Array.isArray(data) || data.length === 0) {
-      console.log(`No status data found for equipment ${equipmentId}`);
-
       // Assume equipment is OK if we just don't have status data
-      // This prevents unnecessary failovers due to lack of data
-      return {
+      const status = {
         equipmentId,
         isHealthy: true,
         lastUpdated: Date.now()
       };
+
+      await redis.set(cacheKey, JSON.stringify(status), 'EX', EQUIPMENT_STATUS_CACHE_TTL);
+      return status;
     }
 
-    // Analyze the data for health indicators based on field names in your database
+    // Analyze the data for health indicators
     let isHealthy = true;
     let hasRecentData = false;
     const latestReading = data[0];
@@ -542,20 +666,23 @@ async function getEquipmentStatus(equipmentId: string): Promise<EquipmentStatus>
     }
 
     console.log(`Equipment ${equipmentId} status: ${isHealthy && hasRecentData ? 'HEALTHY' : 'UNHEALTHY'}`);
-    if (latestReading) {
+    if (latestReading && latestReading.system) {
       console.log(`  Details: System=${latestReading.system || 'unknown'}, HasRecentData=${hasRecentData}`);
     }
 
-    return {
+    const status = {
       equipmentId,
       isHealthy: isHealthy && hasRecentData,
       lastUpdated: Date.now()
     };
+
+    // Cache the status
+    await redis.set(cacheKey, JSON.stringify(status), 'EX', EQUIPMENT_STATUS_CACHE_TTL);
+    return status;
   } catch (error) {
     console.error(`Error getting status for equipment ${equipmentId}:`, error);
 
     // For safety, default to assuming equipment is healthy if we can't determine status
-    // This prevents unnecessary failovers due to query errors
     return {
       equipmentId,
       isHealthy: true,
@@ -566,6 +693,7 @@ async function getEquipmentStatus(equipmentId: string): Promise<EquipmentStatus>
 
 /**
  * Update lead equipment in a group - updates both Firestore and InfluxDB
+ * Also invalidates Redis caches to ensure fresh data
  */
 async function updateLeadEquipment(groupId: string, newLeadId: string, reason: "failover" | "rotation") {
   try {
@@ -615,33 +743,38 @@ async function updateLeadEquipment(groupId: string, newLeadId: string, reason: "
       console.log(`Firebase Admin not initialized or available - cannot update Firestore`);
     }
 
-    // Next, update in InfluxDB for history tracking
-    // Using the line protocol format directly with curl for reliability
+    // Next, update in InfluxDB for history tracking using curl for local efficiency
     const lineProtocol = `equipment_groups,group_id=${groupId},event=lead_change lead_equipment_id="${newLeadId}",last_rotation_timestamp=${now},reason="${reason}"`;
 
-    // Use curl via child_process for most reliable write
-    const { exec } = require('child_process');
-    const curlCommand = `curl -s -X POST "${INFLUXDB_URL}/api/v3/write_lp?db=${INFLUXDB_DATABASE}&precision=ns" -H "Content-Type: text/plain" -d "${lineProtocol}"`;
+    const { stdout, stderr } = await exec(`curl -s -X POST "${INFLUXDB_URL}/api/v3/write_lp?db=${INFLUXDB_DATABASE}&precision=ns" \
+      -H "Content-Type: text/plain" \
+      -d "${lineProtocol}"`);
 
-    console.log(`Executing InfluxDB write: ${curlCommand}`);
+    if (stderr) {
+      console.warn(`InfluxDB write warning: ${stderr}`);
+      if (!updatedFirestore) {
+        throw new Error(`Failed to update both Firestore and InfluxDB: ${stderr}`);
+      }
+    }
 
-    await new Promise<void>((resolve, reject) => {
-      exec(curlCommand, (execError: any, stdout: string, stderr: string) => {
-        if (execError) {
-          console.error(`Error writing to InfluxDB: ${execError}`);
-          if (!updatedFirestore) {
-            reject(new Error(`Failed to update both Firestore and InfluxDB: ${execError}`));
-            return;
-          }
-        }
+    // Invalidate Redis caches
+    console.log('Invalidating Redis caches after lead-lag update');
 
-        if (stderr && stderr.trim().length > 0) {
-          console.warn(`InfluxDB write warning: ${stderr}`);
-        }
+    // Clear the main equipment groups cache
+    await redis.del('equipment-groups');
 
-        resolve();
-      });
-    });
+    // Get group details to find equipment to invalidate
+    const group = await admin.firestore().collection('equipmentGroups').doc(groupId).get();
+    if (group.exists) {
+      const data = group.data();
+      const equipmentIds = data['equipmentIds'] || data['equipmentIds '] || [];
+
+      // Invalidate each equipment's cache entries
+      for (const equipId of equipmentIds) {
+        await redis.del(`equipment-group-mapping:${equipId}`);
+        await redis.del(`lead-lag-status:*:${equipId}`);
+      }
+    }
 
     return true;
   } catch (error) {
@@ -651,24 +784,17 @@ async function updateLeadEquipment(groupId: string, newLeadId: string, reason: "
 }
 
 /**
- * Helper function to safely parse JSON
- */
-function tryParseJson<T>(jsonString: string | undefined, defaultValue: T): T {
-  if (!jsonString) return defaultValue;
-
-  try {
-    return JSON.parse(jsonString) as T;
-  } catch (error) {
-    console.error("Error parsing JSON:", error);
-    return defaultValue;
-  }
-}
-
-/**
- * Find equipment groups for a specific equipment
- * This can be used by other modules to check if equipment is in a group
+ * Find equipment groups for a specific equipment with Redis caching
  */
 export async function findEquipmentGroups(equipmentId: string) {
+  // Check Redis cache first
+  const cacheKey = `equipment-group-mapping:${equipmentId}`;
+  const cachedMapping = await redis.get(cacheKey);
+
+  if (cachedMapping) {
+    return JSON.parse(cachedMapping);
+  }
+
   if (!firestoreInitialized || !admin) return null;
 
   try {
@@ -710,13 +836,43 @@ export async function findEquipmentGroups(equipmentId: string) {
     }
 
     if (results.length === 0) {
-      console.log(`No Firestore equipment group found containing equipment ${equipmentId}`);
       return null;
     }
 
+    // Cache the results
+    await redis.set(cacheKey, JSON.stringify(results), 'EX', GROUP_CACHE_TTL);
     return results;
   } catch (error) {
     console.error(`Error finding equipment groups: ${error}`);
     return null;
+  }
+}
+
+/**
+ * Clear all caches - use this when debugging or ensuring fresh data
+ */
+export async function clearLeadLagCaches() {
+  try {
+    // Get all keys matching our cache patterns
+    const equipmentStatusKeys = await redis.keys('equipment-status:*');
+    const leadLagStatusKeys = await redis.keys('lead-lag-status:*');
+    const mappingKeys = await redis.keys('equipment-group-mapping:*');
+    const groupKeys = ['equipment-groups'];
+
+    // Combine all keys
+    const allKeys = [...equipmentStatusKeys, ...leadLagStatusKeys, ...mappingKeys, ...groupKeys];
+
+    if (allKeys.length > 0) {
+      // Delete all matching keys
+      await redis.del(...allKeys);
+      console.log(`Cleared ${allKeys.length} lead-lag cache entries`);
+    } else {
+      console.log('No lead-lag cache entries found to clear');
+    }
+
+    return { success: true, clearedEntries: allKeys.length };
+  } catch (error) {
+    console.error('Error clearing lead-lag caches:', error);
+    return { success: false, error: String(error) };
   }
 }

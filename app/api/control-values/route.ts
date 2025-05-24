@@ -1,8 +1,13 @@
+// /opt/productionapp/app/api/control-values/route.ts - With Redis caching
 import { type NextRequest, NextResponse } from "next/server"
+import { connection } from "@/lib/queues" // Reuse your existing Redis connection
 
 // Updated InfluxDB 3 configuration with hardcoded values
 const INFLUXDB_URL = "http://localhost:8181"
 const INFLUXDB_DATABASE = "Locations"
+
+// Cache TTL in seconds (1 minute)
+const CACHE_TTL = 60
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,6 +15,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const locationId = searchParams.get("locationId")
     const equipmentId = searchParams.get("equipmentId")
+    // Add a parameter to bypass cache if needed
+    const noCache = searchParams.get("noCache") === "true"
 
     // Validate required parameters
     if (!locationId || !equipmentId) {
@@ -18,10 +25,57 @@ export async function GET(req: NextRequest) {
 
     console.log(`Fetching control values for location ${locationId}, equipment ${equipmentId}`)
 
+    // Generate cache key
+    const cacheKey = `control:values:${locationId}:${equipmentId}`
+
+    // Try to get from cache first (unless noCache is true)
+    if (!noCache) {
+      try {
+        const cachedData = await connection.get(cacheKey)
+        if (cachedData) {
+          console.log(`Cache hit for control values (${locationId}, ${equipmentId})`)
+          const parsedData = JSON.parse(cachedData)
+          
+          // Add cache header to response
+          return NextResponse.json(parsedData, {
+            headers: {
+              "X-Cache": "HIT",
+              "X-Cache-TTL": CACHE_TTL.toString()
+            }
+          })
+        }
+        console.log(`Cache miss for control values (${locationId}, ${equipmentId})`)
+      } catch (cacheError) {
+        console.warn("Redis cache error:", cacheError)
+        // Continue to fetch from InfluxDB if cache fails
+      }
+    }
+
     // Query InfluxDB for the latest control values
     const latestValues = await fetchLatestControlValues(locationId, equipmentId)
 
-    return NextResponse.json(latestValues)
+    // Store in Redis cache (unless noCache is true)
+    if (!noCache) {
+      try {
+        await connection.set(
+          cacheKey, 
+          JSON.stringify(latestValues), 
+          "EX", 
+          CACHE_TTL
+        )
+        console.log(`Cached control values for (${locationId}, ${equipmentId})`)
+      } catch (cacheError) {
+        console.warn("Redis cache error when storing values:", cacheError)
+      }
+    }
+
+    // Return the data with cache header
+    return NextResponse.json(latestValues, {
+      headers: {
+        "X-Cache": "MISS",
+        "X-Cache-TTL": CACHE_TTL.toString()
+      }
+    })
   } catch (error) {
     console.error("Error fetching control values:", error)
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 })

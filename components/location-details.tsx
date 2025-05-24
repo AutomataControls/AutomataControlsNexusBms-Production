@@ -27,6 +27,10 @@ import {
     ToggleLeft,
     Sun,
     Leaf,
+    Flame, // Added Flame icon for boiler firing status
+    Wind,
+    ShieldCheck,
+    Home,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
@@ -263,6 +267,13 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             equipmentItem.type?.toLowerCase().includes("greenhouse") ||
             equipmentItem.name?.toLowerCase().includes("greenhouse") ||
             (location?.name && location.name.toLowerCase().includes("greenhouse"))
+
+        // Check if this is an air handler unit
+        const isAirHandler =
+            equipmentItem.type?.toLowerCase().includes("air handler") ||
+            equipmentItem.type?.toLowerCase().includes("ahu") ||
+            equipmentItem.name?.toLowerCase().includes("air handler") ||
+            equipmentItem.name?.toLowerCase().includes("ahu")
 
         // If this is greenhouse equipment, look for specific greenhouse metrics first
         if (isGreenhouse) {
@@ -609,7 +620,7 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                     const isOpen = findMetric([vent.key])
                     if (isOpen !== undefined) {
                         results.push({
-                            name: `${vent.name}`,
+                            name: vent.name,
                             value: isOpen === true || isOpen === "true" ? "Open" : "Closed",
                             unit: "",
                             icon: (
@@ -675,6 +686,142 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             }
         }
 
+        // If this is an air handler, check for specific AHU metrics
+        if (isAirHandler) {
+            // Check for Occupied status
+            const occupied = findMetric([
+                "Occupied",
+                "occupied",
+                "IsOccupied",
+                "isOccupied",
+                "OccupancyStatus",
+                "occupancyStatus",
+                "Zone Occupied",
+                "ZoneOccupied",
+                "SpaceOccupied",
+                "spaceOccupied"
+            ])
+
+            if (occupied !== undefined) {
+                const isOccupied = occupied === true || occupied === "true" || occupied === "occupied" || occupied === "Occupied" || occupied === 1 || occupied === "1"
+                results.push({
+                    name: "Occupied",
+                    value: isOccupied ? "Yes" : "No",
+                    unit: "",
+                    icon: <Home className={`h-4 w-4 ${isOccupied ? "text-green-500" : "text-gray-400"}`} />,
+                })
+            }
+
+            // Check for Running status
+            const running = findMetric([
+                "Running",
+                "running",
+                "IsRunning",
+                "isRunning",
+                "AhuRunning",
+                "ahuRunning",
+                "UnitRunning",
+                "unitRunning",
+                "SystemRunning",
+                "systemRunning",
+                "Status",
+                "status",
+                "UnitStatus",
+                "unitStatus"
+            ])
+
+            if (running !== undefined) {
+                const isRunning = running === true || running === "true" || running === "running" || running === "Running" || running === 1 || running === "1"
+                results.push({
+                    name: "Running",
+                    value: isRunning ? "Yes" : "No",
+                    unit: "",
+                    icon: <Wind className={`h-4 w-4 ${isRunning ? "text-blue-500 animate-pulse" : "text-gray-400"}`} />,
+                    className: isRunning ? "text-blue-500 font-medium" : "",
+                })
+            }
+
+            // Check for Duct Static Pressure
+            const ductStatic = findMetric([
+                "DuctStatic",
+                "ductStatic",
+                "Duct Static",
+                "duct static",
+                "DuctStaticPressure",
+                "ductStaticPressure",
+                "Duct Static Pressure",
+                "duct static pressure",
+                "SupplyDuctStatic",
+                "supplyDuctStatic",
+                "Supply Duct Static",
+                "StaticPressure",
+                "staticPressure",
+                "Static Pressure",
+                "static pressure"
+            ])
+
+            if (ductStatic !== undefined) {
+                results.push({
+                    name: "Duct Static",
+                    value: roundValue(ductStatic),
+                    unit: "inWC",
+                    icon: <Gauge className="h-4 w-4 text-indigo-500" />,
+                })
+            }
+
+            // Check for Building Pressure
+            const buildingPressure = findMetric([
+                "BuildingPressure",
+                "buildingPressure",
+                "Building Pressure",
+                "building pressure",
+                "Building Static",
+                "BuildingStatic",
+                "buildingStatic",
+                "ZonePressure",
+                "zonePressure",
+                "Zone Pressure",
+                "zone pressure"
+            ])
+
+            if (buildingPressure !== undefined) {
+                results.push({
+                    name: "Building Pressure",
+                    value: roundValue(buildingPressure),
+                    unit: "inWC",
+                    icon: <Gauge className="h-4 w-4 text-teal-500" />,
+                })
+            }
+
+            // Check for Freeze Stat (always display with default "Normal" if not found)
+            const freezeStat = findMetric([
+                "FreezeStat",
+                "freezeStat",
+                "Freeze Stat",
+                "freeze stat",
+                "FreezeStatAlarm",
+                "freezeStatAlarm",
+                "Freeze Stat Alarm",
+                "freeze stat alarm",
+                "FreezeProtection",
+                "freezeProtection",
+                "Freeze Protection",
+                "freeze protection"
+            ])
+
+            // If freezeStat is undefined, default to "Normal"
+            // If it is defined, check if it's in alarm condition
+            const freezeStatAlarm = freezeStat === true || freezeStat === "true" || freezeStat === "alarm" || freezeStat === "Alarm" || freezeStat === 1 || freezeStat === "1"
+
+            results.push({
+                name: "Freeze Stat",
+                value: freezeStatAlarm ? "Alarm" : "Normal",
+                unit: "",
+                icon: <ShieldCheck className={`h-4 w-4 ${freezeStatAlarm ? "text-red-500" : "text-green-500"}`} />,
+                className: freezeStatAlarm ? "text-red-500 font-medium" : "text-green-500",
+            })
+        }
+
         // Now update the temperature detection logic based on equipment type
         const type = equipmentItem.type?.toLowerCase() || ""
         const name = equipmentItem.name?.toLowerCase() || ""
@@ -682,6 +829,18 @@ export function LocationDetails({ id }: LocationDetailsProps) {
 
         // Check if this is a fan coil unit to add fan status
         const isFanCoil = type.includes("fan coil") || name.includes("fancoil") || name.includes("fan coil")
+
+        // Check if this is a pump unit
+        const isPump = type.includes("pump") || name.includes("pump")
+
+        // Check if this is specifically a hot water pump
+        const isHWPump = name.includes("hwpump") || name.includes("hw pump") || name.includes("hot water pump")
+
+        // Check if this is specifically a chilled water pump
+        const isCWPump = name.includes("cwpump") || name.includes("cw pump") || name.includes("chilled water pump")
+
+        // Check if this is a boiler
+        const isBoiler = type.includes("boiler") || name.includes("boiler")
 
         // Look for fan status if this is a fan coil unit
         if (isFanCoil) {
@@ -758,6 +917,86 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                     unit: ampsUnit,
                     icon: <Activity className="h-4 w-4 text-purple-500" />,
                 })
+            }
+        }
+
+        // Look for boiler-specific metrics if this is a boiler
+        if (isBoiler) {
+            // Look for firing status with various naming conventions
+            const firingStatus = findMetric([
+                "Firing",
+                "firing",
+                "BoilerFiring",
+                "Boiler Firing",
+                "boilerFiring",
+                "FiringRate",
+                "b1firing",
+                "b2firing"
+            ])
+
+            if (firingStatus !== undefined) {
+                const isFiring =
+                    typeof firingStatus === "boolean"
+                        ? firingStatus
+                        : typeof firingStatus === "number"
+                            ? firingStatus > 0
+                            : typeof firingStatus === "string" &&
+                            (firingStatus.toLowerCase() === "on" ||
+                                firingStatus.toLowerCase() === "true");
+
+                results.push({
+                    name: "Firing Status",
+                    value: typeof firingStatus === "number"
+                        ? `${firingStatus}%`
+                        : (isFiring ? "Firing" : "Off"),
+                    unit: "",
+                    icon: <Flame className={`h-4 w-4 ${isFiring ? "text-orange-500 animate-pulse" : "text-gray-400"}`} />,
+                    className: isFiring ? "text-orange-500 font-medium" : "",
+                });
+            }
+
+            // Look for boiler Lead/Lag status
+            const boilerIsLead = findMetric([
+                "IsLead",
+                "isLead",
+                "Boiler IsLead",
+                "Boiler Is Lead",
+                "BoilerIsLead",
+                "b1isLead",
+                "b2isLead",
+                "lead"
+            ])
+
+            if (boilerIsLead !== undefined) {
+                results.push({
+                    name: "Lead Status",
+                    value: boilerIsLead === true || boilerIsLead === "true" || boilerIsLead === 1 ? "Lead" : "Lag",
+                    unit: "",
+                    icon: <ToggleLeft className={`h-4 w-4 ${boilerIsLead === true || boilerIsLead === "true" || boilerIsLead === 1 ? "text-teal-300" : "text-gray-400"}`} />,
+                    className: boilerIsLead === true || boilerIsLead === "true" || boilerIsLead === 1 ? "text-teal-300 font-medium" : "",
+                });
+            }
+
+            // Look for boiler runtime
+            const boilerRuntime = findMetric([
+                "Runtime",
+                "runtime",
+                "BoilerRuntime",
+                "Boiler Runtime",
+                "boilerRuntime",
+                "b1boilerRuntime",
+                "b2boilerRuntime"
+            ])
+
+            if (boilerRuntime !== undefined) {
+                results.push({
+                    name: "Runtime",
+                    value: typeof boilerRuntime === "number"
+                        ? `${Math.floor(boilerRuntime / 3600)}h ${Math.floor((boilerRuntime % 3600) / 60)}m`
+                        : boilerRuntime,
+                    unit: "",
+                    icon: <Clock className="h-4 w-4 text-blue-500" />,
+                });
             }
         }
 
@@ -856,6 +1095,50 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                 ]
             }
         }
+        // Add pump-specific temperature names
+        else if (isPump) {
+            if (isHWPump) {
+                supplyTempNames = [
+                    ...supplyTempNames,
+                    "HW Supply Temp",
+                    "HW Supply",
+                    "Hot Water Supply",
+                    "Hot Water Supply Temp",
+                    "HWSupplyTemp",
+                    "HWSupply",
+                    "H2O Supply",
+                    "H2OSupply",
+                    "H20Supply",
+                    "H20 Supply",
+                ]
+            } else if (isCWPump) {
+                supplyTempNames = [
+                    ...supplyTempNames,
+                    "CW Supply Temp",
+                    "CW Supply",
+                    "Chilled Water Supply",
+                    "Chilled Water Supply Temp",
+                    "CWSupplyTemp",
+                    "CWSupply",
+                    "H2O Supply",
+                    "H2OSupply",
+                    "H20Supply",
+                    "H20 Supply",
+                ]
+            } else {
+                supplyTempNames = [
+                    ...supplyTempNames,
+                    "H2O Supply",
+                    "H2OSupply",
+                    "H20Supply",
+                    "H20 Supply",
+                    "Water Supply",
+                    "Water Supply Temp",
+                    "WaterSupplyTemp",
+                    "WaterSupply",
+                ]
+            }
+        }
 
         // Special case for Heritage Pointe of Huntington
         if (locationName.includes("heritage") && (locationName.includes("huntington") || locationName.includes("pointe"))) {
@@ -946,6 +1229,50 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                 ]
             }
         }
+        // Add pump-specific return temperature names
+        else if (isPump) {
+            if (isHWPump) {
+                returnTempNames = [
+                    ...returnTempNames,
+                    "HW Return Temp",
+                    "HW Return",
+                    "Hot Water Return",
+                    "Hot Water Return Temp",
+                    "HWReturnTemp",
+                    "HWReturn",
+                    "H2O Return",
+                    "H2OReturn",
+                    "H20Return",
+                    "H20 Return",
+                ]
+            } else if (isCWPump) {
+                returnTempNames = [
+                    ...returnTempNames,
+                    "CW Return Temp",
+                    "CW Return",
+                    "Chilled Water Return",
+                    "Chilled Water Return Temp",
+                    "CWReturnTemp",
+                    "CWReturn",
+                    "H2O Return",
+                    "H2OReturn",
+                    "H20Return",
+                    "H20 Return",
+                ]
+            } else {
+                returnTempNames = [
+                    ...returnTempNames,
+                    "H2O Return",
+                    "H2OReturn",
+                    "H20Return",
+                    "H20 Return",
+                    "Water Return",
+                    "Water Return Temp",
+                    "WaterReturnTemp",
+                    "WaterReturn",
+                ]
+            }
+        }
 
         // Special case for Heritage Pointe of Huntington
         if (locationName.includes("heritage") && (locationName.includes("huntington") || locationName.includes("pointe"))) {
@@ -986,6 +1313,73 @@ export function LocationDetails({ id }: LocationDetailsProps) {
 
         const spaceTemp = findMetric(spaceTemperatureNames, [], type)
 
+        // Look for Lead/Lag status for pumps
+        const isLead = findMetric([
+            "IsLead",
+            "isLead",
+            "Pump IsLead",
+            "Pump Is Lead",
+            "PumpIsLead",
+            "lead",
+            "Lead",
+            "HWPumpIsLead",
+            "HW Pump IsLead",
+            "CWPumpIsLead",
+            "CW Pump IsLead",
+            "Pump1IsLead",
+            "Pump 1 IsLead",
+            "HWP1IsLead",
+            "HWPump1IsLead",
+            "HW Pump 1 IsLead",
+            "CWP1IsLead",
+            "CWPump1IsLead",
+            "CW Pump 1 IsLead"
+        ])
+
+        const isLead2 = findMetric([
+            "Pump2IsLead",
+            "Pump 2 IsLead",
+            "HWP2IsLead",
+            "HWPump2IsLead",
+            "HW Pump 2 IsLead",
+            "CWP2IsLead",
+            "CWPump2IsLead",
+            "CW Pump 2 IsLead"
+        ])
+
+        // Look for runtime for pumps and boilers
+        const runtime = findMetric([
+            "Runtime",
+            "runtime",
+            "PumpRuntime",
+            "Pump Runtime",
+            "BoilerRuntime",
+            "Boiler Runtime",
+            "HWPumpRuntime",
+            "HW Pump Runtime",
+            "CWPumpRuntime",
+            "CW Pump Runtime",
+            "Pump1Runtime",
+            "Pump 1 Runtime",
+            "HWP1Runtime",
+            "HWPump1Runtime",
+            "HW Pump 1 Runtime",
+            "CWP1Runtime",
+            "CWPump1Runtime",
+            "CW Pump 1 Runtime"
+        ])
+
+        const runtime2 = findMetric([
+            "Pump2Runtime",
+            "Pump 2 Runtime",
+            "HWP2Runtime",
+            "HWPump2Runtime",
+            "HW Pump 2 Runtime",
+            "CWP2Runtime",
+            "CWPump2Runtime",
+            "CW Pump 2 Runtime"
+        ])
+
         // Add space temperature to results if found
         if (spaceTemp !== undefined) {
             results.push({
@@ -1005,7 +1399,11 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                         ? "DHW Supply"
                         : type.includes("boiler")
                             ? "Hot Water"
-                            : "Supply Temp",
+                            : isPump && isHWPump
+                                ? "HW Supply"
+                                : isPump && isCWPump
+                                    ? "CW Supply"
+                                    : "Supply Temp",
                 value: roundValue(supplyTemp),
                 unit: "°F",
                 icon: <Thermometer className="h-4 w-4 text-blue-500" />,
@@ -1021,10 +1419,95 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                         ? "DHW Return"
                         : type.includes("boiler")
                             ? "Return Water"
-                            : "Return Temp",
+                            : isPump && isHWPump
+                                ? "HW Return"
+                                : isPump && isCWPump
+                                    ? "CW Return"
+                                    : "Return Temp",
                 value: roundValue(returnTemp),
                 unit: "°F",
                 icon: <Thermometer className="h-4 w-4 text-orange-500" />,
+            })
+        }
+
+        // Add Lead/Lag status if found (for pumps)
+        if (isPump && isLead !== undefined) {
+            results.push({
+                name: "Lead Status",
+                value: isLead === true || isLead === "true" ? "Lead" : "Lag",
+                unit: "",
+                icon: <ToggleLeft className={`h-4 w-4 ${isLead === true || isLead === "true" ? "text-teal-300" : "text-gray-400"}`} />,
+                className: isLead === true || isLead === "true" ? "text-teal-300 font-medium" : "",
+            })
+        } else if (isPump && isLead2 !== undefined) {
+            results.push({
+                name: "Lead Status",
+                value: isLead2 === true || isLead2 === "true" ? "Lead" : "Lag",
+                unit: "",
+                icon: <ToggleLeft className={`h-4 w-4 ${isLead2 === true || isLead2 === "true" ? "text-teal-300" : "text-gray-400"}`} />,
+                className: isLead2 === true || isLead2 === "true" ? "text-teal-300 font-medium" : "",
+            })
+        }
+
+        // Add runtime if found (for pumps or boilers)
+        if (runtime !== undefined) {
+            results.push({
+                name: "Runtime",
+                value: typeof runtime === "number"
+                    ? `${Math.floor(runtime / 3600)}h ${Math.floor((runtime % 3600) / 60)}m`
+                    : runtime,
+                unit: "",
+                icon: <Clock className="h-4 w-4 text-blue-500" />,
+            })
+        } else if (runtime2 !== undefined) {
+            results.push({
+                name: "Runtime",
+                value: typeof runtime2 === "number"
+                    ? `${Math.floor(runtime2 / 3600)}h ${Math.floor((runtime2 % 3600) / 60)}m`
+                    : runtime2,
+                unit: "",
+                icon: <Clock className="h-4 w-4 text-blue-500" />,
+            })
+        }
+
+        // Look for OAR Setpoint
+        const oarSetpoint = findMetric([
+            "oarSetpoint",
+            "OARSetpoint",
+            "OAR Setpoint",
+            "OAR_Setpoint",
+            "outdoorAirResetSetpoint",
+            "OutdoorAirResetSetpoint",
+            "Outdoor Air Reset Setpoint"
+        ])
+
+        // Add OAR Setpoint to results if found
+        if (oarSetpoint !== undefined) {
+            results.push({
+                name: "OAR Setpoint",
+                value: roundValue(oarSetpoint),
+                unit: "°F",
+                icon: <Atom className="h-4 w-4 text-purple-500" />,
+            })
+        }
+
+        // Look for User Setpoint
+        const userSetpoint = findMetric([
+            "userSetpoint",
+            "UserSetpoint",
+            "User Setpoint",
+            "User_Setpoint",
+            "temperatureSetpoint",
+            "temperature_setpoint"
+        ])
+
+        // Add User Setpoint to results if found
+        if (userSetpoint !== undefined) {
+            results.push({
+                name: "User Setpoint",
+                value: roundValue(userSetpoint),
+                unit: "°F",
+                icon: <Atom className="h-4 w-4 text-green-500" />,
             })
         }
 
@@ -1248,7 +1731,7 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             })
         }
 
-        // Look for pump 1 amps and status
+        // Look for pump 1 amps and status - Enhanced with CWPump support
         const pump1Amps = findMetric([
             "Pump1Amps",
             "Pump 1 Amps",
@@ -1256,6 +1739,13 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             "Pump_1_Amps",
             "HWP1Amps",
             "HW Pump 1 Amps",
+            "CWP1Amps",
+            "CW Pump 1 Amps",
+            "CWPump1Amps",
+            "CW_Pump_1_Amps",
+            "PumpAmps",
+            "CWPumpAmps",
+            "HWPumpAmps"
         ])
 
         const pump1Status = findMetric([
@@ -1265,9 +1755,17 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             "Pump_1_Status",
             "HWP1Status",
             "HW Pump 1 Status",
+            "CWP1Status",
+            "CW Pump 1 Status",
+            "CWPump1Status",
+            "CW_Pump_1_Status",
+            "CWPump1Running",
+            "CW Pump 1 Running",
+            "Pump_Status",
+            "PumpStatus"
         ])
 
-        // Look for pump 2 amps and status
+        // Look for pump 2 amps and status - Enhanced with CWPump support
         const pump2Amps = findMetric([
             "Pump2Amps",
             "Pump 2 Amps",
@@ -1275,6 +1773,10 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             "Pump_2_Amps",
             "HWP2Amps",
             "HW Pump 2 Amps",
+            "CWP2Amps",
+            "CW Pump 2 Amps",
+            "CWPump2Amps",
+            "CW_Pump_2_Amps"
         ])
 
         const pump2Status = findMetric([
@@ -1284,8 +1786,14 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             "Pump_2_Status",
             "HWP2Status",
             "HW Pump 2 Status",
+            "CWP2Status",
+            "CW Pump 2 Status",
+            "CWPump2Status",
+            "CW_Pump_2_Status",
             "Pump2Running",
             "Pump 2 Running",
+            "CWPump2Running",
+            "CW Pump 2 Running"
         ])
 
         // Add pump 1 metrics if available
@@ -1311,11 +1819,18 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             const isRunning =
                 typeof pump1Status === "boolean"
                     ? pump1Status
-                    : typeof pump1Status === "string" && pump1Status.toLowerCase() === "running"
+                    : typeof pump1Status === "string" &&
+                    (pump1Status.toLowerCase() === "running" ||
+                        pump1Status.toLowerCase() === "on" ||
+                        pump1Status.toLowerCase() === "true")
 
             results.push({
                 name: "Pump 1 Status",
-                value: typeof pump1Status === "boolean" ? (pump1Status ? "Running" : "Off") : pump1Status,
+                value: typeof pump1Status === "boolean"
+                    ? (pump1Status ? "Running" : "Off")
+                    : (typeof pump1Status === "string" && pump1Status.toLowerCase() === "on")
+                        ? "Running"
+                        : pump1Status,
                 unit: "",
                 icon: <Settings className={`h-4 w-4 ${isRunning ? "animate-spin text-blue-500" : "text-gray-500"}`} />,
                 className: isRunning ? "text-green-500 font-medium drop-shadow-sm" : "",
@@ -1345,11 +1860,18 @@ export function LocationDetails({ id }: LocationDetailsProps) {
             const isRunning =
                 typeof pump2Status === "boolean"
                     ? pump2Status
-                    : typeof pump2Status === "string" && pump2Status.toLowerCase() === "running"
+                    : typeof pump2Status === "string" &&
+                    (pump2Status.toLowerCase() === "running" ||
+                        pump2Status.toLowerCase() === "on" ||
+                        pump2Status.toLowerCase() === "true")
 
             results.push({
                 name: "Pump 2 Status",
-                value: typeof pump2Status === "boolean" ? (pump2Status ? "Running" : "Off") : pump2Status,
+                value: typeof pump2Status === "boolean"
+                    ? (pump2Status ? "Running" : "Off")
+                    : (typeof pump2Status === "string" && pump2Status.toLowerCase() === "on")
+                        ? "Running"
+                        : pump2Status,
                 unit: "",
                 icon: <Settings className={`h-4 w-4 ${isRunning ? "animate-spin text-blue-500" : "text-gray-500"}`} />,
                 className: isRunning ? "text-green-500 font-medium drop-shadow-sm" : "",
@@ -1358,7 +1880,15 @@ export function LocationDetails({ id }: LocationDetailsProps) {
 
         // Look for generic pump metrics if specific ones aren't found
         if (!pump1Amps && !pump2Amps) {
-            const pumpAmps = findMetric(["PumpAmps", "Pump Amps", "Pump_Amps", "HWPumpAmps", "HW Pump Amps"])
+            const pumpAmps = findMetric([
+                "PumpAmps",
+                "Pump Amps",
+                "Pump_Amps",
+                "HWPumpAmps",
+                "HW Pump Amps",
+                "CWPumpAmps",
+                "CW Pump Amps"
+            ])
 
             if (pumpAmps !== undefined) {
                 // Determine color based on amp value
@@ -1386,19 +1916,32 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                 "Pump_Status",
                 "HWPumpStatus",
                 "HW Pump Status",
+                "CWPumpStatus",
+                "CW Pump Status",
                 "PumpRunning",
                 "Pump Running",
+                "CWPumpRunning",
+                "CW Pump Running",
+                "HWPumpRunning",
+                "HW Pump Running"
             ])
 
             if (pumpStatus !== undefined) {
                 const isRunning =
                     typeof pumpStatus === "boolean"
                         ? pumpStatus
-                        : typeof pumpStatus === "string" && pumpStatus.toLowerCase() === "running"
+                        : typeof pumpStatus === "string" &&
+                        (pumpStatus.toLowerCase() === "running" ||
+                            pumpStatus.toLowerCase() === "on" ||
+                            pumpStatus.toLowerCase() === "true")
 
                 results.push({
                     name: "Pump Status",
-                    value: typeof pumpStatus === "boolean" ? (pumpStatus ? "Running" : "Off") : pumpStatus,
+                    value: typeof pumpStatus === "boolean"
+                        ? (pumpStatus ? "Running" : "Off")
+                        : (typeof pumpStatus === "string" && pumpStatus.toLowerCase() === "on")
+                            ? "Running"
+                            : pumpStatus,
                     unit: "",
                     icon: <Settings className={`h-4 w-4 ${isRunning ? "animate-spin text-blue-500" : "text-gray-500"}`} />,
                     className: isRunning ? "text-green-500 font-medium drop-shadow-sm" : "",
@@ -2020,87 +2563,89 @@ export function LocationDetails({ id }: LocationDetailsProps) {
                         </div>
                     ) : (
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {equipment.map((item) => {
-                                const rtData = getEquipmentRealtimeData(item.id) || getEquipmentRealtimeData(item.name)
-                                const keyMetrics = getKeyMetrics(item)
-                                const status = getEquipmentStatus(item)
+                            {equipment
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((item) => {
+                                    const rtData = getEquipmentRealtimeData(item.id) || getEquipmentRealtimeData(item.name)
+                                    const keyMetrics = getKeyMetrics(item)
+                                    const status = getEquipmentStatus(item)
 
-                                return (
-                                    <Card
-                                        key={item.id}
-                                        className="hover:bg-muted/50 cursor-pointer transition-colors"
-                                        onClick={() => {
-                                            // Navigate to the equipment details page
-                                            router.push(`/dashboard/equipment-details?locationId=${id}&equipmentId=${item.id}`)
-                                        }}
-                                    >
-                                        <CardHeader className="p-4 pb-2">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <CardTitle className="text-base">{item.name}</CardTitle>
-                                                    {/* Show zone from equipment data if available */}
-                                                    {item.zone && (
-                                                        <span className="inline-block px-2 py-0.5 text-sm rounded-full bg-[#e6f3f1] text-black my-1 mr-1">
-                                                            {item.zone}
-                                                        </span>
-                                                    )}
-                                                    {/* Show alias from realtime data if available */}
-                                                    {rtData && rtData.alias && (
-                                                        <span className="inline-block px-2 py-0.5 text-sm rounded-full bg-[#e6f3f1] text-black my-1">
-                                                            {rtData.alias}
-                                                        </span>
-                                                    )}
-                                                    <CardDescription>{item.type}</CardDescription>
+                                    return (
+                                        <Card
+                                            key={item.id}
+                                            className="hover:bg-muted/50 cursor-pointer transition-colors"
+                                            onClick={() => {
+                                                // Navigate to the equipment details page
+                                                router.push(`/dashboard/equipment-details?locationId=${id}&equipmentId=${item.id}`)
+                                            }}
+                                        >
+                                            <CardHeader className="p-4 pb-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <CardTitle className="text-base">{item.name}</CardTitle>
+                                                        {/* Show zone from equipment data if available */}
+                                                        {item.zone && (
+                                                            <span className="inline-block px-2 py-0.5 text-sm rounded-full bg-[#e6f3f1] text-black my-1 mr-1">
+                                                                {item.zone}
+                                                            </span>
+                                                        )}
+                                                        {/* Show alias from realtime data if available */}
+                                                        {rtData && rtData.alias && (
+                                                            <span className="inline-block px-2 py-0.5 text-sm rounded-full bg-[#e6f3f1] text-black my-1">
+                                                                {rtData.alias}
+                                                            </span>
+                                                        )}
+                                                        <CardDescription>{item.type}</CardDescription>
+                                                    </div>
+                                                    <Badge variant={status.variant}>{status.label}</Badge>
                                                 </div>
-                                                <Badge variant={status.variant}>{status.label}</Badge>
-                                            </div>
-                                        </CardHeader>
+                                            </CardHeader>
 
-                                        <CardContent className="p-4 pt-0">
-                                            {rtData && (
-                                                <div className="grid grid-cols-1 gap-2 mt-2">
-                                                    {keyMetrics.length > 0 ? (
-                                                        <div className="grid grid-cols-1 gap-1">
-                                                            {keyMetrics.map((metric, index) => (
-                                                                <div key={index} className="flex items-center space-x-1">
-                                                                    {metric.icon}
-                                                                    <span className={`text-sm font-medium ${metric.className || ""}`}>
-                                                                        {metric.name}:{" "}
-                                                                        {metric.value !== undefined ? `${metric.value}${metric.unit}` : "N/A"}
-                                                                    </span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-xs text-muted-foreground">No metrics available</div>
-                                                    )}
-                                                    {rtData.dateTime && (
-                                                        <div className="flex items-center space-x-1 text-muted-foreground mt-1">
-                                                            <Clock className="h-3 w-3" />
-                                                            <span className="text-xs">{formatDate(rtData.dateTime)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                            {rtData && rtData.alerts && rtData.alerts.length > 0 && (
-                                                <div className="mt-2 p-2 bg-red-50 rounded-md border border-red-200">
-                                                    <p className="text-xs font-medium text-red-700 flex items-center">
-                                                        <AlertTriangle className="h-3 w-3 mr-1" />
-                                                        {rtData.alerts.length} Alert{rtData.alerts.length > 1 ? "s" : ""}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </CardContent>
+                                            <CardContent className="p-4 pt-0">
+                                                {rtData && (
+                                                    <div className="grid grid-cols-1 gap-2 mt-2">
+                                                        {keyMetrics.length > 0 ? (
+                                                            <div className="grid grid-cols-1 gap-1">
+                                                                {keyMetrics.map((metric, index) => (
+                                                                    <div key={index} className="flex items-center space-x-1">
+                                                                        {metric.icon}
+                                                                        <span className={`text-sm font-medium ${metric.className || ""}`}>
+                                                                            {metric.name}:{" "}
+                                                                            {metric.value !== undefined ? `${metric.value}${metric.unit}` : "N/A"}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-xs text-muted-foreground">No metrics available</div>
+                                                        )}
+                                                        {rtData.dateTime && (
+                                                            <div className="flex items-center space-x-1 text-muted-foreground mt-1">
+                                                                <Clock className="h-3 w-3" />
+                                                                <span className="text-xs">{formatDate(rtData.dateTime)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {rtData && rtData.alerts && rtData.alerts.length > 0 && (
+                                                    <div className="mt-2 p-2 bg-red-50 rounded-md border border-red-200">
+                                                        <p className="text-xs font-medium text-red-700 flex items-center">
+                                                            <AlertTriangle className="h-3 w-3 mr-1" />
+                                                            {rtData.alerts.length} Alert{rtData.alerts.length > 1 ? "s" : ""}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </CardContent>
 
-                                        <CardFooter className="p-2 pt-0 flex justify-end">
-                                            <Button variant="ghost" size="sm" className="text-xs h-7 px-2">
-                                                <ExternalLink className="h-3 w-3 mr-1" />
-                                                View Details
-                                            </Button>
-                                        </CardFooter>
-                                    </Card>
-                                )
-                            })}
+                                            <CardFooter className="p-2 pt-0 flex justify-end">
+                                                <Button variant="ghost" size="sm" className="text-xs h-7 px-2">
+                                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                                    View Details
+                                                </Button>
+                                            </CardFooter>
+                                        </Card>
+                                    )
+                                })}
                         </div>
                     )}
                 </CardContent>

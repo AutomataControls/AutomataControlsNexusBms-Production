@@ -4,7 +4,70 @@ import { collection, getDocs, doc, getDoc, updateDoc, setDoc } from "firebase/fi
 import { getApps, initializeApp } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
 import { pidControllerImproved } from "@/lib/pid-controller"
-import { getControlFunction } from "@/lib/equipment-logic"
+
+// Import base implementations
+import { fanCoilControl as fanCoilControlBase } from "@/lib/equipment-logic/base/fan-coil";
+import { boilerControl as boilerControlBase } from "@/lib/equipment-logic/base/boiler";
+import { pumpControl as pumpControlBase } from "@/lib/equipment-logic/base/pumps";
+import { chillerControl as chillerControlBase } from "@/lib/equipment-logic/base/chiller";
+import { airHandlerControl as airHandlerControlBase } from "@/lib/equipment-logic/base/air-handler";
+import { steamBundleControl as steamBundleControlBase } from "@/lib/equipment-logic/base/steam-bundle";
+
+// Import location-specific implementations
+// Warren (ID: 1)
+import { fanCoilControl as fanCoilControlWarren } from "@/lib/equipment-logic/locations/warren/fan-coil";
+import { pumpControl as pumpControlWarren } from "@/lib/equipment-logic/locations/warren/pumps";
+import { airHandlerControl as airHandlerControlWarren } from "@/lib/equipment-logic/locations/warren/air-handler";
+import { steamBundleControl as steamBundleControlWarren } from "@/lib/equipment-logic/locations/warren/steam-bundle";
+
+// Hopebridge (ID: 5)
+import { boilerControl as boilerControlHopebridge } from "@/lib/equipment-logic/locations/hopebridge/boiler";
+import { airHandlerControl as airHandlerControlHopebridge } from "@/lib/equipment-logic/locations/hopebridge/air-handler";
+
+// Huntington (ID: 4)
+import { fanCoilControl as fanCoilControlHuntington } from "@/lib/equipment-logic/locations/huntington/fan-coil";
+import { boilerControl as boilerControlHuntington } from "@/lib/equipment-logic/locations/huntington/boiler";
+import { pumpControl as pumpControlHuntington } from "@/lib/equipment-logic/locations/huntington/pumps";
+import { chillerControl as chillerControlHuntington } from "@/lib/equipment-logic/locations/huntington/chiller";
+
+//FirstChurchofGod (ID: 9)
+import { airHandlerControl as airHandlerControlFirstChurch } from "@/lib/equipment-logic/locations/firstchurchofgod/air-handler";
+
+// Critical commands that should ALWAYS be sent for each equipment type
+const CRITICAL_COMMANDS_BY_TYPE = {
+  // All equipment types
+  "all": ["unitEnable", "isOccupied"],
+  
+  // Air handlers
+  "air-handler": ["fanEnabled", "fanSpeed", "heatingValvePosition", "coolingValvePosition", 
+                  "outdoorDamperPosition", "supplyAirTempSetpoint", "fanVFDSpeed"],
+  
+  // Fan coils
+  "fan-coil": ["fanEnabled", "fanSpeed", "heatingValvePosition", "coolingValvePosition", 
+               "temperatureSetpoint"],
+  
+  // Boilers
+  "boiler": ["firingRate", "waterTempSetpoint", "boilerEnabled", "pumpEnabled"],
+  
+  // Pumps
+  "pump": ["pumpEnabled", "pumpSpeed", "leadLagStatus"],
+  "hwpump": ["pumpEnabled", "pumpSpeed", "leadLagStatus"],
+  "cwpump": ["pumpEnabled", "pumpSpeed", "leadLagStatus"],
+  
+  // Chillers
+  "chiller": ["chillerEnabled", "capacityControl", "setpoint", "leadLagStatus"],
+  
+  // Steam bundles
+  "steam-bundle": ["valvePosition", "steamPressure"]
+};
+
+// Location-specific critical commands
+const CRITICAL_COMMANDS_BY_LOCATION = {
+  "9": ["unitEnable", "fanEnabled", "fanSpeed", "outdoorDamperPosition"], // FirstChurchOfGod
+  "4": ["unitEnable", "temperatureSetpoint"], // Huntington
+  "5": ["unitEnable", "coolingValvePosition", "dxEnabled"], // Hopebridge
+  "1": ["unitEnable", "heatingValvePosition"] // Warren
+};
 
 // Enhanced logging function for equipment-specific debugging
 function logEquipment(equipmentId: string, message: string, data?: any) {
@@ -32,31 +95,31 @@ async function fetchControlValueWithFallback(table: string, equipmentId: string,
     // Use a 5-minute window to get the most recent data
     const query = `
       SELECT *
-      FROM "${table}" 
+      FROM "${table}"
       WHERE "equipment_id" = '${equipmentId}'
       AND "location_id" = '${locationId}'
       AND time >= now() - INTERVAL '5 minutes'
       ORDER BY time DESC
       LIMIT 1
     `;
-    
+
     const result = await queryInfluxDB(query);
-    
+
     if (!result.success || !result.data || !Array.isArray(result.data) || result.data.length === 0) {
       // Try with a wider timeframe if no data found
       const fallbackQuery = `
         SELECT *
-        FROM "${table}" 
+        FROM "${table}"
         WHERE "equipment_id" = '${equipmentId}'
         AND "location_id" = '${locationId}'
         AND time >= now() - INTERVAL '60 minutes'
         ORDER BY time DESC
         LIMIT 1
       `;
-      
+
       return await queryInfluxDB(fallbackQuery);
     }
-    
+
     return result;
   } catch (error) {
     console.error(`Error in fetchControlValueWithFallback for ${table}:`, error);
@@ -143,7 +206,7 @@ async function queryInfluxDB(query: string, options: any = {}) {
   const retryDelay = options.retryDelay || 1000; // 1 second
 
   // Log the query for debugging
-  console.log(`InfluxDB Query: ${query.substring(0, 200)}${query.length > 200 ? '...' : ''}`);
+//  console.log(`InfluxDB Query: ${query.substring(0, 200)}${query.length > 200 ? '...' : ''}`);
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -214,11 +277,14 @@ async function queryInfluxDB(query: string, options: any = {}) {
 
 /**
  * Enhanced standardizeMetrics function with zone-specific temperature detection
+ * FIXED: Added space temperature variants to roomTemperature mapping
  */
 function standardizeMetrics(rawMetrics: any) {
   // Define standard field names and their possible source fields
   const standardFields: Record<string, string[]> = {
     roomTemperature: [
+      // FIXED: Added space temperature variants at the beginning of the array
+      'Space', 'SpaceTemp', 'spaceTemp', 'SpaceTemperature', 'spaceTemperature',
       'roomTemperature', 'roomTemp', 'Room', 'room', 'RoomTemp',
       'room_temperature', 'room_temp', 'ZoneTemp', 'zoneTemp',
       'zone_temperature', 'zone_temp'
@@ -248,18 +314,18 @@ function standardizeMetrics(rawMetrics: any) {
       'temperature_setpoint', 'TempSetpoint', 'temp_setpoint'
     ],
     waterSupplyTemperature: [
-      'waterSupplyTemperature', 'waterSupplyTemp', 'H2OSupply', 'H2O Supply',
-      'water_supply_temperature', 'water_supply_temp', 'H2O_Supply',
+      'waterSupplyTemperature', 'waterSupplyTemp', 'H20Supply', 'H20 Supply',
+      'water_supply_temperature', 'water_supply_temp', 'H20_Supply',
       'WaterSupply', 'waterSupply', 'BoilerSupply', 'boilerSupply'
     ],
     waterReturnTemperature: [
-      'waterReturnTemperature', 'waterReturnTemp', 'H2OReturn', 'H2O Return',
-      'water_return_temperature', 'water_return_temp', 'H2O_Return',
+      'waterReturnTemperature', 'waterReturnTemp', 'H20Return', 'H20 Return',
+      'water_return_temperature', 'water_return_temp', 'H20_Return',
       'WaterReturn', 'waterReturn', 'BoilerReturn', 'boilerReturn'
     ],
     mixedAirTemperature: [
       'mixedAirTemperature', 'mixedAirTemp', 'Mixed_Air', 'MixedAir', 'mixed_air',
-      'mixedAir', 'Mixed', 'mixed', 'MixedTemp', 'mixed_temp'
+      'mixedAir', 'Mixed', 'mixed', 'MixedTemp', 'mixed_temp', 'MixedAirTemp'
     ]
   };
 
@@ -473,7 +539,7 @@ async function fetchMetricsFromInfluxDB(locationId: string, equipmentId: string,
 async function fetchControlValuesFromInfluxDB(locationId: string, equipmentId: string) {
   try {
     logEquipment(equipmentId, `Fetching control values from InfluxDB`);
-    
+
     // Use a cached list of tables if available (static variable shared between calls)
     if (!fetchControlValuesFromInfluxDB.tableCache) {
       // First get all tables that contain control values
@@ -494,35 +560,35 @@ async function fetchControlValuesFromInfluxDB(locationId: string, equipmentId: s
       fetchControlValuesFromInfluxDB.tableCache = tablesResult.data.map((row: any) => row.table_name);
       logEquipment(equipmentId, `Cached ${fetchControlValuesFromInfluxDB.tableCache.length} control tables`);
     }
-    
+
     // Initialize control values
     const controlValues: Record<string, any> = {};
-    
+
     // Get tables from cache
     const tables = fetchControlValuesFromInfluxDB.tableCache;
-    
+
     // Since UNION ALL doesn't work well with mixed data types (boolean/float/string),
     // we'll use individual queries for each table, but process them in parallel for better performance
     const promises = tables.map(async (table) => {
       try {
         const controlType = table.replace('update_', '');
-        
+
         // Use a 5-minute window first for the most recent data
         const query = `
           SELECT *
-          FROM "${table}" 
+          FROM "${table}"
           WHERE "equipment_id" = '${equipmentId}'
           AND "location_id" = '${locationId}'
           AND time >= now() - INTERVAL '5 minutes'
           ORDER BY time DESC
           LIMIT 1
         `;
-        
+
         const result = await queryInfluxDB(query);
-        
+
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           let value = result.data[0].value;
-          
+
           // Convert value types
           if (typeof value === 'string') {
             if (value === 'true' || value === 'false') {
@@ -537,25 +603,25 @@ async function fetchControlValuesFromInfluxDB(locationId: string, equipmentId: s
               }
             }
           }
-          
+
           return { controlType, value };
         } else {
           // Try with a wider timeframe if no data found
           const fallbackQuery = `
             SELECT *
-            FROM "${table}" 
+            FROM "${table}"
             WHERE "equipment_id" = '${equipmentId}'
             AND "location_id" = '${locationId}'
             AND time >= now() - INTERVAL '60 minutes'
             ORDER BY time DESC
             LIMIT 1
           `;
-          
+
           const fallbackResult = await queryInfluxDB(fallbackQuery);
-          
+
           if (fallbackResult.success && Array.isArray(fallbackResult.data) && fallbackResult.data.length > 0) {
             let value = fallbackResult.data[0].value;
-            
+
             // Convert value types
             if (typeof value === 'string') {
               if (value === 'true' || value === 'false') {
@@ -570,21 +636,21 @@ async function fetchControlValuesFromInfluxDB(locationId: string, equipmentId: s
                 }
               }
             }
-            
+
             return { controlType, value };
           }
         }
-        
+
         return null;
       } catch (error) {
         console.error(`Error fetching control value for ${table}:`, error);
         return null;
       }
     });
-    
+
     // Wait for all promises to resolve
     const results = await Promise.all(promises);
-    
+
     // Process results
     for (const result of results) {
       if (result && result.controlType && result.value !== undefined) {
@@ -604,7 +670,7 @@ async function fetchControlValuesFromInfluxDB(locationId: string, equipmentId: s
           ORDER BY time DESC
           LIMIT 1
         `;
-        
+
         const setpointResult = await queryInfluxDB(setpointQuery);
 
         if (setpointResult.success && Array.isArray(setpointResult.data) && setpointResult.data.length > 0 &&
@@ -620,9 +686,9 @@ async function fetchControlValuesFromInfluxDB(locationId: string, equipmentId: s
             ORDER BY time DESC
             LIMIT 1
           `;
-          
+
           const fallbackResult = await queryInfluxDB(fallbackQuery);
-          
+
           if (fallbackResult.success && Array.isArray(fallbackResult.data) && fallbackResult.data.length > 0 &&
               fallbackResult.data[0].Setpoint !== undefined) {
             controlValues.temperatureSetpoint = Number(fallbackResult.data[0].Setpoint);
@@ -704,6 +770,20 @@ async function sendControlCommand(command: string, commandData: any) {
   }
 }
 
+/**
+ * Helper function to get the base implementation for a given equipment type
+ */
+function getBaseImplementation(normalizedType: string) {
+  console.log(`Using base implementation for ${normalizedType}`);
+  if (normalizedType === "fan-coil") return fanCoilControlBase;
+  if (normalizedType === "boiler") return boilerControlBase;
+  if (normalizedType === "pump" || normalizedType === "hwpump" || normalizedType === "cwpump") return pumpControlBase;
+  if (normalizedType === "chiller") return chillerControlBase;
+  if (normalizedType === "air-handler") return airHandlerControlBase;
+  if (normalizedType === "steam-bundle") return steamBundleControlBase;
+  return null;
+}
+
 // Get equipment with custom logic enabled - OPTIMIZED: Uses caching and efficient query
 export async function getEquipmentWithCustomLogic() {
   try {
@@ -712,8 +792,8 @@ export async function getEquipmentWithCustomLogic() {
     }
 
     // Use cache with 30 second TTL to avoid frequent queries
-    if (!getEquipmentWithCustomLogic.cache || 
-        !getEquipmentWithCustomLogic.cacheTime || 
+    if (!getEquipmentWithCustomLogic.cache ||
+        !getEquipmentWithCustomLogic.cacheTime ||
         (Date.now() - getEquipmentWithCustomLogic.cacheTime) > 30000) {
 
       // First try to get equipment with CustomLogicEnabled from InfluxDB - ONLY LAST 30 MINUTES
@@ -751,7 +831,7 @@ export async function getEquipmentWithCustomLogic() {
             // Process in batches to avoid too many concurrent Firestore reads
             const idArray = Array.from(equipmentIds);
             const batchSize = 10;
-            
+
             for (let i = 0; i < idArray.length; i += batchSize) {
               const idBatch = idArray.slice(i, i + batchSize);
               const batchPromises = idBatch.map(async (id) => {
@@ -816,18 +896,18 @@ export async function getEquipmentWithCustomLogic() {
                   };
                 }
               });
-              
+
               // Wait for this batch to complete and add to the list
               const batchResults = await Promise.all(batchPromises);
               equipmentList.push(...batchResults);
             }
 
             console.log(`FOUND ${equipmentList.length} EQUIPMENT WITH CUSTOM LOGIC ENABLED`);
-            
+
             // Update cache
             getEquipmentWithCustomLogic.cache = equipmentList;
             getEquipmentWithCustomLogic.cacheTime = Date.now();
-            
+
             return equipmentList;
           }
         }
@@ -857,11 +937,11 @@ export async function getEquipmentWithCustomLogic() {
       });
 
       console.log(`FOUND ${equipmentList.length} EQUIPMENT WITH CUSTOM LOGIC ENABLED IN FIRESTORE`);
-      
+
       // Update cache
       getEquipmentWithCustomLogic.cache = equipmentList;
       getEquipmentWithCustomLogic.cacheTime = Date.now();
-      
+
       return equipmentList;
     } else {
       // Return cached result
@@ -1162,15 +1242,58 @@ export async function runEquipmentLogic(equipmentId: string) {
       currentTemp = standardizedMetrics.supplyTemperature || metrics.Supply || 55;
       logEquipment(equipmentId, `Using supply temperature: ${currentTemp}°F`);
     } else {
-      // Use room temperature
+      // Use room temperature - FIXED: Now properly mapped from Space fields
       currentTemp = standardizedMetrics.roomTemperature || metrics.Room || 72;
       logEquipment(equipmentId, `Using room temperature: ${currentTemp}°F`);
     }
 
     // STEP 9: Evaluate custom logic for this equipment type
-    logEquipment(equipmentId, `Evaluating custom logic for equipment type: ${equipmentType}`);
+    logEquipment(equipmentId, `Evaluating custom logic for equipment type: ${equipmentType}, location: ${locationId}`);
 
-    const controlFunction = getControlFunction(equipmentType);
+    // Normalize the equipment type for lookup
+    const normalizedType = equipmentType.toLowerCase().replace(/[^a-z0-9]/g, "-");
+
+    // Select the appropriate control function based on location and equipment type
+    let controlFunction;
+
+    // Huntington (ID: 4)
+    if (locationId === "4") {
+      logEquipment(equipmentId, `Using Huntington-specific implementation for ${normalizedType}`);
+      if (normalizedType === "fan-coil") controlFunction = fanCoilControlHuntington;
+      else if (normalizedType === "boiler") controlFunction = boilerControlHuntington;
+      else if (normalizedType === "pump" || normalizedType === "hwpump" || normalizedType === "cwpump")
+        controlFunction = pumpControlHuntington;
+      else if (normalizedType === "chiller") controlFunction = chillerControlHuntington;
+      else controlFunction = getBaseImplementation(normalizedType);
+    }
+    // Warren (ID: 1)
+    else if (locationId === "1") {
+      logEquipment(equipmentId, `Using Warren-specific implementation for ${normalizedType}`);
+      if (normalizedType === "fan-coil") controlFunction = fanCoilControlWarren;
+      else if (normalizedType === "pump" || normalizedType === "hwpump" || normalizedType === "cwpump")
+        controlFunction = pumpControlWarren;
+      else if (normalizedType === "air-handler") controlFunction = airHandlerControlWarren;
+      else if (normalizedType === "steam-bundle") controlFunction = steamBundleControlWarren;
+      else controlFunction = getBaseImplementation(normalizedType);
+    }
+    // Hopebridge (ID: 5)
+    else if (locationId === "5") {
+      logEquipment(equipmentId, `Using Hopebridge-specific implementation for ${normalizedType}`);
+      if (normalizedType === "boiler") controlFunction = boilerControlHopebridge;
+      else if (normalizedType === "air-handler") controlFunction = airHandlerControlHopebridge;
+      else controlFunction = getBaseImplementation(normalizedType);
+    }
+    // FirstChurchofGod (ID: 9)
+    else if (locationId === "9") {
+      logEquipment(equipmentId, `Using FirstChurchofGod-specific implementation for ${normalizedType}`);
+      if (normalizedType === "air-handler") controlFunction = airHandlerControlFirstChurch;
+      else controlFunction = getBaseImplementation(normalizedType);
+    }
+    // Fall back to base implementation
+    else {
+      controlFunction = getBaseImplementation(normalizedType);
+    }
+
     if (!controlFunction) {
       return {
         success: false,
@@ -1222,10 +1345,16 @@ export async function runEquipmentLogic(equipmentId: string) {
     if (result && typeof result === "object") {
       logEquipment(equipmentId, `Logic evaluation result:`, result);
 
+      // Get critical commands for this equipment type
+      const allCriticalCommands = CRITICAL_COMMANDS_BY_TYPE["all"] || [];
+      const typeCriticalCommands = CRITICAL_COMMANDS_BY_TYPE[normalizedType] || [];
+      const locationCriticalCommands = CRITICAL_COMMANDS_BY_LOCATION[locationId] || [];
+      const criticalCommands = [...allCriticalCommands, ...typeCriticalCommands, ...locationCriticalCommands];
+
       // Validate each control value before sending
       for (const [key, value] of Object.entries(result)) {
-        // Skip if value hasn't changed
-        if (controlValues[key] === value) {
+        // Only skip if value hasn't changed AND it's not a critical command
+        if (controlValues[key] === value && !criticalCommands.includes(key)) {
           continue;
         }
 
@@ -1370,7 +1499,7 @@ export async function runAllEquipmentLogic() {
   try {
     // Get start time to measure overall performance
     const startTime = Date.now();
-    
+
     // Get the equipment list with custom logic enabled (uses caching internally)
     const equipmentList = await getEquipmentWithCustomLogic();
     console.log(`Found ${equipmentList.length} equipment with custom logic enabled`);
@@ -1384,111 +1513,111 @@ export async function runAllEquipmentLogic() {
     }));
 
     // Clear existing queue
-    queue.items.length = 0;
+   queue.items.length = 0;
 
-    // Prioritize equipment processing:
-    // 1. Process boilers and lead equipment first (they control other equipment)
-    // 2. Process fan coils and other equipment after
-    
-    // Create prioritized list
-    const prioritizedEquipment = [...equipmentList].sort((a, b) => {
-      // First priority: Boilers
-      if ((a.type || '').toLowerCase().includes('boiler') && !(b.type || '').toLowerCase().includes('boiler')) {
-        return -1;
-      }
-      if (!(a.type || '').toLowerCase().includes('boiler') && (b.type || '').toLowerCase().includes('boiler')) {
-        return 1;
-      }
-      
-      // Second priority: Lead equipment (isLead === 1 or isLead === true)
-      const aIsLead = a.controls?.isLead === 1 || a.controls?.isLead === true;
-      const bIsLead = b.controls?.isLead === 1 || b.controls?.isLead === true;
-      
-      if (aIsLead && !bIsLead) {
-        return -1;
-      }
-      if (!aIsLead && bIsLead) {
-        return 1;
-      }
-      
-      return 0;
-    });
-    
-    // Process first few equipment immediately and in parallel (limited batch), and queue the rest
-    const initialBatchSize = 3; // Process the 3 highest priority equipment immediately
-    const initialBatch = prioritizedEquipment.slice(0, Math.min(initialBatchSize, prioritizedEquipment.length));
-    
-    if (initialBatch.length > 0) {
-      try {
-        console.log(`Processing initial batch of ${initialBatch.length} equipment immediately`);
-        
-        // Create promises for initial batch
-        const initialPromises = initialBatch.map(async (equipment) => {
-          try {
-            console.log(`Processing high-priority equipment: ${equipment.id}`);
-            const result = await runEquipmentLogic(equipment.id);
-            // Update results for this equipment
-            const index = results.findIndex(r => r.equipmentId === equipment.id);
-            if (index >= 0) {
-              results[index] = result;
-            }
-            return result;
-          } catch (error) {
-            console.error(`Error running logic for equipment ${equipment.id}:`, error);
-            return {
-              equipmentId: equipment.id,
-              name: equipment.name || "Unknown",
-              success: false,
-              error: String(error),
-              timestamp: Date.now(),
-            };
-          }
-        });
-        
-        // Wait for all initial equipment to be processed
-        await Promise.all(initialPromises);
-      } catch (error) {
-        console.error(`Error processing initial equipment batch:`, error);
-      }
+   // Prioritize equipment processing:
+   // 1. Process boilers and lead equipment first (they control other equipment)
+   // 2. Process fan coils and other equipment after
 
-      // Queue the rest for sequential processing
-      if (prioritizedEquipment.length > initialBatchSize) {
-        console.log(`Queueing ${prioritizedEquipment.length - initialBatchSize} additional equipment for sequential processing`);
-        for (let i = initialBatchSize; i < prioritizedEquipment.length; i++) {
-          queueEquipmentLogic(prioritizedEquipment[i].id);
-        }
-      }
-    }
-    
-    // Calculate total time and expected completion time
-    const initialBatchTime = Date.now() - startTime;
-    const avgTimePerEquipment = initialBatch.length > 0 ? initialBatchTime / initialBatch.length : 2000; // default 2s if no data
-    const expectedRemainingTime = avgTimePerEquipment * (equipmentList.length - initialBatchSize);
-    
-    console.log(`Initial batch processed in ${initialBatchTime}ms, avg ${Math.round(avgTimePerEquipment)}ms per equipment`);
-    console.log(`Expected completion time for remaining equipment: ~${Math.round(expectedRemainingTime / 1000)}s`);
+   // Create prioritized list
+   const prioritizedEquipment = [...equipmentList].sort((a, b) => {
+     // First priority: Boilers
+     if ((a.type || '').toLowerCase().includes('boiler') && !(b.type || '').toLowerCase().includes('boiler')) {
+       return -1;
+     }
+     if (!(a.type || '').toLowerCase().includes('boiler') && (b.type || '').toLowerCase().includes('boiler')) {
+       return 1;
+     }
 
-    // Return results for the initial batch immediately, the rest will process in the background
-    return {
-      success: true,
-      message: `Server logic execution completed for ${initialBatch.length} equipment, ${equipmentList.length - initialBatch.length} more queued for processing`,
-      results,
-      queuedCount: equipmentList.length - initialBatch.length,
-      timestamp: Date.now(),
-      stats: {
-        initialBatchTime,
-        avgTimePerEquipment: Math.round(avgTimePerEquipment),
-        expectedRemainingTime: Math.round(expectedRemainingTime),
-        totalEquipment: equipmentList.length
-      }
-    };
-  } catch (error) {
-    console.error("Error running logic for all equipment:", error);
-    return {
-      success: false,
-      message: String(error),
-      results: [],
-      timestamp: Date.now(),
-    };
-  }
+     // Second priority: Lead equipment (isLead === 1 or isLead === true)
+     const aIsLead = a.controls?.isLead === 1 || a.controls?.isLead === true;
+     const bIsLead = b.controls?.isLead === 1 || b.controls?.isLead === true;
+
+     if (aIsLead && !bIsLead) {
+       return -1;
+     }
+     if (!aIsLead && bIsLead) {
+       return 1;
+     }
+
+     return 0;
+   });
+
+   // Process first few equipment immediately and in parallel (limited batch), and queue the rest
+   const initialBatchSize = 3; // Process the 3 highest priority equipment immediately
+   const initialBatch = prioritizedEquipment.slice(0, Math.min(initialBatchSize, prioritizedEquipment.length));
+
+   if (initialBatch.length > 0) {
+     try {
+       console.log(`Processing initial batch of ${initialBatch.length} equipment immediately`);
+
+       // Create promises for initial batch
+       const initialPromises = initialBatch.map(async (equipment) => {
+         try {
+           console.log(`Processing high-priority equipment: ${equipment.id}`);
+           const result = await runEquipmentLogic(equipment.id);
+           // Update results for this equipment
+           const index = results.findIndex(r => r.equipmentId === equipment.id);
+           if (index >= 0) {
+             results[index] = result;
+           }
+           return result;
+         } catch (error) {
+           console.error(`Error running logic for equipment ${equipment.id}:`, error);
+           return {
+             equipmentId: equipment.id,
+             name: equipment.name || "Unknown",
+             success: false,
+             error: String(error),
+             timestamp: Date.now(),
+           };
+         }
+       });
+
+       // Wait for all initial equipment to be processed
+       await Promise.all(initialPromises);
+     } catch (error) {
+       console.error(`Error processing initial equipment batch:`, error);
+     }
+
+     // Queue the rest for sequential processing
+     if (prioritizedEquipment.length > initialBatchSize) {
+       console.log(`Queueing ${prioritizedEquipment.length - initialBatchSize} additional equipment for sequential processing`);
+       for (let i = initialBatchSize; i < prioritizedEquipment.length; i++) {
+         queueEquipmentLogic(prioritizedEquipment[i].id);
+       }
+     }
+   }
+
+   // Calculate total time and expected completion time
+   const initialBatchTime = Date.now() - startTime;
+   const avgTimePerEquipment = initialBatch.length > 0 ? initialBatchTime / initialBatch.length : 2000; // default 2s if no data
+   const expectedRemainingTime = avgTimePerEquipment * (equipmentList.length - initialBatchSize);
+
+   console.log(`Initial batch processed in ${initialBatchTime}ms, avg ${Math.round(avgTimePerEquipment)}ms per equipment`);
+   console.log(`Expected completion time for remaining equipment: ~${Math.round(expectedRemainingTime / 1000)}s`);
+
+   // Return results for the initial batch immediately, the rest will process in the background
+   return {
+     success: true,
+     message: `Server logic execution completed for ${initialBatch.length} equipment, ${equipmentList.length - initialBatch.length} more queued for processing`,
+     results,
+     queuedCount: equipmentList.length - initialBatch.length,
+     timestamp: Date.now(),
+     stats: {
+       initialBatchTime,
+       avgTimePerEquipment: Math.round(avgTimePerEquipment),
+       expectedRemainingTime: Math.round(expectedRemainingTime),
+       totalEquipment: equipmentList.length
+     }
+   };
+ } catch (error) {
+   console.error("Error running logic for all equipment:", error);
+   return {
+     success: false,
+     message: String(error),
+     results: [],
+     timestamp: Date.now(),
+   };
+ }
 }

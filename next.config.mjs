@@ -37,13 +37,11 @@ const nextConfig = {
           },
         },
       };
-      
       // Enable cache busting with content hashes
       if (!dev) {
         config.output.filename = '[name].[contenthash].js';
       }
     }
-    
     return config;
   },
 }

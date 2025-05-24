@@ -76,6 +76,14 @@ export interface AirHandlerControls {
   activeHeatingStages?: number
   coolingStages?: number
   activeCoolingStages?: number
+
+  // Add this new property
+  controlMode?: "space" | "supply" // Whether the setpoint controls space temp or supply air temp
+  
+  // Add new equipment type configuration properties
+  coolingType?: "dx_single_stage" | "dx_two_stage" | "chilled_water" | "none"
+  heatingType?: "hot_water" | "none"
+  
   pidControllers?: {
     heating?: PIDSettings
     cooling?: PIDSettings

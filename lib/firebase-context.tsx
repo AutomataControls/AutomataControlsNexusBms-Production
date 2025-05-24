@@ -93,7 +93,6 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
           const savedConfig = localStorage.getItem("firebaseConfig")
           if (savedConfig) {
             localConfig = JSON.parse(savedConfig)
-            console.log("Loaded config from localStorage:", localConfig)
           }
         } catch (e) {
           console.error("Error parsing saved config:", e)

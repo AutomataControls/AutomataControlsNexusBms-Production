@@ -1,438 +1,366 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormEvent, useState } from "react"
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Fan, Thermometer, Droplet, Wind, Gauge } from "lucide-react"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { InfoIcon } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
+// Import types
+import type { AirHandlerControls } from "./types"
 
 interface AirHandlerGeneralControlsProps {
-  controls: any
-  onControlChange: (key: string, value: any) => void
+    controls: AirHandlerControls
+    onControlChange: (key: string, value: any) => void
 }
 
 export function AirHandlerGeneralControls({ controls, onControlChange }: AirHandlerGeneralControlsProps) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>General Controls</CardTitle>
-        <CardDescription>Basic control settings for the air handler unit</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="operation" className="w-full">
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger
-              value="operation"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500"
-            >
-              <Wind className="h-4 w-4 mr-2" />
-              Operation
-            </TabsTrigger>
-            <TabsTrigger value="fans" className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500">
-              <Fan className="h-4 w-4 mr-2" />
-              Fans
-            </TabsTrigger>
-            <TabsTrigger
-              value="temperature"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500"
-            >
-              <Thermometer className="h-4 w-4 mr-2" />
-              Temperature
-            </TabsTrigger>
-            <TabsTrigger
-              value="dampers"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500"
-            >
-              <Droplet className="h-4 w-4 mr-2" />
-              Dampers
-            </TabsTrigger>
-          </TabsList>
+    // Default values from provided controls or fallbacks
+    const [temperatureSetpoint, setTemperatureSetpoint] = useState<number>(controls.temperatureSetpoint || 70)
+    const [supplyAirTempSetpoint, setSupplyAirTempSetpoint] = useState<number>(controls.supplyAirTempSetpoint || 55)
+    
+    // State for controlling sliders
+    const [tempSubmitMode, setTempSubmitMode] = useState<boolean>(false)
+    const [satSubmitMode, setSatSubmitMode] = useState<boolean>(false)
 
-          {/* Operation Tab */}
-          <TabsContent value="operation" className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="unit-enable"
-                checked={controls.unitEnable}
-                onCheckedChange={(checked) => {
-                  onControlChange("unitEnable", checked)
-                }}
-                className="data-[state=checked]:bg-[#d2f4ea]"
-              />
-              <Label htmlFor="unit-enable">Enable Unit</Label>
-            </div>
+    // Temperature setpoint handler with input validation
+    const handleTemperatureSetpointChange = (value: number) => {
+        // Validate range
+        const validatedValue = Math.max(60, Math.min(80, value))
+        setTemperatureSetpoint(validatedValue)
+        
+        if (!tempSubmitMode) {
+            onControlChange("temperatureSetpoint", validatedValue)
+        }
+    }
 
-            <div className="space-y-2">
-              <Label htmlFor="operation-mode">Operation Mode</Label>
-              <Select
-                value={controls.operationMode}
-                onValueChange={(value) => {
-                  onControlChange("operationMode", value)
-                }}
-              >
-                <SelectTrigger id="operation-mode">
-                  <SelectValue placeholder="Select operation mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto</SelectItem>
-                  <SelectItem value="heating">Heating</SelectItem>
-                  <SelectItem value="cooling">Cooling</SelectItem>
-                  <SelectItem value="ventilation">Ventilation Only</SelectItem>
-                  <SelectItem value="off">Off</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+    // Submit handler for temperature when using submit mode
+    const handleTempSubmit = (e: FormEvent) => {
+        e.preventDefault()
+        onControlChange("temperatureSetpoint", temperatureSetpoint)
+    }
 
-            {controls.hasStaticPressureControl && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="static-pressure-setpoint">Static Pressure Setpoint (inWC)</Label>
-                  <span className="text-sm font-medium">{controls.staticPressureSetpoint?.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Gauge className="h-4 w-4 text-gray-500" />
-                  <Slider
-                    id="static-pressure-setpoint"
-                    min={0}
-                    max={3}
-                    step={0.1}
-                    value={[controls.staticPressureSetpoint || 1.0]}
-                    onValueChange={(value) => {
-                      onControlChange("staticPressureSetpoint", value[0])
-                    }}
-                    className="flex-1 accent-[#d2f4ea]"
-                  />
-                </div>
-              </div>
-            )}
-          </TabsContent>
+    // Supply air temperature setpoint handler with input validation
+    const handleSupplyAirTempSetpointChange = (value: number) => {
+        // Validate range
+        const validatedValue = Math.max(45, Math.min(75, value))
+        setSupplyAirTempSetpoint(validatedValue)
+        
+        if (!satSubmitMode) {
+            onControlChange("supplyAirTempSetpoint", validatedValue)
+        }
+    }
 
-          {/* Fans Tab */}
-          <TabsContent value="fans" className="space-y-4">
-            <div className="space-y-4">
-              {/* Supply Fan Controls */}
-              <div className="border p-4 rounded-md space-y-3">
-                <h4 className="font-medium">Supply Fan</h4>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="supply-fan-enable"
-                    checked={controls.supplyFanEnable}
-                    onCheckedChange={(checked) => {
-                      onControlChange("supplyFanEnable", checked)
-                    }}
-                    className="data-[state=checked]:bg-[#d2f4ea]"
-                  />
-                  <Label htmlFor="supply-fan-enable">Enable Supply Fan</Label>
-                </div>
+    // Submit handler for supply air temp when using submit mode
+    const handleSATSubmit = (e: FormEvent) => {
+        e.preventDefault()
+        onControlChange("supplyAirTempSetpoint", supplyAirTempSetpoint)
+    }
 
-                {controls.supplyFanVFD ? (
-                  <div className="space-y-2">
+    // Unit enable toggle handler
+    const handleUnitEnableChange = (checked: boolean) => {
+        onControlChange("unitEnable", checked)
+    }
+
+    // Operation mode handler
+    const handleOperationModeChange = (value: string) => {
+        onControlChange("operationMode", value)
+    }
+
+    // Control mode handler
+    const handleControlModeChange = (value: string) => {
+        onControlChange("controlMode", value)
+    }
+
+    // Equipment type handlers
+    const handleCoolingTypeChange = (value: string) => {
+        onControlChange("coolingType", value)
+    }
+
+    const handleHeatingTypeChange = (value: string) => {
+        onControlChange("heatingType", value)
+    }
+
+    // Economizer toggle handler
+    const handleEconomizerEnableChange = (checked: boolean) => {
+        onControlChange("economizerEnable", checked)
+    }
+
+    // Fan enable handler
+    const handleFanEnableChange = (checked: boolean) => {
+        onControlChange("supplyFanEnable", checked)
+    }
+
+    // Fan speed handler
+    const handleFanSpeedChange = (value: number) => {
+        const validatedValue = Math.max(0, Math.min(100, value))
+        onControlChange("supplyFanSpeed", validatedValue)
+    }
+
+    // Return the UI component
+    return (
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+            {/* Temperature Control Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center">
+                        Temperature Controls
+                        <TooltipProvider delayDuration={300}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <InfoIcon className="h-4 w-4 ml-2 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Set temperature setpoints for the space and supply air</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Temperature Setpoint (Zone/Room) */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between">
+                            <Label htmlFor="temperatureSetpoint">Zone Temperature Setpoint</Label>
+                            <span className="text-muted-foreground text-sm">{temperatureSetpoint}°F</span>
+                        </div>
+                        <form onSubmit={handleTempSubmit} className="flex space-x-2">
+                            <div className="flex-1">
+                                <Slider
+                                    id="temperatureSetpoint"
+                                    min={60}
+                                    max={80}
+                                    step={0.5}
+                                    value={[temperatureSetpoint]}
+                                    onValueChange={(values) => handleTemperatureSetpointChange(values[0])}
+                                />
+                            </div>
+                            {tempSubmitMode && (
+                                <Button type="submit" size="sm">Set</Button>
+                            )}
+                        </form>
+                    </div>
+
+                    {/* Supply Air Temperature Setpoint */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between">
+                            <Label htmlFor="supplyAirTempSetpoint">Supply Air Temperature Setpoint</Label>
+                            <span className="text-muted-foreground text-sm">{supplyAirTempSetpoint}°F</span>
+                        </div>
+                        <form onSubmit={handleSATSubmit} className="flex space-x-2">
+                            <div className="flex-1">
+                                <Slider
+                                    id="supplyAirTempSetpoint"
+                                    min={45}
+                                    max={75}
+                                    step={0.5}
+                                    value={[supplyAirTempSetpoint]}
+                                    onValueChange={(values) => handleSupplyAirTempSetpointChange(values[0])}
+                                />
+                            </div>
+                            {satSubmitMode && (
+                                <Button type="submit" size="sm">Set</Button>
+                            )}
+                        </form>
+                    </div>
+
+                    {/* Control Mode */}
+                    <div className="space-y-2">
+                        <Label htmlFor="controlMode">Control Mode</Label>
+                        <Select
+                            value={controls.controlMode || "space"}
+                            onValueChange={handleControlModeChange}
+                        >
+                            <SelectTrigger id="controlMode">
+                                <SelectValue placeholder="Select Control Mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="space">Space Temperature</SelectItem>
+                                <SelectItem value="supply">Supply Air Temperature</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* System Operation Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>System Operation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Unit Enable Switch */}
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="supply-fan-speed">Supply Fan Speed (%)</Label>
-                      <span className="text-sm font-medium">{controls.supplyFanSpeed}%</span>
+                        <Label htmlFor="unitEnable">Unit Enable</Label>
+                        <Switch
+                            id="unitEnable"
+                            checked={controls.unitEnable || false}
+                            onCheckedChange={handleUnitEnableChange}
+                        />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Fan className="h-4 w-4 text-gray-500" />
-                      <Slider
-                        id="supply-fan-speed"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={[controls.supplyFanSpeed || 0]}
-                        onValueChange={(value) => {
-                          onControlChange("supplyFanSpeed", value[0])
-                        }}
-                        className="flex-1 accent-[#d2f4ea]"
-                        disabled={!controls.supplyFanEnable}
-                      />
+
+                    {/* Operation Mode */}
+                    <div className="space-y-2">
+                        <Label htmlFor="operationMode">Operation Mode</Label>
+                        <Select
+                            value={controls.operationMode || "auto"}
+                            onValueChange={handleOperationModeChange}
+                        >
+                            <SelectTrigger id="operationMode">
+                                <SelectValue placeholder="Select Mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="auto">Auto</SelectItem>
+                                <SelectItem value="heating">Heating</SelectItem>
+                                <SelectItem value="cooling">Cooling</SelectItem>
+                                <SelectItem value="off">Off</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="supply-fan-speed-select">Supply Fan Speed</Label>
-                    <Select
-                      value={
-                        controls.supplyFanSpeed === 100 ? "high" : controls.supplyFanSpeed === 66 ? "medium" : "low"
-                      }
-                      onValueChange={(value) => {
-                        const speedValue = value === "high" ? 100 : value === "medium" ? 66 : 33
-                        onControlChange("supplyFanSpeed", speedValue)
-                      }}
-                      disabled={!controls.supplyFanEnable}
-                    >
-                      <SelectTrigger id="supply-fan-speed-select">
-                        <SelectValue placeholder="Select fan speed" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
 
-              {/* Return Fan Controls */}
-              <div className="border p-4 rounded-md space-y-3">
-                <h4 className="font-medium">Return Fan</h4>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="return-fan-enable"
-                    checked={controls.returnFanEnable}
-                    onCheckedChange={(checked) => {
-                      onControlChange("returnFanEnable", checked)
-                    }}
-                    className="data-[state=checked]:bg-[#d2f4ea]"
-                  />
-                  <Label htmlFor="return-fan-enable">Enable Return Fan</Label>
-                </div>
-
-                {controls.returnFanVFD ? (
-                  <div className="space-y-2">
+                    {/* Economizer Enable */}
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="return-fan-speed">Return Fan Speed (%)</Label>
-                      <span className="text-sm font-medium">{controls.returnFanSpeed}%</span>
+                        <Label htmlFor="economizerEnable">Economizer Enable</Label>
+                        <Switch
+                            id="economizerEnable"
+                            checked={controls.economizerEnable || false}
+                            onCheckedChange={handleEconomizerEnableChange}
+                        />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Fan className="h-4 w-4 text-gray-500" />
-                      <Slider
-                        id="return-fan-speed"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={[controls.returnFanSpeed || 0]}
-                        onValueChange={(value) => {
-                          onControlChange("returnFanSpeed", value[0])
-                        }}
-                        className="flex-1 accent-[#d2f4ea]"
-                        disabled={!controls.returnFanEnable}
-                      />
+
+                    {/* Supply Fan Enable */}
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="supplyFanEnable">Supply Fan Enable</Label>
+                        <Switch
+                            id="supplyFanEnable"
+                            checked={controls.supplyFanEnable || false}
+                            onCheckedChange={handleFanEnableChange}
+                        />
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="return-fan-speed-select">Return Fan Speed</Label>
-                    <Select
-                      value={
-                        controls.returnFanSpeed === 100 ? "high" : controls.returnFanSpeed === 66 ? "medium" : "low"
-                      }
-                      onValueChange={(value) => {
-                        const speedValue = value === "high" ? 100 : value === "medium" ? 66 : 33
-                        onControlChange("returnFanSpeed", speedValue)
-                      }}
-                      disabled={!controls.returnFanEnable}
-                    >
-                      <SelectTrigger id="return-fan-speed-select">
-                        <SelectValue placeholder="Select fan speed" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            </div>
-          </TabsContent>
 
-          {/* Temperature Tab */}
-          <TabsContent value="temperature" className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="temperature-setpoint">Temperature Setpoint (°F)</Label>
-                <span className="text-sm font-medium">{controls.temperatureSetpoint}°F</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Thermometer className="h-4 w-4 text-gray-500" />
-                <Slider
-                  id="temperature-setpoint"
-                  min={55}
-                  max={85}
-                  step={1}
-                  value={[controls.temperatureSetpoint || 72]}
-                  onValueChange={(value) => {
-                    onControlChange("temperatureSetpoint", value[0])
-                  }}
-                  className="flex-1 accent-[#d2f4ea]"
-                />
-              </div>
-            </div>
+                    {/* Supply Fan Speed */}
+                    {controls.supplyFanEnable && (
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <Label htmlFor="supplyFanSpeed">Supply Fan Speed</Label>
+                                <span className="text-muted-foreground text-sm">{controls.supplyFanSpeed || 0}%</span>
+                            </div>
+                            <Slider
+                                id="supplyFanSpeed"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={[controls.supplyFanSpeed || 0]}
+                                onValueChange={(values) => handleFanSpeedChange(values[0])}
+                            />
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
-            {/* Heating Controls */}
-            <div className="border p-4 rounded-md space-y-3">
-              <h4 className="font-medium">Heating</h4>
-              {controls.hasHotWaterValve ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="heating-valve-position">Heating Valve Position (%)</Label>
-                    <span className="text-sm font-medium">{controls.heatingValvePosition}%</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Droplet className="h-4 w-4 text-gray-500" />
-                    <Slider
-                      id="heating-valve-position"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={[controls.heatingValvePosition || 0]}
-                      onValueChange={(value) => {
-                        onControlChange("heatingValvePosition", value[0])
-                      }}
-                      className="flex-1 accent-[#d2f4ea]"
-                    />
-                  </div>
-                </div>
-              ) : controls.heatingStages > 0 ? (
-                <div className="space-y-2">
-                  <Label htmlFor="active-heating-stages">Active Heating Stages</Label>
-                  <Select
-                    value={controls.activeHeatingStages?.toString() || "0"}
-                    onValueChange={(value) => {
-                      onControlChange("activeHeatingStages", Number.parseInt(value))
-                    }}
-                  >
-                    <SelectTrigger id="active-heating-stages">
-                      <SelectValue placeholder="Select active stages" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">0 Stages</SelectItem>
-                      {Array.from({ length: controls.heatingStages }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1} {i === 0 ? "Stage" : "Stages"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500">No heating control available</div>
-              )}
-            </div>
+            {/* Equipment Configuration Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Equipment Configuration</CardTitle>
+                    <CardDescription>System type and components</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Cooling Type */}
+                    <div className="space-y-2">
+                        <Label htmlFor="coolingType">Cooling Type</Label>
+                        <Select
+                            value={controls.coolingType || "chilled_water"}
+                            onValueChange={handleCoolingTypeChange}
+                        >
+                            <SelectTrigger id="coolingType">
+                                <SelectValue placeholder="Select Cooling Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="chilled_water">Chilled Water</SelectItem>
+                                <SelectItem value="dx_single_stage">DX Single Stage</SelectItem>
+                                <SelectItem value="dx_two_stage">DX Two Stage</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-            {/* Cooling Controls */}
-            <div className="border p-4 rounded-md space-y-3">
-              <h4 className="font-medium">Cooling</h4>
-              {controls.hasCoolingValve ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="cooling-valve-position">Cooling Valve Position (%)</Label>
-                    <span className="text-sm font-medium">{controls.coolingValvePosition}%</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Droplet className="h-4 w-4 text-gray-500" />
-                    <Slider
-                      id="cooling-valve-position"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={[controls.coolingValvePosition || 0]}
-                      onValueChange={(value) => {
-                        onControlChange("coolingValvePosition", value[0])
-                      }}
-                      className="flex-1 accent-[#d2f4ea]"
-                    />
-                  </div>
-                </div>
-              ) : controls.coolingStages > 0 ? (
-                <div className="space-y-2">
-                  <Label htmlFor="active-cooling-stages">Active Cooling Stages</Label>
-                  <Select
-                    value={controls.activeCoolingStages?.toString() || "0"}
-                    onValueChange={(value) => {
-                      onControlChange("activeCoolingStages", Number.parseInt(value))
-                    }}
-                  >
-                    <SelectTrigger id="active-cooling-stages">
-                      <SelectValue placeholder="Select active stages" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">0 Stages</SelectItem>
-                      {Array.from({ length: controls.coolingStages }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1} {i === 0 ? "Stage" : "Stages"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500">No cooling control available</div>
-              )}
-            </div>
-          </TabsContent>
+                    {/* Heating Type */}
+                    <div className="space-y-2">
+                        <Label htmlFor="heatingType">Heating Type</Label>
+                        <Select
+                            value={controls.heatingType || "hot_water"}
+                            onValueChange={handleHeatingTypeChange}
+                        >
+                            <SelectTrigger id="heatingType">
+                                <SelectValue placeholder="Select Heating Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="hot_water">Hot Water</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
 
-          {/* Dampers Tab */}
-          <TabsContent value="dampers" className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="outdoor-damper-position">Outdoor Air Damper (%)</Label>
-                <span className="text-sm font-medium">{controls.outdoorDamperPosition || 0}%</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Wind className="h-4 w-4 text-gray-500" />
-                <Slider
-                  id="outdoor-damper-position"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={[controls.outdoorDamperPosition || 0]}
-                  onValueChange={(value) => {
-                    onControlChange("outdoorDamperPosition", value[0])
-                  }}
-                  className="flex-1 accent-[#d2f4ea]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="return-damper-position">Return Air Damper (%)</Label>
-                <span className="text-sm font-medium">{controls.returnDamperPosition || 0}%</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Wind className="h-4 w-4 text-gray-500" />
-                <Slider
-                  id="return-damper-position"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={[controls.returnDamperPosition || 0]}
-                  onValueChange={(value) => {
-                    onControlChange("returnDamperPosition", value[0])
-                  }}
-                  className="flex-1 accent-[#d2f4ea]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="exhaust-damper-position">Exhaust Air Damper (%)</Label>
-                <span className="text-sm font-medium">{controls.exhaustDamperPosition || 0}%</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Wind className="h-4 w-4 text-gray-500" />
-                <Slider
-                  id="exhaust-damper-position"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={[controls.exhaustDamperPosition || 0]}
-                  onValueChange={(value) => {
-                    onControlChange("exhaustDamperPosition", value[0])
-                  }}
-                  className="flex-1 accent-[#d2f4ea]"
-                />
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
-  )
+            {/* System Status Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Current Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <p className="text-sm font-medium">Unit Status</p>
+                            <p className={`text-lg ${controls.unitEnable ? "text-green-600" : "text-red-600"}`}>
+                                {controls.unitEnable ? "Running" : "Off"}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">Mode</p>
+                            <p className="text-lg">{controls.operationMode || "Auto"}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">Control Type</p>
+                            <p className="text-lg">{controls.controlMode === "space" ? "Space Temp" : "Supply Temp"}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">Economizer</p>
+                            <p className={`text-lg ${controls.economizerEnable ? "text-green-600" : "text-gray-600"}`}>
+                                {controls.economizerEnable ? "Enabled" : "Disabled"}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">Fan Status</p>
+                            <p className={`text-lg ${controls.supplyFanEnable ? "text-green-600" : "text-red-600"}`}>
+                                {controls.supplyFanEnable ? "Running" : "Off"}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">Fan Speed</p>
+                            <p className="text-lg">{controls.supplyFanSpeed || 0}%</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    )
 }

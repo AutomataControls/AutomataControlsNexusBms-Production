@@ -4,7 +4,31 @@
 import { initializeApp, getApps } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
 import { doc, getDoc } from "firebase/firestore"
-import { getControlFunction } from "./equipment-logic"
+
+// Import base implementations
+import { fanCoilControl as fanCoilControlBase } from "./equipment-logic/base/fan-coil";
+import { boilerControl as boilerControlBase } from "./equipment-logic/base/boiler";
+import { pumpControl as pumpControlBase } from "./equipment-logic/base/pumps";
+import { chillerControl as chillerControlBase } from "./equipment-logic/base/chiller";
+import { airHandlerControl as airHandlerControlBase } from "./equipment-logic/base/air-handler";
+import { steamBundleControl as steamBundleControlBase } from "./equipment-logic/base/steam-bundle";
+
+// Import location-specific implementations
+// Warren (ID: 1)
+import { fanCoilControl as fanCoilControlWarren } from "./equipment-logic/locations/warren/fan-coil";
+import { pumpControl as pumpControlWarren } from "./equipment-logic/locations/warren/pumps";
+import { airHandlerControl as airHandlerControlWarren } from "./equipment-logic/locations/warren/air-handler";
+import { steamBundleControl as steamBundleControlWarren } from "./equipment-logic/locations/warren/steam-bundle";
+
+// Hopebridge (ID: 5)
+import { boilerControl as boilerControlHopebridge } from "./equipment-logic/locations/hopebridge/boiler";
+import { airHandlerControl as airHandlerControlHopebridge } from "./equipment-logic/locations/hopebridge/air-handler";
+
+// Huntington (ID: 4)
+import { fanCoilControl as fanCoilControlHuntington } from "./equipment-logic/locations/huntington/fan-coil";
+import { boilerControl as boilerControlHuntington } from "./equipment-logic/locations/huntington/boiler";
+import { pumpControl as pumpControlHuntington } from "./equipment-logic/locations/huntington/pumps";
+import { chillerControl as chillerControlHuntington } from "./equipment-logic/locations/huntington/chiller";
 
 // Enhanced logging function for equipment-specific debugging
 function logEquipment(equipmentId: string, message: string, data?: any) {
@@ -102,6 +126,7 @@ export interface ControlValues {
   firingRate?: number // ADDED: Include firingRate as separate property
   waterTempSetpoint?: number
 }
+
 // Default PID settings
 export const defaultPIDSettings = {
   kp: 1.0,
@@ -116,33 +141,40 @@ export const defaultPIDSettings = {
 
 // Helper function to determine if custom logic should run for this equipment
 function shouldRunCustomLogic(equipmentId, equipmentType, locationId) {
-  // Only run custom logic for specific equipment types we've completed
-  const supportedTypes = ["fan-coil", "boiler"]
-
-  // Only run for specific locations
-  const supportedLocations = ["4"] // Huntington
-
-  // Only run for specific equipment IDs (if you want to whitelist specific units)
-  const supportedEquipment = [
-    "BBHCLhaeItV7pIdinQzM", // Huntington Fan Coil
-    "IEhoTqKphbvHb5fTanpP", // Huntington Fan Coil
-    "ZLYR6YveSmCEMqtBSy3e", // Huntington Boiler - EXACT ID from screenshot
+  // Equipment types we've implemented custom logic for
+  const supportedTypes = [
+    "fan-coil",
+    "fan coil", 
+    "Fan Coil",
+    "boiler",
+    "Boiler",
+    "pump",
+    "Pump",
+    "hwpump",
+    "cwpump",
+    "air-handler",
+    "air handler",
+    "Air Handler",
+    "chiller",
+    "Chiller",
+    "steam-bundle",
+    "Steam Bundle"
   ]
 
-  // Check if equipment is in our supported lists
-  const typeSupported = supportedTypes.includes(equipmentType?.toLowerCase())
-  const locationSupported = supportedLocations.includes(locationId)
-  const equipmentSupported = supportedEquipment.includes(equipmentId)
+  // Check if equipment type is supported
+  const normalizedType = equipmentType?.toLowerCase().replace(/-/g, ' ') || "";
+  const typeSupported = supportedTypes.some(type => {
+    const normalizedSupportedType = type.toLowerCase().replace(/-/g, ' ');
+    return normalizedType === normalizedSupportedType ||
+           normalizedType.includes(normalizedSupportedType) ||
+           normalizedSupportedType.includes(normalizedType);
+  });
 
-  // Only run if ALL conditions are met: supported type, location, and either all equipment of that type or specific IDs
-  return (
-    typeSupported &&
-    locationSupported &&
-    (equipmentSupported ||
-      equipmentId.includes("FCU") ||
-      equipmentId.toLowerCase().includes("fancoil") ||
-      equipmentId.toLowerCase().includes("boiler"))
-  )
+  // Debug logging
+  console.log(`shouldRunCustomLogic check for ${equipmentId} (${equipmentType}): ${typeSupported}`);
+
+  // Run for all locations now, with equipment type as the only criteria
+  return typeSupported;
 }
 
 // Initialize Firebase if not already initialized
@@ -275,6 +307,7 @@ export function initializeControlValuesCache() {
     console.error("Error initializing control values cache:", error)
   }
 }
+
 // Function to save cache to disk
 export async function saveControlValuesCache() {
   try {
@@ -419,16 +452,7 @@ export async function fetchMetricsFromFirebase(locationId: string, equipmentId: 
     }
 
     const metrics = metricsSnap.exists() ? metricsSnap.val() : {}
-
     logEquipment(equipmentId, `Retrieved ${Object.keys(metrics).length} metrics from Firebase RTDB`);
-    if (Object.keys(metrics).length > 0) {
-      // Log key temperature metrics if they exist
-      if (metrics.Supply !== undefined) logEquipment(equipmentId, `Firebase RTDB - Supply temperature: ${metrics.Supply}`);
-      if (metrics.supplyTemp !== undefined) logEquipment(equipmentId, `Firebase RTDB - supplyTemp: ${metrics.supplyTemp}`);
-      if (metrics.Outdoor_Air !== undefined) logEquipment(equipmentId, `Firebase RTDB - Outdoor_Air: ${metrics.Outdoor_Air}`);
-      if (metrics.Mixed_Air !== undefined) logEquipment(equipmentId, `Firebase RTDB - Mixed_Air: ${metrics.Mixed_Air}`);
-    }
-
     return metrics;
   } catch (error) {
     console.error(`Error fetching metrics from Firebase RTDB: ${error}`)
@@ -518,7 +542,6 @@ export async function fetchControlValuesFromFirebase(locationId: string, equipme
 }
 
 // Helper function to fetch metrics from InfluxDB "Locations" bucket
-// UPDATED to use InfluxDB 3 SQL API with proper time constraints
 export async function fetchMetricsFromLocationsInfluxDB(
   locationId: string,
   equipmentId: string,
@@ -528,15 +551,11 @@ export async function fetchMetricsFromLocationsInfluxDB(
     logEquipment(equipmentId, `Fetching metrics from InfluxDB Locations bucket`);
 
     // Use SQL query for InfluxDB 3 with proper time constraints
-    const sqlQuery = `SELECT * FROM "metrics" 
-                     WHERE "equipmentId"='${equipmentId}' 
+    const sqlQuery = `SELECT * FROM "metrics"
+                     WHERE "equipmentId"='${equipmentId}'
                      AND time > now() - INTERVAL '5 minutes'
                      ORDER BY time DESC LIMIT 10`;
 
-    // Log the query for debugging
-    logEquipment(equipmentId, `Querying InfluxDB with: ${sqlQuery}`);
-
-    // Use the SQL API endpoint
     const response = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
       method: "POST",
       headers: {
@@ -553,25 +572,15 @@ export async function fetchMetricsFromLocationsInfluxDB(
     }
 
     const data = await response.json()
-    // Log first 200 chars for debugging
-    if (data && data.length > 0) {
-      logEquipment(equipmentId, `InfluxDB Locations response: Found ${data.length} rows`);
 
-      // Log the first row to see what fields are available
-      if (data[0]) {
-        logEquipment(equipmentId, "First row data sample:", data[0]);
-      }
-    } else {
-      logEquipment(equipmentId, `InfluxDB Locations response is empty, trying a broader time range`);
-      
-      // Try with a longer time range as a fallback
-      const fallbackQuery = `SELECT * FROM "metrics" 
-                            WHERE "equipmentId"='${equipmentId}' 
+    // If no data found, try with a longer time range as a fallback
+    let fallbackData = []
+    if (!data || data.length === 0) {
+      const fallbackQuery = `SELECT * FROM "metrics"
+                            WHERE "equipmentId"='${equipmentId}'
                             AND time > now() - INTERVAL '1 hour'
                             ORDER BY time DESC LIMIT 5`;
-                            
-      logEquipment(equipmentId, `Retry InfluxDB with broader time range: ${fallbackQuery}`);
-      
+
       const fallbackResponse = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
         method: "POST",
         headers: {
@@ -582,14 +591,11 @@ export async function fetchMetricsFromLocationsInfluxDB(
           db: INFLUXDB_DATABASE
         }),
       });
-      
+
       if (fallbackResponse.ok) {
-        const fallbackData = await fallbackResponse.json();
+        fallbackData = await fallbackResponse.json();
         if (fallbackData && fallbackData.length > 0) {
-          logEquipment(equipmentId, `Found ${fallbackData.length} metrics using broader time range`);
           data.push(...fallbackData);
-        } else {
-          logEquipment(equipmentId, `No metrics found in InfluxDB in the last hour`);
         }
       }
     }
@@ -627,16 +633,9 @@ export async function fetchMetricsFromLocationsInfluxDB(
       }
     }
 
-    // Log key temperature values if available
-    if (metrics.Supply !== undefined) logEquipment(equipmentId, `InfluxDB - Supply temperature: ${metrics.Supply}`);
-    if (metrics.supplyTemp !== undefined) logEquipment(equipmentId, `InfluxDB - supplyTemp: ${metrics.supplyTemp}`);
-    if (metrics.Outdoor_Air !== undefined) logEquipment(equipmentId, `InfluxDB - Outdoor_Air: ${metrics.Outdoor_Air}`);
-    if (metrics.Mixed_Air !== undefined) logEquipment(equipmentId, `InfluxDB - Mixed_Air: ${metrics.Mixed_Air}`);
-
     // If we got metrics from InfluxDB, return them
     if (Object.keys(metrics).length > 0) {
       logEquipment(equipmentId, `Retrieved ${Object.keys(metrics).length} metrics from InfluxDB Locations bucket`);
-      logEquipment(equipmentId, `System name from database: ${metrics.system || "unknown"}`);
       return metrics
     }
 
@@ -651,15 +650,14 @@ export async function fetchMetricsFromLocationsInfluxDB(
 }
 
 // Helper function to fetch metrics from InfluxDB with fallback to Firebase
-// UPDATED to use InfluxDB 3 SQL API with proper time constraints
 export async function fetchMetricsFromInfluxDB(locationId: string, equipmentId: string) {
   try {
     logEquipment(equipmentId, `Fetching metrics from InfluxDB`);
 
     // Use SQL query for InfluxDB 3 with proper time constraints
-    const sqlQuery = `SELECT * FROM "metrics" 
-                      WHERE "location"='${locationId}' 
-                      AND "equipmentId"='${equipmentId}' 
+    const sqlQuery = `SELECT * FROM "metrics"
+                      WHERE "location"='${locationId}'
+                      AND "equipmentId"='${equipmentId}'
                       AND time > now() - INTERVAL '5 minutes'
                       ORDER BY time DESC LIMIT 10`;
 
@@ -720,111 +718,324 @@ export async function fetchMetricsFromInfluxDB(locationId: string, equipmentId: 
   }
 }
 
-// Helper function to fetch control values from InfluxDB
-// UPDATED to use proper time constraint to avoid file limit errors
+// Helper function to fetch control values from InfluxDB - OPTIMIZED
 export async function fetchControlValuesFromInfluxDB(locationId: string, equipmentId: string) {
   try {
-    // Use SQL query for InfluxDB 3 with proper time constraint
-    const sqlQuery = `SELECT * FROM "metrics" 
-                      WHERE "equipmentId"='${equipmentId}' 
-                      AND time > now() - INTERVAL '5 minutes'
-                      ORDER BY time DESC LIMIT 1`;
+    // First try to determine the equipment type to guide our optimization
+    let equipmentType = await determineEquipmentType(locationId, equipmentId);
+    logEquipment(equipmentId, `Determined equipment type for query optimization: ${equipmentType}`);
 
-    logEquipment(equipmentId, `Querying metrics and settings from Locations bucket: ${sqlQuery}`);
+    // Create an object to store the control settings
+    const controlSettings: any = {};
 
-    // Use the SQL API endpoint
-    const response = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
+    // Get core metrics data first (which is efficient - one query for many fields)
+    const metricsQuery = `SELECT * FROM "metrics"
+                          WHERE "equipmentId"='${equipmentId}'
+                          AND time > now() - INTERVAL '5 minutes'
+                          ORDER BY time DESC LIMIT 1`;
+
+    const metricsResponse = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        q: sqlQuery,
+        q: metricsQuery,
         db: INFLUXDB_DATABASE
       }),
-    })
+    });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch data from InfluxDB: ${response.status} ${response.statusText}`)
-    }
+    if (metricsResponse.ok) {
+      const metricsData = await metricsResponse.json();
 
-    const data = await response.json()
-    logEquipment(equipmentId, `InfluxDB response:`, data);
+      if (Array.isArray(metricsData) && metricsData.length > 0) {
+        const metrics = metricsData[0];
 
-    // Process the JSON data from InfluxDB 3
-    const metrics = {}
+        // Process common fields from metrics
+        processCommonMetricsFields(metrics, controlSettings, equipmentId);
 
-    if (Array.isArray(data) && data.length > 0) {
-      // Take the first row (most recent)
-      const row = data[0]
-
-      // Extract all fields from the response
-      Object.entries(row).forEach(([key, value]) => {
-        // Skip time field and internal fields
-        if (key !== 'time' && !key.startsWith('_')) {
-          // Try to convert numeric values
-          if (typeof value === 'string' && !isNaN(Number(value))) {
-            metrics[key] = Number(value)
-          } else if (value === 'true' || value === 'false') {
-            metrics[key] = value === 'true'
-          } else {
-            metrics[key] = value
-          }
+        // Also extract equipment_type if available but not already determined
+        if (!equipmentType && metrics.equipment_type) {
+          equipmentType = metrics.equipment_type;
+          logEquipment(equipmentId, `Updated equipment type from metrics: ${equipmentType}`);
         }
-      })
-    }
-
-    // Get temperature setpoint from the Setpoint field
-    let temperatureSetpoint = metrics.Setpoint
-    if (temperatureSetpoint !== undefined) {
-      logEquipment(equipmentId, `Found temperature setpoint in metrics: ${temperatureSetpoint}°F`);
-    } else {
-      // Default setpoint if not found
-      temperatureSetpoint = 72
-      logEquipment(equipmentId, `No setpoint found in metrics, using default: ${temperatureSetpoint}°F`);
-    }
-
-    // Get temperature source from the TemperatureSource field
-    let temperatureSource = metrics.TemperatureSource
-    if (temperatureSource !== undefined) {
-      logEquipment(equipmentId, `Found temperature source in metrics: ${temperatureSource}`);
-    } else {
-      // Default based on location
-      temperatureSource = locationId === "4" ? "supply" : "space"
-      logEquipment(
-        equipmentId,
-        `No temperature source found in metrics, using default for location ${locationId}: ${temperatureSource}`,
-      )
-    }
-
-    // Get custom logic enabled flag from the CustomLogicEnabled field
-    let customLogicEnabled = metrics.CustomLogicEnabled
-    if (customLogicEnabled !== undefined) {
-      // Make sure it's a boolean
-      if (typeof customLogicEnabled === "string") {
-        customLogicEnabled = customLogicEnabled === "true"
       }
-      logEquipment(equipmentId, `Found custom logic enabled setting in metrics: ${customLogicEnabled}`);
-    } else {
-      // Default to true if not found
-      customLogicEnabled = true
-      logEquipment(equipmentId, `No custom logic enabled setting found in metrics, using default: ${customLogicEnabled}`);
     }
 
-    // Return only the settings needed for control logic
-    return {
-      temperatureSetpoint,
-      temperatureSource,
-      customLogicEnabled,
+    // Only query for control command records that are relevant to this equipment type
+    const normalizedType = equipmentType ? equipmentType.toLowerCase() : "";
+    let relevantCommands = getRelevantCommandsForType(normalizedType);
+
+    logEquipment(equipmentId, `Querying only for ${relevantCommands.length} relevant commands for ${normalizedType}`);
+
+    // Fetch the relevant command history
+    for (const command of relevantCommands) {
+      await fetchCommandHistory(locationId, equipmentId, command, controlSettings);
     }
+
+    // Apply appropriate defaults for any missing fields
+    applyDefaults(controlSettings, normalizedType, locationId);
+
+    return controlSettings;
   } catch (error) {
-    console.error(`Error fetching data from InfluxDB: ${error}`)
+    console.error(`Error fetching control values from InfluxDB: ${error}`);
 
     // Return minimal default values needed for the logic to work
     return {
       temperatureSetpoint: 72,
       temperatureSource: locationId === "4" ? "supply" : "space",
       customLogicEnabled: true,
+    };
+  }
+}
+
+// Helper function to process common fields from metrics
+function processCommonMetricsFields(metrics: any, controlSettings: any, equipmentId: string) {
+  // Process temperature setpoint
+  if (metrics.temperature_setpoint !== undefined) {
+    controlSettings.temperatureSetpoint = parseFloat(metrics.temperature_setpoint);
+    logEquipment(equipmentId, `Using user-defined temperature setpoint: ${controlSettings.temperatureSetpoint}°F`);
+  } else if (metrics.Setpoint !== undefined) {
+    controlSettings.temperatureSetpoint = metrics.Setpoint;
+    logEquipment(equipmentId, `Using temperature setpoint from database: ${controlSettings.temperatureSetpoint}°F`);
+  }
+
+  // Get custom logic enabled flag
+  let customLogicEnabled = metrics.CustomLogicEnabled || metrics.custom_logic_enabled;
+  if (customLogicEnabled !== undefined) {
+    if (typeof customLogicEnabled === "string") {
+      customLogicEnabled = customLogicEnabled === "true";
+    }
+    controlSettings.customLogicEnabled = customLogicEnabled;
+  }
+
+  // Get temperature source
+  let temperatureSource = metrics.TemperatureSource || metrics.temperature_source;
+  if (temperatureSource !== undefined) {
+    controlSettings.temperatureSource = temperatureSource;
+  }
+
+  // Process equipment-specific fields from metrics
+  if (metrics.IsLead !== undefined) controlSettings.isLead = metrics.IsLead ? 1 : 0;
+  if (metrics.PumpAmps !== undefined) controlSettings.pumpAmps = metrics.PumpAmps;
+  if (metrics.Pump_Status !== undefined) controlSettings.pumpStatus = metrics.Pump_Status;
+
+  // Check for fan-coil specific fields
+  if (metrics.fanEnabled !== undefined) controlSettings.fanEnabled = metrics.fanEnabled === true;
+  if (metrics.fanSpeed !== undefined) controlSettings.fanSpeed = metrics.fanSpeed;
+  if (metrics.fanMode !== undefined) controlSettings.fanMode = metrics.fanMode;
+}
+
+// Helper function to determine equipment type
+async function determineEquipmentType(locationId: string, equipmentId: string): Promise<string> {
+  try {
+    // Try from Firestore first (should be cached for most equipment)
+    try {
+      const equipRef = doc(db, "equipment", equipmentId);
+      const equipSnap = await getDoc(equipRef);
+      if (equipSnap.exists()) {
+        const equipData = equipSnap.data();
+        return equipData.type || equipData.equipmentType || "";
+      }
+    } catch (firestoreError) {
+      console.error(`Error getting equipment from Firestore: ${firestoreError}`);
+    }
+
+    // If not in Firestore, try metrics
+    const metricsQuery = `SELECT equipment_type FROM "metrics"
+                          WHERE "equipmentId"='${equipmentId}'
+                          AND time > now() - INTERVAL '5 minutes'
+                          ORDER BY time DESC LIMIT 1`;
+
+    const response = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        q: metricsQuery,
+        db: INFLUXDB_DATABASE
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0 && data[0].equipment_type) {
+        return data[0].equipment_type;
+      }
+    }
+
+    // Return empty string if not found
+    return "";
+  } catch (error) {
+    console.error(`Error determining equipment type: ${error}`);
+    return "";
+  }
+}
+
+// Helper function to get relevant command history for equipment type
+function getRelevantCommandsForType(equipmentType: string): string[] {
+  // Common commands needed for all equipment types
+  const commonCommands = ["temperatureSetpoint", "temperature_setpoint", "unitEnable", "temperatureSource", "customLogicEnabled"];
+
+  // Pump-specific commands
+  if (equipmentType.includes("pump")) {
+    return [
+      ...commonCommands,
+      "isLead",
+      "pumpRuntime",
+      "groupId"
+    ];
+  }
+
+  // Fan coil specific commands
+  else if (equipmentType.includes("fan-coil") || equipmentType.includes("fancoil")) {
+    return [
+      ...commonCommands,
+      "fanSpeed",
+      "fanMode",
+      "fanEnabled",
+      "heatingValvePosition",
+      "coolingValvePosition",
+      "heatingValveMode",
+      "coolingValveMode",
+      "operationMode",
+      "outdoorDamperPosition"
+    ];
+  }
+
+  // Boiler specific commands
+  else if (equipmentType.includes("boiler")) {
+    return [
+      ...commonCommands,
+      "firing",
+      "firingRate",
+      "waterTempSetpoint",
+      "boilerRuntime",
+      "boilerType",
+      "isLead",
+      "groupId"
+    ];
+  }
+
+  // Chiller specific commands
+  else if (equipmentType.includes("chiller")) {
+    return [
+      ...commonCommands,
+      "waterTempSetpoint",
+      "isLead",
+      "chillerRuntime",
+      "groupId",
+      "operationMode"
+    ];
+  }
+
+  // If equipment type not recognized or empty, return essential commands
+  // This ensures we always get at least the basic necessary fields
+  return [
+    "temperatureSetpoint",
+    "temperatureSource",
+    "unitEnable",
+    "isLead",
+    "groupId"
+  ];
+}
+
+// Helper function to fetch a single command's history
+async function fetchCommandHistory(locationId: string, equipmentId: string, command: string, controlSettings: any) {
+  try {
+    const commandQuery = `SELECT * FROM "update_${command}"
+                          WHERE "equipment_id"='${equipmentId}'
+                          AND "location_id"='${locationId}'
+                          AND time > now() - INTERVAL '5 minutes'
+                          ORDER BY time DESC LIMIT 1`;
+
+    const commandResponse = await fetch(`${INFLUXDB_URL}/api/v3/query_sql`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        q: commandQuery,
+        db: INFLUXDB_DATABASE
+      }),
+    });
+
+    if (commandResponse.ok) {
+      const commandData = await commandResponse.json();
+      if (Array.isArray(commandData) && commandData.length > 0 && commandData[0].value !== undefined) {
+        // Convert numeric strings to numbers
+        let value = commandData[0].value;
+        if (typeof value === 'string' && !isNaN(Number(value))) {
+          value = parseFloat(value);
+        }
+
+        controlSettings[command] = value;
+        logEquipment(equipmentId, `Found command value for ${command}: ${value}`);
+      }
+    }
+  } catch (error) {
+    console.error(`Error querying for command ${command}: ${error}`);
+  }
+}
+
+// Helper function to apply default values for missing fields
+function applyDefaults(controlSettings: any, equipmentType: string, locationId: string) {
+  // Apply common defaults
+  if (!controlSettings.temperatureSetpoint) {
+    controlSettings.temperatureSetpoint = 72;
+  }
+
+  if (!controlSettings.temperatureSource) {
+    controlSettings.temperatureSource = locationId === "4" ? "supply" : "space";
+  }
+
+  if (controlSettings.customLogicEnabled === undefined) {
+    controlSettings.customLogicEnabled = true;
+  }
+
+  if (controlSettings.unitEnable === undefined) {
+    controlSettings.unitEnable = true;
+  }
+
+  // Apply equipment-specific defaults based on type
+  if (equipmentType.includes("pump")) {
+    if (controlSettings.isLead === undefined) {
+      controlSettings.isLead = 0; // Default to not lead
+    }
+
+    if (controlSettings.pumpRuntime === undefined) {
+      controlSettings.pumpRuntime = 0;
+    }
+  }
+
+  else if (equipmentType.includes("fan-coil") || equipmentType.includes("fancoil")) {
+    if (controlSettings.fanEnabled === undefined) {
+      controlSettings.fanEnabled = true;
+    }
+
+    if (controlSettings.fanSpeed === undefined) {
+      controlSettings.fanSpeed = "low";
+    }
+
+    if (controlSettings.fanMode === undefined) {
+      controlSettings.fanMode = "auto";
+    }
+
+    if (controlSettings.heatingValvePosition === undefined) {
+      controlSettings.heatingValvePosition = 0;
+    }
+
+    if (controlSettings.coolingValvePosition === undefined) {
+      controlSettings.coolingValvePosition = 0;
+    }
+  }
+
+  else if (equipmentType.includes("boiler")) {
+    if (controlSettings.firing === undefined) {
+      controlSettings.firing = 0;
+    }
+
+    if (controlSettings.firingRate === undefined) {
+      controlSettings.firingRate = 0;
+    }
+
+    if (controlSettings.waterTempSetpoint === undefined) {
+      controlSettings.waterTempSetpoint = 120;
     }
   }
 }
@@ -874,15 +1085,101 @@ export async function sendControlCommand(command: string, commandData: any) {
   }
 }
 
-// Helper function for evaluating custom logic - SIMPLIFIED TO USE EQUIPMENT-SPECIFIC FUNCTIONS
+/**
+ * Helper function to get the base implementation for a given equipment type
+ * @param normalizedType The normalized equipment type
+ * @returns The base implementation for the equipment type
+ */
+function getBaseImplementation(normalizedType: string) {
+  console.log(`Using base implementation for ${normalizedType}`);
+  if (normalizedType === "fan-coil") return fanCoilControlBase;
+  if (normalizedType === "boiler") return boilerControlBase;
+  if (normalizedType === "pump" || normalizedType === "hwpump" || normalizedType === "cwpump") return pumpControlBase;
+  if (normalizedType === "chiller") return chillerControlBase;
+  if (normalizedType === "air-handler") return airHandlerControlBase;
+  if (normalizedType === "steam-bundle") return steamBundleControlBase;
+  return null;
+}
+
+// Helper function for evaluating custom logic - DIRECT IMPLEMENTATION SELECTION
 export function evaluateCustomLogic(sandbox: any, pidState: any, equipmentType?: string): LogicEvaluation | null {
   try {
     const equipmentId = sandbox.settings.equipmentId || "unknown";
-    // Log the equipment type we received
-    logEquipment(equipmentId, `Evaluating logic for equipment type: ${equipmentType || "unknown"}`);
 
-    // Get the control function for this equipment type
-    const controlFunction = getControlFunction(equipmentType || "")
+    // Log the equipment type we received from settings
+    logEquipment(equipmentId, `Initial equipment type from settings: ${equipmentType || "unknown"}`);
+
+    // IMPORTANT FIX: Check if metrics has equipment_type field - prioritize this over settings
+    if (sandbox.metrics && sandbox.metrics.equipment_type) {
+      const metricsType = sandbox.metrics.equipment_type;
+      logEquipment(equipmentId, `Found equipment_type in metrics: ${metricsType}, overriding settings type`);
+      equipmentType = metricsType;
+    }
+
+    // Log the final equipment type after checking metrics
+    logEquipment(equipmentId, `Final equipment type after checking metrics: ${equipmentType || "unknown"}`);
+
+    // Get the location ID and equipment ID for location-based control
+    const locationId = sandbox.settings.locationId; // Don't default to any location
+
+    logEquipment(equipmentId, `Processing equipment ID: ${equipmentId}, type: ${equipmentType}, location: ${locationId}`);
+
+    // DIRECTLY SELECT THE CONTROL FUNCTION HERE INSTEAD OF CALLING OUT TO equipment-logic/index.ts
+    // Normalize the equipment type
+    let normalizedType = equipmentType ? equipmentType.toLowerCase().replace(/[^a-z0-9]/g, "-") : "";
+
+    // IMPORTANT: Better pump type normalization to handle both "pump" and "hotwater_pump"
+    if (normalizedType === "pump" ||
+        normalizedType === "hotwater-pump" ||
+        normalizedType.includes("hwpump") ||
+        normalizedType.includes("hot-water")) {
+      logEquipment(equipmentId, `Normalizing pump type: ${normalizedType} -> "pump"`);
+      normalizedType = "pump";
+    }
+
+    // Select the appropriate control function based on location and equipment type
+    let controlFunction;
+
+    // First check if we have a valid locationId
+    if (!locationId) {
+      logEquipment(equipmentId, `WARNING: No location ID provided. Using base implementation for ${normalizedType}`);
+      // Fallback to base implementation when locationId is missing
+      controlFunction = getBaseImplementation(normalizedType);
+    } else {
+      // Now we have a locationId, use it to select the correct implementation
+      logEquipment(equipmentId, `Looking for implementation for ${normalizedType} at location ${locationId}`);
+
+      // Warren (ID: 1)
+      if (locationId === "1") {
+        logEquipment(equipmentId, `Using Warren-specific implementation for ${normalizedType}`);
+        if (normalizedType === "fan-coil") controlFunction = fanCoilControlWarren;
+        else if (normalizedType === "pump" || normalizedType === "hwpump" || normalizedType === "cwpump") controlFunction = pumpControlWarren;
+        else if (normalizedType === "air-handler") controlFunction = airHandlerControlWarren;
+        else if (normalizedType === "steam-bundle") controlFunction = steamBundleControlWarren;
+        else controlFunction = getBaseImplementation(normalizedType);
+      }
+      // Hopebridge (ID: 5)
+      else if (locationId === "5") {
+        logEquipment(equipmentId, `Using Hopebridge-specific implementation for ${normalizedType}`);
+        if (normalizedType === "boiler") controlFunction = boilerControlHopebridge;
+        else if (normalizedType === "air-handler") controlFunction = airHandlerControlHopebridge;
+        else controlFunction = getBaseImplementation(normalizedType);
+      }
+      // Huntington (ID: 4)
+      else if (locationId === "4") {
+        logEquipment(equipmentId, `Using Huntington-specific implementation for ${normalizedType}`);
+        if (normalizedType === "fan-coil") controlFunction = fanCoilControlHuntington;
+        else if (normalizedType === "boiler") controlFunction = boilerControlHuntington;
+        else if (normalizedType === "pump" || normalizedType === "hwpump" || normalizedType === "cwpump") controlFunction = pumpControlHuntington;
+        else if (normalizedType === "chiller") controlFunction = chillerControlHuntington;
+        else controlFunction = getBaseImplementation(normalizedType);
+      }
+      // Other locations - use base implementation
+      else {
+        logEquipment(equipmentId, `No specific implementation for ${normalizedType} at location ${locationId}, using base implementation`);
+        controlFunction = getBaseImplementation(normalizedType);
+      }
+    }
 
     if (!controlFunction) {
       logEquipment(equipmentId, `ERROR: No control function found for equipment type: ${equipmentType}`);
@@ -894,11 +1191,6 @@ export function evaluateCustomLogic(sandbox: any, pidState: any, equipmentType?:
       }
     }
 
-    // Get the location ID and equipment ID for location-based control
-    const locationId = sandbox.settings.locationId || "4" // Default to Huntington if not specified
-
-    logEquipment(equipmentId, `Processing equipment ID: ${equipmentId}, type: ${equipmentType}, location: ${locationId}`);
-
     // Force temperatureSource to "supply" for location 4
     if (locationId === "4" && sandbox.settings) {
       sandbox.settings.temperatureSource = "supply"
@@ -908,22 +1200,6 @@ export function evaluateCustomLogic(sandbox: any, pidState: any, equipmentType?:
     let currentTemp;
     let temperatureSourceLabel;
     let temperatureSourceField;
-
-    // Log all available temperature fields for debugging
-    const tempFields = [
-      "H2OSupply", "H2OReturn", "Supply", "measurement",
-      "SupplyTemp", "supplyTemp", "supplyTemperature", "SupplyTemperature",
-      "discharge", "Discharge", "dischargeTemp", "DischargeTemp",
-      "roomTemp", "RoomTemp", "roomTemperature", "RoomTemperature",
-      "spaceTemp", "SpaceTemp", "zoneTemp", "ZoneTemp"
-    ];
-
-    // Log which temperature fields are available
-    for (const field of tempFields) {
-      if (sandbox.metrics[field] !== undefined) {
-        logEquipment(equipmentId, `Available temperature field: ${field} = ${sandbox.metrics[field]}`);
-      }
-    }
 
     // First check if we have the Supply field from the database view
     if (sandbox.metrics.H2OSupply !== undefined) {
@@ -1004,12 +1280,7 @@ export function evaluateCustomLogic(sandbox: any, pidState: any, equipmentType?:
     const supplyTemp = sandbox.metrics.Supply || "N/A"
     const supplyDisplay = supplyTemp === "N/A" ? "N/A" : `${supplyTemp}°F`
 
-    logEquipment(equipmentId, `Equipment ID: ${equipmentId}, Type: ${equipmentType}, Location: ${locationId}, System: ${systemName}`);
-    logEquipment(
-      equipmentId,
-      `Using ${temperatureSourceLabel} temperature from field "${temperatureSourceField || "default"}" with value: ${currentTemp}°F`,
-    );
-    logEquipment(equipmentId, `Supply: ${supplyDisplay}, Measurement: ${measurementDisplay}`);
+    logEquipment(equipmentId, `Using ${temperatureSourceLabel} temperature: ${currentTemp}°F, Supply: ${supplyDisplay}, Measurement: ${measurementDisplay}`);
 
     // Make sure we pass the equipment ID and location ID in the settings
     if (!sandbox.settings.equipmentId) {
@@ -1066,6 +1337,8 @@ export function evaluateCustomLogic(sandbox: any, pidState: any, equipmentType?:
       logEquipment(equipmentId, `Boiler control result (filtered):`, boilerResult);
       result = boilerResult
     }
+
+    logEquipment(equipmentId, `Logic evaluation result:`, result);
 
     return {
       result,
@@ -1127,7 +1400,7 @@ export async function getEquipmentWithCustomLogic() {
 // Run logic for a specific piece of equipment
 export async function runEquipmentLogic(equipmentId: string) {
   try {
-    logEquipment(equipmentId, `Running logic for equipment`);
+    logEquipment(equipmentId, `Starting equipment logic processing`);
 
     // Get the equipment document from Firestore to determine its type and location
     const equipmentRef = doc(db, "equipment", equipmentId);
@@ -1151,7 +1424,7 @@ export async function runEquipmentLogic(equipmentId: string) {
     const equipmentType = equipment.type || equipment.equipmentType || "unknown";
     const locationId = equipment.locationId || "4"; // Default to Huntington
 
-    logEquipment(equipmentId, `Equipment info: ${equipment.name || "Unnamed"}, Type: ${equipmentType}, Location: ${locationId}`);
+    logEquipment(equipmentId, `Starting logic execution - type=${equipmentType}, location=${locationId}`);
 
     // Check if custom logic should run for this equipment
     const shouldRun = shouldRunCustomLogic(equipmentId, equipmentType, locationId);
@@ -1170,13 +1443,6 @@ export async function runEquipmentLogic(equipmentId: string) {
 
     // Fetch metrics for this equipment from InfluxDB (with Firebase fallback)
     const metrics = await fetchMetricsFromLocationsInfluxDB(locationId, equipmentId, equipmentType);
-    logEquipment(equipmentId, `Retrieved metrics - key fields:`, {
-      Supply: metrics.Supply,
-      supplyTemp: metrics.supplyTemp,
-      Outdoor_Air: metrics.Outdoor_Air,
-      Mixed_Air: metrics.Mixed_Air,
-      Setpoint: metrics.Setpoint
-    });
 
     // Fetch control settings for this equipment from InfluxDB (with defaults)
     const controlSettings = await fetchControlValuesFromInfluxDB(locationId, equipmentId);
@@ -1220,7 +1486,7 @@ export async function runEquipmentLogic(equipmentId: string) {
     };
 
     // Execute the custom logic
-    logEquipment(equipmentId, `Evaluating custom logic with ${Object.keys(metrics).length} metrics`);
+    logEquipment(equipmentId, `Evaluating custom logic for equipment type: ${equipmentType}`);
     const logicResult = evaluateCustomLogic(sandbox, pidState, equipmentType);
 
     // Check if there was an error in the logic
@@ -1332,6 +1598,8 @@ export async function runEquipmentLogic(equipmentId: string) {
     // Return success or failure based on commands
     const allCommandsSucceeded = commandResults.every(cmd => cmd.success);
 
+    logEquipment(equipmentId, `Logic processing complete, took ${Date.now() - logicResult.timestamp}ms`);
+
     return {
       equipmentId,
       name: equipment.name || "Unknown",
@@ -1355,7 +1623,7 @@ export async function runEquipmentLogic(equipmentId: string) {
 export async function runAllEquipmentLogic() {
   try {
     const equipmentList = await getEquipmentWithCustomLogic();
-    console.log(`Found ${equipmentList.length} equipment with custom logic enabled`);
+    console.log(`Found ${equipmentList.length} equipment that should run custom logic`);
 
     // Initialize results array with pending status for all equipment
     const results: any[] = equipmentList.map(equipment => ({
@@ -1366,57 +1634,67 @@ export async function runAllEquipmentLogic() {
     }));
 
     // Clear existing queue to prevent duplication
-    equipmentQueue.length = 0;
+   equipmentQueue.length = 0;
 
-    // Process first equipment immediately, and queue the rest
-    if (equipmentList.length > 0) {
-      // Process first equipment immediately to get quick feedback
-      try {
-        console.log(`Processing first equipment immediately: ${equipmentList[0].id}`);
-        const result = await runEquipmentLogic(equipmentList[0].id);
-        // Update results for the first equipment
-        const index = results.findIndex(r => r.equipmentId === equipmentList[0].id);
-        if (index >= 0) {
-          results[index] = result;
-        }
-      } catch (error) {
-        console.error(`Error running logic for first equipment ${equipmentList[0].id}:`, error);
-        const index = results.findIndex(r => r.equipmentId === equipmentList[0].id);
-        if (index >= 0) {
-          results[index] = {
-            equipmentId: equipmentList[0].id,
-            name: equipmentList[0].name || "Unknown",
-            success: false,
-            error: String(error),
-            timestamp: Date.now(),
-          };
-        }
-      }
+   // Process first equipment immediately, and queue the rest
+   if (equipmentList.length > 0) {
+     // Process first equipment immediately to get quick feedback
+     try {
+       console.log(`Processing first equipment immediately: ${equipmentList[0].id}`);
+       const result = await runEquipmentLogic(equipmentList[0].id);
+       // Update results for the first equipment
+       const index = results.findIndex(r => r.equipmentId === equipmentList[0].id);
+       if (index >= 0) {
+         results[index] = result;
+       }
+     } catch (error) {
+       console.error(`Error running logic for first equipment ${equipmentList[0].id}:`, error);
+       const index = results.findIndex(r => r.equipmentId === equipmentList[0].id);
+       if (index >= 0) {
+         results[index] = {
+           equipmentId: equipmentList[0].id,
+           name: equipmentList[0].name || "Unknown",
+           success: false,
+           error: String(error),
+           timestamp: Date.now(),
+         };
+       }
+     }
 
-      // Queue the rest for sequential processing
-      if (equipmentList.length > 1) {
-        console.log(`Queueing ${equipmentList.length - 1} additional equipment for sequential processing`);
-        for (let i = 1; i < equipmentList.length; i++) {
-          queueEquipmentLogic(equipmentList[i].id);
-        }
-      }
-    }
+     // Queue the rest for sequential processing
+     if (equipmentList.length > 1) {
+       console.log(`Queueing ${equipmentList.length - 1} additional equipment for sequential processing`);
+       for (let i = 1; i < equipmentList.length; i++) {
+         queueEquipmentLogic(equipmentList[i].id);
+       }
+     }
+   }
 
-    // Return results for the first equipment immediately, the rest will process in the background
-    return {
-      success: true,
-      message: `Server logic execution completed for first equipment, ${equipmentList.length - 1} more queued for processing`,
-      results,
-      queuedCount: equipmentList.length - 1,
-      timestamp: Date.now(),
-    };
-  } catch (error) {
-    console.error("Error running logic for all equipment:", error);
-    return {
-      success: false,
-      message: String(error),
-      results: [],
-      timestamp: Date.now(),
-    };
-  }
+   // Return results for the first equipment immediately, the rest will process in the background
+   return {
+     success: true,
+     message: `Server logic execution completed for first equipment, ${equipmentList.length - 1} more queued for processing`,
+     results,
+     queuedCount: equipmentList.length - 1,
+     timestamp: Date.now(),
+   };
+ } catch (error) {
+   console.error("Error running logic for all equipment:", error);
+   return {
+     success: false,
+     message: String(error),
+     results: [],
+     timestamp: Date.now(),
+   };
+ }
 }
+
+// Export the previously imported control functions for backward compatibility
+export {
+ fanCoilControlBase as fanCoilControl,
+ boilerControlBase as boilerControl,
+ pumpControlBase as pumpControl,
+ chillerControlBase as chillerControl,
+ airHandlerControlBase as airHandlerControl,
+ steamBundleControlBase as steamBundleControl
+};

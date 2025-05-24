@@ -159,7 +159,7 @@ export interface PIDControllerResult {
  *   input: roomTemperature,
  *   setpoint: desiredTemperature,
  *   pidParams: {
- *     kp: 1.0,
+ *     kp: 2.0,
  *     ki: 0.05,
  *     kd: 0.01,
  *     outputMin: 0,

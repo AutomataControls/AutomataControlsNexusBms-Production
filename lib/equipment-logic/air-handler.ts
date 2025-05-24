@@ -2,7 +2,7 @@
  * Air Handler Control Logic
  * This function implements control logic for air handling units with temperature control, damper control, and economizer logic
  */
-import { pidControllerImproved } from "../pid-controller"
+import { pidControllerImproved } from "@/lib/pid-controller"
 
 export function airHandlerControl(metrics, settings, currentTemp, pidState) {
   // If currentTemp is provided (from location-based selection), use it
