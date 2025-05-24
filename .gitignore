@@ -30,3 +30,6 @@ logs/control-commands.log
 # Log files
 logs/
 *.log
+# InfluxDB data files
+influxdb/data/
+*.wal
