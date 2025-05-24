@@ -6,6 +6,7 @@
 # next.js
 /.next/
 /out/
+/dist/
 
 # production
 /build
@@ -24,12 +25,16 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.tslogs/*.log
-influxdb/data/
-logs/control-commands.log
+next-env.d.ts
+
 # Log files
 logs/
 *.log
+
 # InfluxDB data files
 influxdb/data/
 *.wal
+
+# Large binary files
+*.jar
+*.pack
