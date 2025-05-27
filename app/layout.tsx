@@ -9,9 +9,8 @@ import { AuthProvider } from "@/lib/auth-context"
 import { FirebaseProvider } from "@/lib/firebase-context"
 import { SocketProvider } from "@/lib/socket-context"
 import { cn } from "@/lib/utils"
-import InitializationWrapper from "@/components/initialization-wrapper"
+
 import { NavigationProgress } from "@/components/navigation-progress"
-import { patchScripts } from "@/lib/patches" // Import the consolidated scripts
 import "@/app/globals.css"
 import Script from "next/script"
 
@@ -33,9 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className="w-full h-full">
       <head>
-        <Script id="consolidated-patches" strategy="beforeInteractive">
-          {patchScripts}
-        </Script>
       </head>
       <body
         className={cn(
@@ -50,10 +46,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <FirebaseProvider>
               <SocketProvider>
                 <SidebarProvider>
-                  <InitializationWrapper>
-                    {children}
-                  </InitializationWrapper>
-                  <Toaster />
+                  {children}
+                <Toaster />
                 </SidebarProvider>
               </SocketProvider>
             </FirebaseProvider>

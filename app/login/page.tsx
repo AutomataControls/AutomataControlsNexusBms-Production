@@ -1,5 +1,9 @@
 "use client"
 
+// Add this at the very top of your login page.tsx file
+export const dynamic = 'force-dynamic'
+
+
 import type React from "react"
 
 import { useState, useEffect } from "react"
@@ -49,6 +53,12 @@ export default function LoginPage() {
   const [locations, setLocations] = useState<any[]>([])
   const db = getFirestore()
   const [hasAdminAccess, setHasAdminAccess] = useState<((roles: string[]) => boolean) | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Add mounted state to prevent hydration mismatches
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     const loadHasAdminAccess = async () => {
@@ -57,21 +67,25 @@ export default function LoginPage() {
         setHasAdminAccess(() => hasEquipmentControlAccess)
       } catch (error) {
         console.error("Failed to load hasAdminAccess:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load admin access function.",
-          variant: "destructive",
-        })
+        if (isMounted) {
+          toast({
+            title: "Error",
+            description: "Failed to load admin access function.",
+            variant: "destructive",
+          })
+        }
       }
     }
 
-    loadHasAdminAccess()
-  }, [toast])
+    if (isMounted) {
+      loadHasAdminAccess()
+    }
+  }, [toast, isMounted])
 
   // Modified user check to redirect based on role, verification status, and assigned locations
   useEffect(() => {
-    // Only proceed if we have loaded the hasAdminAccess function
-    if (!hasAdminAccess) return
+    // Only proceed if we have loaded the hasAdminAccess function and component is mounted
+    if (!hasAdminAccess || !isMounted) return
 
     if (user && user.id) {
       console.log("User check - User found:", user.email)
@@ -123,11 +137,11 @@ export default function LoginPage() {
         return
       }
     }
-  }, [user, router, hasAdminAccess, toast])
+  }, [user, router, hasAdminAccess, toast, isMounted])
 
   useEffect(() => {
     const fetchLocations = async () => {
-      if (!db) return
+      if (!db || !isMounted) return
 
       try {
         const locationsRef = collection(db, "locations")
@@ -142,8 +156,10 @@ export default function LoginPage() {
       }
     }
 
-    fetchLocations()
-  }, [db])
+    if (isMounted) {
+      fetchLocations()
+    }
+  }, [db, isMounted])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -305,6 +321,40 @@ export default function LoginPage() {
     }
   }
 
+  // Show loading state until component is mounted
+  if (!isMounted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen w-full bg-zinc-900">
+        <div className="w-full max-w-2xl px-4">
+          <Card className="w-full bg-gray-800 border-gray-700">
+            <CardHeader className="space-y-4">
+              <div className="flex items-center justify-center mb-6">
+                <div className="w-[150px] h-[150px] bg-gray-600 animate-pulse rounded mr-6"></div>
+                <div>
+                  <div className="h-8 bg-gray-600 animate-pulse rounded mb-2 w-64"></div>
+                  <div className="h-6 bg-gray-600 animate-pulse rounded w-48"></div>
+                </div>
+              </div>
+              <div className="h-8 bg-gray-600 animate-pulse rounded w-32 mx-auto"></div>
+              <div className="h-6 bg-gray-600 animate-pulse rounded w-64 mx-auto"></div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="h-10 bg-gray-600 animate-pulse rounded"></div>
+              <div className="h-12 bg-gray-600 animate-pulse rounded"></div>
+              <div className="h-12 bg-gray-600 animate-pulse rounded"></div>
+            </CardContent>
+            <CardFooter className="space-y-4">
+              <div className="flex gap-4 w-full">
+                <div className="h-12 bg-gray-600 animate-pulse rounded flex-1"></div>
+                <div className="h-12 bg-gray-600 animate-pulse rounded w-24"></div>
+              </div>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen w-full bg-zinc-900">
       <div className="w-full max-w-2xl px-4">
@@ -425,7 +475,7 @@ export default function LoginPage() {
                             className="opacity-75"
                             fill="currentColor"
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
+                            ></path>
                         </svg>
                         Logging in...
                       </div>

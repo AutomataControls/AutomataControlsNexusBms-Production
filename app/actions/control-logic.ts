@@ -1,3 +1,6 @@
+// app/actions/control-logic.ts
+// Description: This module handles the logic for controlling HVAC equipment based on InfluxDB metrics and Firestore data.
+
 "use server"
 
 import { collection, getDocs, doc, getDoc, updateDoc, setDoc } from "firebase/firestore"
@@ -33,30 +36,47 @@ import { chillerControl as chillerControlHuntington } from "@/lib/equipment-logi
 //FirstChurchofGod (ID: 9)
 import { airHandlerControl as airHandlerControlFirstChurch } from "@/lib/equipment-logic/locations/firstchurchofgod/air-handler";
 
+// Location names mapping
+const LOCATION_NAMES: Record<string, string> = {
+  "1": "HeritageWarren",
+  "2": "StJudeCatholicSchool", 
+  "3": "ByrnaAmmunition",
+  "4": "HeritageHuntington",
+  "5": "HopbridgeAutismCenter",
+  "6": "AkronCarnegiePublicLibrary",
+  "7": "TaylorUniversity",
+  "8": "ElementLabs",
+  "9": "FirstChurchOfGod",
+  "10": "NERealtyGroup",
+  "11": "StJohnCatholicSchool",
+  "12": "Residential",
+  "13": "UplandCommunityChurch"
+};
+
 // Critical commands that should ALWAYS be sent for each equipment type
 const CRITICAL_COMMANDS_BY_TYPE = {
   // All equipment types
   "all": ["unitEnable", "isOccupied"],
-  
+
   // Air handlers
-  "air-handler": ["fanEnabled", "fanSpeed", "heatingValvePosition", "coolingValvePosition", 
+  "air-handler": ["fanEnabled", "fanSpeed", "heatingValvePosition", "coolingValvePosition",
                   "outdoorDamperPosition", "supplyAirTempSetpoint", "fanVFDSpeed"],
-  
+
   // Fan coils
-  "fan-coil": ["fanEnabled", "fanSpeed", "heatingValvePosition", "coolingValvePosition", 
+  "fan-coil": ["fanEnabled", "fanSpeed", "heatingValvePosition", "coolingValvePosition",
                "temperatureSetpoint"],
-  
+
   // Boilers
   "boiler": ["firingRate", "waterTempSetpoint", "boilerEnabled", "pumpEnabled"],
-  
+
   // Pumps
   "pump": ["pumpEnabled", "pumpSpeed", "leadLagStatus"],
   "hwpump": ["pumpEnabled", "pumpSpeed", "leadLagStatus"],
   "cwpump": ["pumpEnabled", "pumpSpeed", "leadLagStatus"],
-  
+
   // Chillers
   "chiller": ["chillerEnabled", "capacityControl", "setpoint", "leadLagStatus"],
-  
+
   // Steam bundles
   "steam-bundle": ["valvePosition", "steamPressure"]
 };
@@ -747,7 +767,7 @@ async function sendControlCommand(command: string, commandData: any) {
         ...commandData,
       }),
       // Add timeout to prevent hanging
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+        signal: AbortSignal.timeout(30000) // 30 second timeout
     });
 
     if (!response.ok) {
@@ -800,107 +820,77 @@ export async function getEquipmentWithCustomLogic() {
       try {
         console.log("Querying InfluxDB for equipment with CustomLogicEnabled=true (last 30 minutes)");
 
-        // Use proper INTERVAL syntax for time range with single query approach
-        // Only select the necessary fields to reduce data transfer
-        const sqlQuery = `
-          SELECT DISTINCT("equipmentId")
-          FROM "metrics"
-          WHERE (CAST("CustomLogicEnabled" AS TEXT) = 'true')
-          AND time >= now() - INTERVAL '30 minutes'
-        `;
+          // Use proper INTERVAL syntax for time range with single query approach
+          // Only select the necessary fields to reduce data transfer
+          const sqlQuery = `
+  SELECT DISTINCT("equipmentId")
+  FROM "metrics"
+  WHERE (CAST("CustomLogicEnabled" AS TEXT) = 'true')
+  AND time >= now() - INTERVAL '30 minutes'
+`;
 
-        const result = await queryInfluxDB(sqlQuery);
+          const result = await queryInfluxDB(sqlQuery);
 
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-          console.log(`Found ${result.data.length} equipment with CustomLogicEnabled=true in InfluxDB`);
+          if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+              console.log(`Found ${result.data.length} equipment with CustomLogicEnabled=true in InfluxDB`);
 
-          // Extract equipment IDs
-          const equipmentIds = new Set<string>();
+              // Extract equipment IDs
+              const equipmentIds = new Set < string > ();
 
-          for (const row of result.data) {
-            if (row.equipmentId) {
-              equipmentIds.add(row.equipmentId);
-            }
-          }
-
-          // Get equipment details from Firestore in bulk when possible
-          if (equipmentIds.size > 0) {
-            console.log(`Found ${equipmentIds.size} unique equipment IDs in InfluxDB, fetching details from Firestore`);
-            const equipmentList = [];
-
-            // Process in batches to avoid too many concurrent Firestore reads
-            const idArray = Array.from(equipmentIds);
-            const batchSize = 10;
-
-            for (let i = 0; i < idArray.length; i += batchSize) {
-              const idBatch = idArray.slice(i, i + batchSize);
-              const batchPromises = idBatch.map(async (id) => {
-                try {
-                  const equipRef = doc(db, "equipment", id);
-                  const equipSnap = await getDoc(equipRef);
-
-                  if (equipSnap.exists()) {
-                    // Equipment exists in Firestore, use its data
-                    const equipData = equipSnap.data();
-
-                    // Ensure required fields exist
-                    if (!equipData.controls) {
-                      equipData.controls = {};
-                    }
-
-                    // Set customLogicEnabled to true
-                    equipData.controls.customLogicEnabled = true;
-
-                    return {
-                      ...equipData,
-                      id: equipSnap.id,
-                    };
-                  } else {
-                    // Equipment not in Firestore, create basic record
-                    console.log(`Equipment ${id} found in InfluxDB but not in Firestore, creating basic record`);
-
-                    // Default values
-                    const basicEquipment = {
-                      id: id,
-                      locationId: "4", // Default to location 4 (Huntington)
-                      type: "Fan Coil", // Default type
-                      name: `Equipment ${id}`,
-                      controls: {
-                        customLogicEnabled: true
-                      }
-                    };
-
-                    // Optionally create in Firestore (in background)
-                    try {
-                      setDoc(doc(db, "equipment", id), basicEquipment).catch((createError) => {
-                        console.error(`Error creating equipment in Firestore:`, createError);
-                      });
-                    } catch (createError) {
-                      console.error(`Error creating equipment in Firestore:`, createError);
-                    }
-
-                    return basicEquipment;
+              for (const row of result.data) {
+                  if (row.equipmentId) {
+                      equipmentIds.add(row.equipmentId);
                   }
-                } catch (firestoreError) {
-                  console.error(`Error fetching equipment ${id} from Firestore:`, firestoreError);
+              }
 
-                  // Still add a basic record
-                  return {
-                    id: id,
-                    locationId: "4", // Default to location 4 (Huntington)
-                    type: "Fan Coil", // Default type
-                    name: `Equipment ${id}`,
-                    controls: {
-                      customLogicEnabled: true
-                    }
-                  };
-                }
-              });
+              // Get equipment details from Firestore in bulk when possible
+              if (equipmentIds.size > 0) {
+                  console.log(`Found ${equipmentIds.size} unique equipment IDs in InfluxDB, fetching details from Firestore`);
+                  const equipmentList = [];
 
-              // Wait for this batch to complete and add to the list
-              const batchResults = await Promise.all(batchPromises);
-              equipmentList.push(...batchResults);
-            }
+                  // Process in batches to avoid too many concurrent Firestore reads
+                  const idArray = Array.from(equipmentIds);
+                  const batchSize = 10;
+
+                  for (let i = 0; i < idArray.length; i += batchSize) {
+                      const idBatch = idArray.slice(i, i + batchSize);
+                      const batchPromises = idBatch.map(async (id) => {
+                          try {
+                              const equipRef = doc(db, "equipment", id);
+                              const equipSnap = await getDoc(equipRef);
+
+                              if (equipSnap.exists()) {
+                                  // Equipment exists in Firestore, use its data
+                                  const equipData = equipSnap.data();
+
+                                  // Ensure required fields exist
+                                  if (!equipData.controls) {
+                                      equipData.controls = {};
+                                  }
+
+                                  // Set customLogicEnabled to true
+                                  equipData.controls.customLogicEnabled = true;
+
+                                  return {
+                                      ...equipData,
+                                      id: equipSnap.id,
+                                  };
+                              } else {
+                                  // Equipment not in Firestore - skip control logic
+                                  console.log(`Equipment ${id} found in InfluxDB but not in Firestore, skipping control logic`);
+                                  return null; // Don't run control logic for unconfigured equipment
+                              }
+                          } catch (firestoreError) {
+                              console.error(`Error fetching equipment ${id} from Firestore:`, firestoreError);
+                              return null; // Skip equipment if Firestore error
+                          }
+                      });
+
+                      // Wait for this batch to complete and add to the list
+                      const batchResults = await Promise.all(batchPromises);
+                      // Filter out null results before adding to list
+                      equipmentList.push(...batchResults.filter(result => result !== null));
+                  }
 
             console.log(`FOUND ${equipmentList.length} EQUIPMENT WITH CUSTOM LOGIC ENABLED`);
 
@@ -979,61 +969,16 @@ export async function runEquipmentLogic(equipmentId: string) {
       console.error(`Error getting equipment from Firestore: ${firebaseError}`);
     }
 
-    // If equipment not found in Firestore, check if it's in InfluxDB and create a basic record
-    if (!equipment) {
-      try {
-        logEquipment(equipmentId, "Equipment not found in Firestore, checking InfluxDB");
-
-        // Query InfluxDB for this equipment - ONLY LATEST DATA with shorter time constraint
-        const query = `
-          SELECT *
-          FROM "metrics"
-          WHERE "equipmentId" = '${equipmentId}'
-          AND time >= now() - INTERVAL '60 minutes'
-          ORDER BY time DESC
-          LIMIT 1
-        `;
-
-        const result = await queryInfluxDB(query);
-
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-          logEquipment(equipmentId, "Found in InfluxDB but not in Firestore, creating basic record");
-
-          // Extract system name if available
-          let systemName = "unknown";
-          if (result.data[0].system) {
-            systemName = result.data[0].system;
-          }
-
-          // Create a basic equipment record
-          equipment = {
-            id: equipmentId,
-            locationId: "4", // Default to location 4 (Huntington)
-            type: "Fan Coil", // Default type
-            name: `Equipment ${equipmentId}`,
-            system: systemName,
-            controls: {
-              customLogicEnabled: true // Set to true since we're creating it for control purposes
-            }
+      // If equipment not found in Firestore, skip it (don't run control logic)
+      if (!equipment) {
+          logEquipment(equipmentId, "Equipment not found in Firestore, skipping control logic");
+          return {
+              success: false,
+              message: "Equipment not found in Firestore",
+              equipmentId,
+              timestamp: Date.now(),
           };
-
-          // Optionally create in Firestore
-          if (db) {
-            try {
-              await setDoc(doc(db, "equipment", equipmentId), equipment);
-              logEquipment(equipmentId, "Created new equipment record in Firestore");
-            } catch (createError) {
-              console.error(`Error creating equipment in Firestore:`, createError);
-            }
-          }
-        } else {
-          throw new Error(`Equipment ${equipmentId} not found in InfluxDB`);
-        }
-      } catch (error) {
-        console.error(`Error checking equipment in InfluxDB: ${error}`);
-        throw new Error(`Equipment ${equipmentId} not found in Firestore or InfluxDB`);
       }
-    }
 
     // Check equipment type and location
     const equipmentType = equipment.type || "Fan Coil";
@@ -1309,7 +1254,7 @@ export async function runEquipmentLogic(equipmentId: string) {
     try {
       // Set timeout for logic execution
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Logic execution timed out after 5 seconds")), 5000);
+        setTimeout(() => reject(new Error("Logic execution timed out after 45 seconds")), 45000);
       });
 
       // Execute control function
@@ -1323,6 +1268,51 @@ export async function runEquipmentLogic(equipmentId: string) {
         hasChanges: true,
         timestamp: Date.now(),
       };
+
+      logEquipment(equipmentId, `Logic evaluation result:`, evalResult);
+
+      // SKIP API CALLS FOR ALL LOCATIONS WITH CUSTOM LOGIC
+      // (they all write directly to InfluxDB)
+      const locationsWithCustomLogic = [
+        "1",   // HeritageWarren
+        "2",   // StJudeCatholicSchool
+        "3",   // ByrnaAmmunition
+        "4",   // HeritageHuntington
+        "5",   // HopbridgeAutismCenter
+        "6",   // AkronCarnegiePublicLibrary
+        "7",   // TaylorUniversity
+        "8",   // ElementLabs
+        "9",   // FirstChurchOfGod
+        "10",  // NERealtyGroup
+        "11",  // StJohnCatholicSchool
+        "12",  // Residential
+        "13"   // UplandCommunityChurch
+      ];
+
+      if (locationsWithCustomLogic.includes(locationId)) {
+        const locationName = LOCATION_NAMES[locationId] || `Location ${locationId}`;
+        logEquipment(equipmentId, `Skipping API calls - ${locationName} uses direct InfluxDB writes`);
+        
+        // UPDATE EXISTING PID STATE
+        pidStateStorage.set(pidStateKey, pidState);
+        
+        // Return success without sending API commands
+        return {
+          success: true,
+          result: evalResult.result,
+          equipmentId,
+          name: equipment.name || "Unknown",
+          timestamp: Date.now(),
+          message: `Processed via ${locationName} custom logic with direct InfluxDB writes`
+        };
+      }
+
+      // Only equipment without location-specific logic uses the API calls
+      logEquipment(equipmentId, `Using API calls for base implementation (no custom location logic)`);
+
+      // UPDATE EXISTING PID STATE
+      pidStateStorage.set(pidStateKey, pidState);
+
     } catch (error) {
       console.error(`Error in control logic:`, error);
       return {

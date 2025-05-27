@@ -1,528 +1,109 @@
 // lib/equipment-logic/locations/hopebridge/air-handler.ts
+//
+// ===============================================================================
+// HOPEBRIDGE AIR HANDLER CONTROL LOGIC - MULTI-AHU SYSTEM WITH SPECIALIZED COOLING
+// ===============================================================================
+//
+// OVERVIEW:
+// This file controls multiple air handler units at the Hopebridge location with
+// different cooling strategies, occupancy scheduling, and specialized equipment
+// configurations for optimal comfort in autism therapy facility zones.
+//
+// EQUIPMENT CONFIGURATION:
+// - AHU-1 (FDhNArcvkL6v2cZDfuSR): CW actuator + CW circulation pump + Chiller control
+// - AHU-2 (XS60eMHH8DJRXmvIv6wU): DX cooling with hysteresis and minimum runtime
+// - AHU-3 (57bJYUeT8vbjsKqzo0uD): Simplified CW actuator control only
+//
+// CONTROL STRATEGIES:
+// 1. Supply Air Temperature Control - All AHUs use supply air temperature for control
+// 2. Outdoor Air Reset (OAR) - Automatically adjusts setpoints based on outdoor temp
+// 3. Occupancy Scheduling - Extended hours for therapy sessions (5:30 AM - 9:45 PM)
+// 4. Equipment-Specific Cooling - Different cooling methods per AHU
+// 5. Safety Interlocks - Comprehensive freeze protection and operational safety
+//
+// OCCUPANCY SCHEDULE:
+// - Occupied: 5:30 AM to 9:45 PM (extended hours for therapy sessions)
+// - Unoccupied: All cooling systems disabled, OA dampers closed
+//
+// OAR SETPOINTS (Hopebridge Specific):
+// - When Outdoor Temp = 32°F → Supply Setpoint = 76°F (Max Heat/Min Cool)
+// - When Outdoor Temp = 68°F → Supply Setpoint = 50°F (Min Heat/Max Cool)
+// - Temperatures between 32°F-68°F are calculated proportionally
+// - Designed for moderate cooling loads typical in therapy environments
+//
+// DAMPER OPERATION:
+// - Opens when outdoor temp ≥ 40°F (free cooling opportunity)
+// - Closes when outdoor temp ≤ 38°F (hysteresis prevents cycling)
+// - Closes during unoccupied periods and safety conditions
+// - Safety override: Closes if supply air < 40°F or > 80°F
+//
+// COOLING SYSTEM DETAILS:
+//
+// AHU-1 (Chilled Water System):
+// - CW circulation pump must run 2 minutes before chiller starts
+// - Chiller operation requires: OAT > 55°F, Mixed air > 38°F, Supply > 38°F
+// - Safe shutdown: Pump continues 5 minutes after chiller stops
+// - PID control: kp=2.8, ki=0.17, kd=0.01 (enhanced for stable CW control)
+//
+// AHU-2 (DX Cooling System):
+// - 7.5°F hysteresis prevents short cycling
+// - 15-minute minimum runtime when enabled
+// - ON when: Supply temp > (Setpoint + 3.75°F)
+// - OFF when: Supply temp < (Setpoint - 3.75°F) AND minimum runtime met
+// - Binary operation: 100% ON or 0% OFF (no modulation)
+//
+// AHU-3 (Simple CW System):
+// - CW valve control only (no pump or chiller)
+// - Same PID parameters as AHU-1 for consistency
+// - Simpler conditions: OAT > 55°F, Supply > 38°F
+//
+// SAFETY FEATURES:
+// - FreezeStat: Trips when supply OR mixed air < 40°F
+// - All cooling systems disabled on freeze protection
+// - Fan disabled during freeze protection
+// - OA dampers closed on any safety condition
+// - Emergency state written to InfluxDB for monitoring
+//
+// PID TUNING (Enhanced for Hopebridge):
+// - Cooling PID: kp=2.8, ki=0.17, kd=0.01 (increased gains for responsive control)
+// - Anti-windup: maxIntegral=10 for stable operation
+// - Direct acting: Higher output = more cooling
+//
+// DATA STORAGE:
+// - Commands are written directly to both Locations and ControlCommands databases
+// - All operations are logged for troubleshooting
+// - State storage maintains equipment timers and hysteresis logic
+//
+// TECHNICIAN NOTES:
+// - Check supply air temperature sensor if any AHU control seems erratic
+// - Verify outdoor temperature sensor for proper OAR and damper operation
+// - AHU-1 chiller requires 2-minute pump warm-up and 5-minute cooldown
+// - AHU-2 DX system has 7.5°F hysteresis - normal for temperature swings
+// - AHU-2 minimum runtime is 15 minutes - prevents short cycling damage
+// - All cooling systems require occupied mode + specific temperature conditions
+// - Extended occupancy hours (5:30 AM - 9:45 PM) for therapy scheduling
+// - Monitor state storage for timing sequences (pump warm-up, DX runtime, etc.)
+// - FreezeStat trips disable all cooling - check mixed air and supply sensors
+// - Use Node-RED dashboard to monitor real-time equipment states and timers
+//
+// ===============================================================================
+
 import { airHandlerControl as airHandlerControlBase } from "../../base/air-handler";
 import { pidControllerImproved } from "@/lib/pid-controller";
 import { logLocationEquipment } from "@/lib/logging/location-logger";
 
-/**
- * Air Handler Control Logic specifically for Hopebridge
- * - Control source: Supply air temperature
- * - Occupied hours: 5:30 AM to 9:30 PM
- * - OAR setpoint: Min OAT 32°F → SP 76°F, Max OAT 68°F → SP 50°F
- * - OA dampers: Open at OAT 40°F, close at 38°F
- * - Safety: Close OA dampers if supply air < 40°F or > 80°F
- * - AHU-1: CW actuator, OA/RA dampers, CW circ pump, Chiller control
- * - AHU-2: DX cooling, OA/RA dampers, Hysteresis 7.5°F, 15-min min runtime
- * - AHU-3: CW actuator only, simplified control
- * - Safety: Freezestat trips when mixed/supply air < 40°F
- */
-export async function airHandlerControl(metrics: any, settings: any, currentTemp: number, stateStorage: any): Promise<any> {
-  // Extract equipment ID and location ID for logging
-  const equipmentId = settings.equipmentId || "unknown";
-  const locationId = settings.locationId || "5"; // Hopebridge is location ID 5
-
-  logLocationEquipment(locationId, equipmentId, "air-handler", "Starting Hopebridge-specific air handler control logic");
-
-  // Determine which AHU this is (1, 2, or 3)
-  const ahuNumber = getAHUNumber(equipmentId);
-  logLocationEquipment(locationId, equipmentId, "air-handler", `Identified as AHU-${ahuNumber}`);
-
-  // STEP 1: Get temperatures
-
-  // Always use supply air temperature for control
-  if (currentTemp === undefined) {
-    currentTemp = metrics.Supply ||
-                  metrics.supplyTemperature ||
-                  metrics.SupplyTemp ||
-                  metrics.supplyTemp ||
-                  metrics.SupplyTemperature ||
-                  metrics.SAT ||
-                  metrics.sat ||
-                  metrics.SupplyAirTemp ||
-                  metrics.supplyAirTemp ||
-                  55;
-
-    logLocationEquipment(locationId, equipmentId, "air-handler", `Using supply air temperature: ${currentTemp}°F`);
+// Helper to safely parse temperatures from various metric sources or settings
+function parseSafeNumber(value: any, defaultValue: number): number {
+  if (typeof value === 'number' && !isNaN(value)) {
+    return value;
   }
-
-  // Get outdoor temperature with fallbacks
-  const outdoorTemp = metrics.Outdoor_Air ||
-                     metrics.outdoorTemperature ||
-                     metrics.outdoorTemp ||
-                     metrics.Outdoor ||
-                     metrics.outdoor ||
-                     metrics.OutdoorTemp ||
-                     metrics.OAT ||
-                     metrics.oat ||
-                     65;
-
-  logLocationEquipment(locationId, equipmentId, "air-handler", `Outdoor temperature: ${outdoorTemp}°F`);
-
-  // Get mixed air temperature for safety checks
-  const mixedAirTemp = metrics.Mixed_Air ||
-                      metrics.MixedAir ||
-                      metrics.mixedAir ||
-                      metrics.MAT ||
-                      metrics.mat ||
-                      metrics.MixedAirTemp ||
-                      metrics.mixedAirTemp ||
-                      55;
-
-  logLocationEquipment(locationId, equipmentId, "air-handler", `Mixed air temperature: ${mixedAirTemp}°F`);
-
-  // STEP 2: Determine occupancy based on time of day
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-  // Convert 5:30 AM to minutes (5 * 60 + 30 = 330)
-  const occupiedStartMinutes = 5 * 60 + 30;
-  // Convert 9:30 PM to minutes (23 * 60 + 1 = 1290) - UPDATED
-  const occupiedEndMinutes = 21 * 60 + 45;
-
-  const isOccupied = currentTimeInMinutes >= occupiedStartMinutes && currentTimeInMinutes <= occupiedEndMinutes;
-
-  logLocationEquipment(locationId, equipmentId, "air-handler",
-    `Current time: ${currentHour}:${currentMinute.toString().padStart(2, '0')}, Occupancy: ${isOccupied ? "OCCUPIED" : "UNOCCUPIED"}`);
-
-  // STEP 3: Calculate supply air temperature setpoint using OAR
-  // Updated OAR: Min OAT 32°F → SP 76°F, Max OAT 68°F → SP 50°F
-  let supplySetpoint = 50; // Default to minimum setpoint
-
-  if (isOccupied) {
-    // Apply outdoor air reset for all AHUs
-    const minOAT = 32;    // Minimum outdoor air temperature
-    const maxOAT = 68;    // Maximum outdoor air temperature
-    const maxSupply = 76; // Maximum supply air setpoint (when OAT = minOAT)
-    const minSupply = 50; // Minimum supply air setpoint (when OAT = maxOAT)
-
-    if (outdoorTemp <= minOAT) {
-      supplySetpoint = maxSupply;
-      logLocationEquipment(locationId, equipmentId, "air-handler",
-        `OAR: OAT ${outdoorTemp}°F <= ${minOAT}°F, using max setpoint: ${supplySetpoint}°F`);
-    } else if (outdoorTemp >= maxOAT) {
-      supplySetpoint = minSupply;
-      logLocationEquipment(locationId, equipmentId, "air-handler",
-        `OAR: OAT ${outdoorTemp}°F >= ${maxOAT}°F, using min setpoint: ${supplySetpoint}°F`);
-    } else {
-      // Linear interpolation for values between min and max
-      const ratio = (outdoorTemp - minOAT) / (maxOAT - minOAT);
-      supplySetpoint = maxSupply - ratio * (maxSupply - minSupply);
-      logLocationEquipment(locationId, equipmentId, "air-handler",
-        `OAR: Calculated setpoint: ${supplySetpoint.toFixed(1)}°F (ratio: ${ratio.toFixed(2)})`);
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed)) {
+      return parsed;
     }
   }
-
-  // STEP 4: Check safety conditions
-
-  // SAFETY CHECK 1: Freezestat (mixed or supply air < 40°F)
-  const freezestatTripped = currentTemp < 40 || mixedAirTemp < 40;
-
-  if (freezestatTripped) {
-    logLocationEquipment(locationId, equipmentId, "air-handler", `SAFETY: FREEZESTAT TRIPPED! Supply: ${currentTemp}°F, Mixed: ${mixedAirTemp}°F`);
-
-    // Emergency shutdown
-    const safetyResult = {
-      heatingValvePosition: 0,           // No heating for Hopebridge AHUs
-      coolingValvePosition: 0,           // Close cooling valve/disable DX
-      fanEnabled: false,                 // Disable fan
-      fanSpeed: "off",
-      outdoorDamperPosition: 0,          // Close outdoor air damper
-      supplyAirTempSetpoint: supplySetpoint,
-      temperatureSetpoint: 72,           // Standard room temp setpoint
-      unitEnable: true,                  // Keep unit enabled for control
-      dxEnabled: false,                  // Disable DX cooling
-      cwCircPumpEnabled: false,          // Disable CW circulation pump
-      chillerEnabled: false,             // Disable chiller
-      safetyTripped: "freezestat",       // Record the safety trip
-      stateStorage: stateStorage         // Include state storage
-    };
-
-    // Write emergency shutdown state to InfluxDB
-    await writeToInfluxDB(locationId, equipmentId, safetyResult, "air-handler");
-
-    return safetyResult;
-  }
-
-  // SAFETY CHECK 2: Supply air temperature too high or low for dampers
-  const supplyTempOutOfRange = currentTemp < 40 || currentTemp > 80;
-
-  if (supplyTempOutOfRange && !freezestatTripped) {
-    logLocationEquipment(locationId, equipmentId, "air-handler",
-      `SAFETY: Supply air temperature out of range (${currentTemp}°F), closing outdoor dampers`);
-  }
-
-  // STEP 5: Determine outdoor damper position
-
-  // Initialize damper state if not present
-  if (!stateStorage.hopebridgeOADamperState) {
-    stateStorage.hopebridgeOADamperState = {
-      isOpen: false
-    };
-
-    // Set initial state based on outdoor temperature
-    if (outdoorTemp >= 40) {
-      stateStorage.hopebridgeOADamperState.isOpen = true;
-      logLocationEquipment(locationId, equipmentId, "air-handler",
-        `Initializing OA damper state to OPEN (OAT ${outdoorTemp}°F >= 40°F)`);
-    } else {
-      logLocationEquipment(locationId, equipmentId, "air-handler",
-        `Initializing OA damper state to CLOSED (OAT ${outdoorTemp}°F < 40°F)`);
-    }
-  }
-
-  // Apply hysteresis logic to outdoor damper
-  let outdoorDamperPosition = 0;
-
-  if (isOccupied && !freezestatTripped && !supplyTempOutOfRange) {
-    if (stateStorage.hopebridgeOADamperState.isOpen) {
-      // If currently open, close at 38°F or lower
-      if (outdoorTemp <= 38) {
-        stateStorage.hopebridgeOADamperState.isOpen = false;
-        outdoorDamperPosition = 0;
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `OA damper: CLOSING (OAT ${outdoorTemp}°F <= 38°F)`);
-      } else {
-        outdoorDamperPosition = 100; // 0-10V maps to 0-100%
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `OA damper: Maintaining OPEN (OAT ${outdoorTemp}°F > 38°F)`);
-      }
-    } else {
-      // If currently closed, open at 40°F or higher
-      if (outdoorTemp >= 40) {
-        stateStorage.hopebridgeOADamperState.isOpen = true;
-        outdoorDamperPosition = 100;
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `OA damper: OPENING (OAT ${outdoorTemp}°F >= 40°F)`);
-      } else {
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `OA damper: Maintaining CLOSED (OAT ${outdoorTemp}°F < 40°F)`);
-      }
-    }
-  } else if (!isOccupied) {
-    logLocationEquipment(locationId, equipmentId, "air-handler", `OA damper: CLOSED (unoccupied mode)`);
-  } else if (freezestatTripped || supplyTempOutOfRange) {
-    logLocationEquipment(locationId, equipmentId, "air-handler", `OA damper: CLOSED (safety protection)`);
-  }
-
-  // STEP 6: Determine fan status (moved up from Step 7)
-  const fanEnabled = isOccupied && !freezestatTripped;
-  const fanSpeed = fanEnabled ? "medium" : "off";
-
-  if (fanEnabled) {
-    logLocationEquipment(locationId, equipmentId, "air-handler", `Fan ENABLED (occupied mode)`);
-  } else if (!isOccupied) {
-    logLocationEquipment(locationId, equipmentId, "air-handler", `Fan DISABLED (unoccupied mode)`);
-  } else if (freezestatTripped) {
-    logLocationEquipment(locationId, equipmentId, "air-handler", `Fan DISABLED (safety protection)`);
-  }
-
-  // STEP 7: Calculate cooling outputs based on AHU number
-  let coolingValvePosition = 0;
-  let cwCircPumpEnabled = false;
-  let dxEnabled = false;
-  let chillerEnabled = false; // New control for chiller
-
-  if (isOccupied && !freezestatTripped) {
-    if (ahuNumber === 1) {
-      // AHU-1: CW actuator and chiller control logic
-
-      // First check if conditions meet for pump operation
-      cwCircPumpEnabled = outdoorTemp > 55 && mixedAirTemp > 38 && currentTemp > 38 && fanEnabled;
-
-      // Initialize chiller state if not present
-      if (!stateStorage.chillerState) {
-        stateStorage.chillerState = {
-          isEnabled: false,
-          pumpRunningTime: 0
-        };
-      }
-
-      if (cwCircPumpEnabled) {
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `AHU-1: CW circulation pump ENABLED (OAT ${outdoorTemp}°F > 55°F, Mixed Air ${mixedAirTemp}°F > 38°F, Supply ${currentTemp}°F > 38°F)`);
-
-        // Ensure pump runs for at least 2 minutes before enabling chiller
-        if (!stateStorage.chillerState.isEnabled) {
-          stateStorage.chillerState.pumpRunningTime += 1; // Increment by 1 minute
-
-          if (stateStorage.chillerState.pumpRunningTime >= 2) {
-            // Enable chiller after pump has been running for 2 minutes
-            chillerEnabled = true;
-            stateStorage.chillerState.isEnabled = true;
-            logLocationEquipment(locationId, equipmentId, "air-handler",
-              `AHU-1: CHILLER ENABLED after pump warm-up period`);
-          } else {
-            logLocationEquipment(locationId, equipmentId, "air-handler",
-              `AHU-1: Pump warm-up period: ${stateStorage.chillerState.pumpRunningTime}/2 minutes before chiller enable`);
-          }
-        } else {
-          // Chiller already running
-          chillerEnabled = true;
-        }
-
-        // Calculate cooling valve position using PID with updated gains
-        const coolingPID = pidControllerImproved({
-          input: currentTemp,
-          setpoint: supplySetpoint,
-          pidParams: {
-            kp: 2.8,              // Increased from 1.0 to 2.8
-            ki: 0.17,             // Increased from 0.1 to 0.17
-            kd: 0.01,             // Unchanged
-            outputMin: 0,
-            outputMax: 100,
-            enabled: true,
-            reverseActing: false, // Direct acting for cooling
-            maxIntegral: 10,      // Maximum integral value
-          },
-          dt: 1,
-          controllerType: "cooling",
-          pidState: stateStorage.pidState, // Use state storage for PID
-        });
-
-        coolingValvePosition = coolingPID.output;
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `AHU-1: CW valve position: ${coolingValvePosition.toFixed(1)}% (PID control)`);
-      } else {
-        // Not meeting conditions for pump operation
-        if (stateStorage.chillerState && stateStorage.chillerState.isEnabled) {
-          // If chiller was running, disable it first before turning off pump
-          chillerEnabled = false;
-          stateStorage.chillerState.isEnabled = false;
-          stateStorage.chillerState.pumpRunningTime = 0;
-
-          logLocationEquipment(locationId, equipmentId, "air-handler",
-            `AHU-1: CHILLER DISABLED (Safe shutdown sequence initiated)`);
-
-          // Keep pump running for 5 more minutes after chiller shutdown
-          if (!stateStorage.chillerShutdownTimer) {
-            stateStorage.chillerShutdownTimer = 5; // 5 minute cooldown period
-            cwCircPumpEnabled = true; // Keep pump running during cooldown
-
-            logLocationEquipment(locationId, equipmentId, "air-handler",
-              `AHU-1: Pump cooldown period: ${stateStorage.chillerShutdownTimer} minutes remaining`);
-          } else if (stateStorage.chillerShutdownTimer > 0) {
-            stateStorage.chillerShutdownTimer -= 1;
-            cwCircPumpEnabled = true; // Keep pump running during cooldown
-
-            logLocationEquipment(locationId, equipmentId, "air-handler",
-              `AHU-1: Pump cooldown period: ${stateStorage.chillerShutdownTimer} minutes remaining`);
-          } else {
-            // Safe to turn off pump now
-            cwCircPumpEnabled = false;
-            stateStorage.chillerShutdownTimer = null;
-
-            logLocationEquipment(locationId, equipmentId, "air-handler",
-              `AHU-1: CW circulation pump DISABLED after safe cooldown period`);
-          }
-        } else {
-          logLocationEquipment(locationId, equipmentId, "air-handler",
-            `AHU-1: CW circulation pump DISABLED (conditions not met)`);
-        }
-      }
-    } else if (ahuNumber === 2) {
-      // AHU-2: DX cooling with longer hysteresis and minimum runtime
-      // Check if conditions meet for DX operation - same as AHU-1 chiller
-      const dxConditionsMet = outdoorTemp > 55 && mixedAirTemp > 38 && currentTemp > 38 && fanEnabled && isOccupied;
-
-      // Initialize DX state if not present
-      if (!stateStorage.dxState) {
-        stateStorage.dxState = {
-          isRunning: false,
-          runningTime: 0,
-          lastState: false,
-          hysteresisPoint: 0
-        };
-      }
-
-      if (dxConditionsMet) {
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `AHU-2: DX conditions met (OAT ${outdoorTemp}°F > 55°F, Mixed Air ${mixedAirTemp}°F > 38°F, Supply ${currentTemp}°F > 38°F, Fan Enabled)`);
-
-        // Calculate if DX should be on or off based on temperature and hysteresis
-        const hysteresis = 7.5; // 7.5°F hysteresis
-
-        // If DX is currently off, turn on when temp exceeds setpoint + (hysteresis/2)
-        // If DX is currently on, turn off when temp drops below setpoint - (hysteresis/2)
-        if (!stateStorage.dxState.isRunning) {
-          if (currentTemp > supplySetpoint + (hysteresis / 2)) {
-            // Time to turn on DX
-            stateStorage.dxState.isRunning = true;
-            stateStorage.dxState.runningTime = 1; // Start the running timer (in minutes)
-            stateStorage.dxState.hysteresisPoint = supplySetpoint - (hysteresis / 2); // Point at which to turn off
-
-            dxEnabled = true;
-            coolingValvePosition = 100; // Fully on for DX
-
-            logLocationEquipment(locationId, equipmentId, "air-handler",
-              `AHU-2: DX cooling TURNING ON (${currentTemp}°F > ${supplySetpoint + (hysteresis / 2)}°F), will turn off at ${stateStorage.dxState.hysteresisPoint}°F`);
-          } else {
-            dxEnabled = false;
-            coolingValvePosition = 0;
-
-            logLocationEquipment(locationId, equipmentId, "air-handler",
-              `AHU-2: DX cooling OFF (waiting for ${currentTemp}°F to exceed ${supplySetpoint + (hysteresis / 2)}°F)`);
-          }
-        } else {
-          // DX is currently running
-          stateStorage.dxState.runningTime += 1; // Increment runtime by 1 minute
-
-          if (currentTemp < stateStorage.dxState.hysteresisPoint && stateStorage.dxState.runningTime >= 15) {
-            // OK to turn off - below hysteresis point and met minimum runtime
-            stateStorage.dxState.isRunning = false;
-            stateStorage.dxState.runningTime = 0;
-
-            dxEnabled = false;
-            coolingValvePosition = 0;
-
-            logLocationEquipment(locationId, equipmentId, "air-handler",
-              `AHU-2: DX cooling TURNING OFF (${currentTemp}°F < ${stateStorage.dxState.hysteresisPoint}°F and minimum runtime met)`);
-          } else {
-            // Keep running
-            dxEnabled = true;
-            coolingValvePosition = 100;
-
-            if (stateStorage.dxState.runningTime < 15) {
-              logLocationEquipment(locationId, equipmentId, "air-handler",
-                `AHU-2: DX cooling ON (minimum runtime: ${stateStorage.dxState.runningTime}/15 minutes)`);
-            } else if (currentTemp < stateStorage.dxState.hysteresisPoint) {
-              logLocationEquipment(locationId, equipmentId, "air-handler",
-                `AHU-2: DX cooling ON (ready to turn off, waiting for temperature ${currentTemp}°F to drop below ${stateStorage.dxState.hysteresisPoint}°F)`);
-            } else {
-              logLocationEquipment(locationId, equipmentId, "air-handler",
-                `AHU-2: DX cooling ON (running normally, current temp: ${currentTemp}°F, will turn off at ${stateStorage.dxState.hysteresisPoint}°F)`);
-            }
-          }
-        }
-      } else {
-        // DX conditions not met - ensure DX is off
-        dxEnabled = false;
-        coolingValvePosition = 0;
-
-        // Reset running state
-        if (stateStorage.dxState.isRunning) {
-          stateStorage.dxState.isRunning = false;
-          stateStorage.dxState.runningTime = 0;
-          logLocationEquipment(locationId, equipmentId, "air-handler",
-            `AHU-2: DX cooling FORCED OFF (conditions no longer met)`);
-        } else {
-          logLocationEquipment(locationId, equipmentId, "air-handler",
-            `AHU-2: DX cooling OFF (conditions not met)`);
-        }
-      }
-    } else if (ahuNumber === 3) {
-      // AHU-3: Simplified CW actuator control with PID
-      // Only checks supply temperature and outdoor temperature
-
-      // Check if conditions meet for CW valve operation
-      const cwValveConditionsMet = outdoorTemp > 55 && currentTemp > 38 && fanEnabled;
-
-      if (cwValveConditionsMet) {
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `AHU-3: CW valve control ENABLED (OAT ${outdoorTemp}°F > 55°F, Supply ${currentTemp}°F > 38°F)`);
-
-        // Calculate cooling valve position using PID with same parameters as AHU-1
-        const coolingPID = pidControllerImproved({
-          input: currentTemp,
-          setpoint: supplySetpoint,
-          pidParams: {
-            kp: 2.8,             // Same as AHU-1
-            ki: 0.17,            // Same as AHU-1
-            kd: 0.01,            // Same as AHU-1
-            outputMin: 0,
-            outputMax: 100,
-            enabled: true,
-            reverseActing: false,
-            maxIntegral: 10,
-          },
-          dt: 1,
-          controllerType: "cooling",
-          pidState: stateStorage.pidStateAhu3, // Separate PID state for AHU-3
-        });
-
-        coolingValvePosition = coolingPID.output;
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `AHU-3: CW valve position: ${coolingValvePosition.toFixed(1)}% (PID control)`);
-      } else {
-        // Not meeting conditions for CW valve operation
-        coolingValvePosition = 0;
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `AHU-3: CW valve CLOSED (conditions not met)`);
-      }
-    }
-  } else if (!isOccupied) {
-    logLocationEquipment(locationId, equipmentId, "air-handler", `Cooling disabled (unoccupied mode)`);
-  } else if (freezestatTripped) {
-    logLocationEquipment(locationId, equipmentId, "air-handler", `Cooling disabled (safety protection)`);
-  }
-
-  // No need for step 7 fan determination since we moved it to step 6
-
-  // Return the final control values
-  const result = {
-    heatingValvePosition: 0,                 // No heating for Hopebridge AHUs
-    coolingValvePosition: coolingValvePosition,
-    fanEnabled: fanEnabled,
-    fanSpeed: fanSpeed,
-    outdoorDamperPosition: outdoorDamperPosition,
-    supplyAirTempSetpoint: supplySetpoint,
-    temperatureSetpoint: 72,                 // Standard room temp setpoint
-    unitEnable: true,                        // Keep unit enabled for control
-    dxEnabled: dxEnabled,                    // DX cooling status (AHU-2 only)
-    cwCircPumpEnabled: cwCircPumpEnabled,    // CW circulation pump status (AHU-1 only)
-    chillerEnabled: chillerEnabled,          // Chiller status (AHU-1 only)
-    isOccupied: isOccupied,                  // Return occupancy state
-    stateStorage: stateStorage               // Return the updated state storage
-  };
-
-  // ADDED CODE: Write all control values to InfluxDB in a single batch
-  await writeToInfluxDB(locationId, equipmentId, result, "air-handler");
-
-  // Original code for fan command
-  // ADDED CODE: Force explicit fan command to be stored in the database for AHU-2 and AHU-3
-  if (ahuNumber === 2 || ahuNumber === 3) {
-    // Explicitly create a command to ensure fan state is persisted in the database
-    try {
-      // Use Node-RED global context to store a command that should be sent to the database
-      if (global && typeof global.set === 'function') {
-        const fanCommand = {
-          command_type: 'fanEnabled',
-          equipment_id: equipmentId,
-          value: fanEnabled,
-          timestamp: new Date().toISOString()
-        };
-
-        // Store the command in a well-known location that your command processing can access
-        global.set(`fanCommand_${equipmentId}`, fanCommand);
-
-        // Add message to the environment to ensure this gets processed
-        if (settings && settings.context) {
-          settings.context.fanCommand = fanCommand;
-        }
-
-        logLocationEquipment(locationId, equipmentId, "air-handler",
-          `FORCED FAN COMMAND for AHU-${ahuNumber}: fanEnabled=${fanEnabled ? "ON" : "OFF"}`);
-      }
-    } catch (cmdError) {
-      logLocationEquipment(locationId, equipmentId, "air-handler",
-        `Error forcing fan command: ${cmdError.message}`);
-    }
-  }
-
-  logLocationEquipment(locationId, equipmentId, "air-handler",
-    `Final control values: fan=${result.fanEnabled ? "ON" : "OFF"}, ` +
-    `cooling=${result.coolingValvePosition}%, OA damper=${result.outdoorDamperPosition}%, ` +
-    `isOccupied=${result.isOccupied}, ` +
-    (ahuNumber === 1 ?
-      `CW pump=${result.cwCircPumpEnabled ? "ON" : "OFF"}, Chiller=${result.chillerEnabled ? "ON" : "OFF"}` :
-      (ahuNumber === 2 ?
-        `DX=${result.dxEnabled ? "ON" : "OFF"}` :
-        `CW valve=${result.coolingValvePosition}%`
-      )
-    ),
-    result);
-
-  return result;
+  return defaultValue;
 }
 
 /**
@@ -543,7 +124,6 @@ function getAHUNumber(equipmentId: string): number {
     }
 
     // Fallback to the original logic for any other equipment IDs
-    // Check for AHU-1, AHU-2, or AHU-3 in the ID
     if (equipmentId.includes("AHU-1") || equipmentId.includes("AHU1")) {
       return 1;
     }
@@ -558,28 +138,503 @@ function getAHUNumber(equipmentId: string): number {
     const match = equipmentId.match(/(\d+)/);
     if (match) {
       const num = parseInt(match[0], 10);
-      // If the number is 1, 2, or 3 use it; otherwise default to 1
       return (num === 1 || num === 2 || num === 3) ? num : 1;
     }
 
-    // Default to AHU-1 if no number found
-    return 1;
+    return 1; // Default to AHU-1
   } catch (error) {
     console.error(`Error determining AHU number: ${error}`);
     return 1;
   }
 }
 
+export async function airHandlerControl(
+  metricsInput: any,
+  settingsInput: any,
+  currentTempArgument: number,
+  stateStorageInput: any
+) {
+  const equipmentId = settingsInput.equipmentId || "unknown";
+  const locationId = settingsInput.locationId || "5";
+
+  const currentMetrics = metricsInput;
+  const currentSettings = settingsInput;
+
+  logLocationEquipment(locationId, equipmentId, "air-handler", "Starting Hopebridge air handler control logic");
+
+  try {
+    // Initialize state storage if needed
+    if (!stateStorageInput) {
+      stateStorageInput = {};
+    }
+
+    // Determine which AHU this is (1, 2, or 3)
+    const ahuNumber = getAHUNumber(equipmentId);
+    logLocationEquipment(locationId, equipmentId, "air-handler", `Identified as AHU-${ahuNumber}`);
+
+    // STEP 1: Get temperatures - Always use supply air temperature for control
+    let currentTemp = currentTempArgument;
+
+    if (currentTemp === undefined || isNaN(currentTemp)) {
+      currentTemp = parseSafeNumber(currentMetrics.Supply,
+        parseSafeNumber(currentMetrics.supplyTemperature,
+        parseSafeNumber(currentMetrics.SupplyTemp,
+        parseSafeNumber(currentMetrics.supplyTemp,
+        parseSafeNumber(currentMetrics.SupplyTemperature,
+        parseSafeNumber(currentMetrics.SAT,
+        parseSafeNumber(currentMetrics.sat,
+        parseSafeNumber(currentMetrics.SupplyAirTemp,
+        parseSafeNumber(currentMetrics.supplyAirTemp, 55)))))))));
+
+      logLocationEquipment(locationId, equipmentId, "air-handler", 
+        `Using supply air temperature: ${currentTemp}°F`);
+    } else {
+      logLocationEquipment(locationId, equipmentId, "air-handler", 
+        `Using provided supply air temperature: ${currentTemp}°F`);
+    }
+
+    // Get outdoor temperature with fallbacks
+    const outdoorTemp = parseSafeNumber(currentMetrics.Outdoor_Air,
+      parseSafeNumber(currentMetrics.outdoorTemperature,
+      parseSafeNumber(currentMetrics.outdoorTemp,
+      parseSafeNumber(currentMetrics.Outdoor,
+      parseSafeNumber(currentMetrics.outdoor,
+      parseSafeNumber(currentMetrics.OutdoorTemp,
+      parseSafeNumber(currentMetrics.OAT,
+      parseSafeNumber(currentMetrics.oat, 65))))))));
+
+    // Get mixed air temperature for safety checks
+    const mixedAirTemp = parseSafeNumber(currentMetrics.Mixed_Air,
+      parseSafeNumber(currentMetrics.MixedAir,
+      parseSafeNumber(currentMetrics.mixedAir,
+      parseSafeNumber(currentMetrics.MAT,
+      parseSafeNumber(currentMetrics.mat,
+      parseSafeNumber(currentMetrics.MixedAirTemp,
+      parseSafeNumber(currentMetrics.mixedAirTemp, 55)))))));
+
+    logLocationEquipment(locationId, equipmentId, "air-handler", 
+      `Temperatures: Supply=${currentTemp}°F, Outdoor=${outdoorTemp}°F, Mixed=${mixedAirTemp}°F`);
+
+    // STEP 2: Determine occupancy based on time of day (5:30 AM to 9:45 PM)
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    const occupiedStartMinutes = 5 * 60 + 30;  // 5:30 AM
+    const occupiedEndMinutes = 21 * 60 + 45;   // 9:45 PM
+
+    const isOccupied = currentTimeInMinutes >= occupiedStartMinutes && 
+                       currentTimeInMinutes <= occupiedEndMinutes;
+
+    logLocationEquipment(locationId, equipmentId, "air-handler",
+      `Current time: ${currentHour}:${currentMinute.toString().padStart(2, '0')}, ` +
+      `Occupancy: ${isOccupied ? "OCCUPIED" : "UNOCCUPIED"}`);
+
+    // STEP 3: Calculate supply air temperature setpoint using OAR
+    let supplySetpoint = 50; // Default to minimum setpoint
+
+    if (isOccupied) {
+      // Hopebridge OAR: Min OAT 32°F → SP 76°F, Max OAT 68°F → SP 50°F
+      const minOAT = 32;
+      const maxOAT = 68;
+      const maxSupply = 76;
+      const minSupply = 50;
+
+      if (outdoorTemp <= minOAT) {
+        supplySetpoint = maxSupply;
+        logLocationEquipment(locationId, equipmentId, "air-handler",
+          `OAR: OAT ${outdoorTemp}°F <= ${minOAT}°F, using max setpoint: ${supplySetpoint}°F`);
+      } else if (outdoorTemp >= maxOAT) {
+        supplySetpoint = minSupply;
+        logLocationEquipment(locationId, equipmentId, "air-handler",
+          `OAR: OAT ${outdoorTemp}°F >= ${maxOAT}°F, using min setpoint: ${supplySetpoint}°F`);
+      } else {
+        const ratio = (outdoorTemp - minOAT) / (maxOAT - minOAT);
+        supplySetpoint = maxSupply - ratio * (maxSupply - minSupply);
+        supplySetpoint = parseFloat(supplySetpoint.toFixed(1));
+        logLocationEquipment(locationId, equipmentId, "air-handler",
+          `OAR: Calculated setpoint: ${supplySetpoint}°F (ratio: ${ratio.toFixed(2)})`);
+      }
+    } else {
+      logLocationEquipment(locationId, equipmentId, "air-handler",
+        `Using unoccupied setpoint: ${supplySetpoint}°F`);
+    }
+
+    // STEP 4: Check safety conditions
+    const freezestatTripped = currentTemp < 40 || mixedAirTemp < 40;
+
+    if (freezestatTripped) {
+      logLocationEquipment(locationId, equipmentId, "air-handler", 
+        `SAFETY: FREEZESTAT TRIPPED! Supply: ${currentTemp}°F, Mixed: ${mixedAirTemp}°F`);
+
+      const safetyResult = {
+        heatingValvePosition: 0,
+        coolingValvePosition: 0,
+        fanEnabled: false,
+        fanSpeed: "off",
+        outdoorDamperPosition: 0,
+        supplyAirTempSetpoint: supplySetpoint,
+        temperatureSetpoint: 72,
+        unitEnable: true,
+        dxEnabled: false,
+        cwCircPumpEnabled: false,
+        chillerEnabled: false,
+        isOccupied: isOccupied,
+        safetyTripped: "freezestat"
+      };
+
+      await writeToInfluxDB(locationId, equipmentId, safetyResult, "airhandler");
+      return filterValidCommands(safetyResult);
+    }
+
+    // Check for supply temperature out of range for dampers
+    const supplyTempOutOfRange = currentTemp < 40 || currentTemp > 80;
+    if (supplyTempOutOfRange && !freezestatTripped) {
+      logLocationEquipment(locationId, equipmentId, "air-handler",
+        `SAFETY: Supply air temperature out of range (${currentTemp}°F), closing outdoor dampers`);
+    }
+
+    // STEP 5: Determine outdoor damper position with hysteresis
+    let outdoorDamperPosition = 0;
+
+    // Initialize damper state if not present
+    if (!stateStorageInput.hopebridgeOADamperState) {
+      stateStorageInput.hopebridgeOADamperState = {
+        isOpen: false
+      };
+
+      if (outdoorTemp >= 40) {
+        stateStorageInput.hopebridgeOADamperState.isOpen = true;
+        logLocationEquipment(locationId, equipmentId, "air-handler",
+          `Initializing OA damper state to OPEN (OAT ${outdoorTemp}°F >= 40°F)`);
+      } else {
+        logLocationEquipment(locationId, equipmentId, "air-handler",
+          `Initializing OA damper state to CLOSED (OAT ${outdoorTemp}°F < 40°F)`);
+      }
+    }
+
+    if (isOccupied && !freezestatTripped && !supplyTempOutOfRange) {
+      if (stateStorageInput.hopebridgeOADamperState.isOpen) {
+        if (outdoorTemp <= 38) {
+          stateStorageInput.hopebridgeOADamperState.isOpen = false;
+          outdoorDamperPosition = 0;
+          logLocationEquipment(locationId, equipmentId, "air-handler",
+            `OA damper: CLOSING (OAT ${outdoorTemp}°F <= 38°F)`);
+        } else {
+          outdoorDamperPosition = 100;
+          logLocationEquipment(locationId, equipmentId, "air-handler",
+            `OA damper: Maintaining OPEN (OAT ${outdoorTemp}°F > 38°F)`);
+        }
+      } else {
+        if (outdoorTemp >= 40) {
+          stateStorageInput.hopebridgeOADamperState.isOpen = true;
+          outdoorDamperPosition = 100;
+          logLocationEquipment(locationId, equipmentId, "air-handler",
+            `OA damper: OPENING (OAT ${outdoorTemp}°F >= 40°F)`);
+        } else {
+          logLocationEquipment(locationId, equipmentId, "air-handler",
+            `OA damper: Maintaining CLOSED (OAT ${outdoorTemp}°F < 40°F)`);
+        }
+      }
+    } else {
+      outdoorDamperPosition = 0;
+      if (stateStorageInput.hopebridgeOADamperState) {
+        stateStorageInput.hopebridgeOADamperState.isOpen = false;
+      }
+      
+      if (!isOccupied) {
+        logLocationEquipment(locationId, equipmentId, "air-handler", `OA damper: CLOSED (unoccupied mode)`);
+      } else {
+        logLocationEquipment(locationId, equipmentId, "air-handler", `OA damper: CLOSED (safety protection)`);
+      }
+    }
+
+    // STEP 6: Determine fan status
+    const fanEnabled = isOccupied && !freezestatTripped;
+    const fanSpeed = fanEnabled ? "medium" : "off";
+
+    logLocationEquipment(locationId, equipmentId, "air-handler", 
+      `Fan: ${fanEnabled ? "ENABLED" : "DISABLED"} (${fanSpeed})`);
+
+    // STEP 7: Calculate cooling outputs based on AHU number
+    let coolingValvePosition = 0;
+    let cwCircPumpEnabled = false;
+    let dxEnabled = false;
+    let chillerEnabled = false;
+
+    if (isOccupied && !freezestatTripped) {
+      if (ahuNumber === 1) {
+        // AHU-1: CW actuator and chiller control logic
+        const cwConditionsMet = outdoorTemp > 55 && mixedAirTemp > 38 && currentTemp > 38 && fanEnabled;
+        
+        // Initialize chiller state if not present
+        if (!stateStorageInput.chillerState) {
+          stateStorageInput.chillerState = {
+            isEnabled: false,
+            pumpRunningTime: 0
+          };
+        }
+
+        if (cwConditionsMet) {
+          cwCircPumpEnabled = true;
+          logLocationEquipment(locationId, equipmentId, "air-handler",
+            `AHU-1: CW circulation pump ENABLED (conditions met)`);
+
+          // Chiller warm-up logic
+          if (!stateStorageInput.chillerState.isEnabled) {
+            stateStorageInput.chillerState.pumpRunningTime += 1;
+
+            if (stateStorageInput.chillerState.pumpRunningTime >= 2) {
+              chillerEnabled = true;
+              stateStorageInput.chillerState.isEnabled = true;
+              logLocationEquipment(locationId, equipmentId, "air-handler",
+                `AHU-1: CHILLER ENABLED after pump warm-up period`);
+            } else {
+              logLocationEquipment(locationId, equipmentId, "air-handler",
+                `AHU-1: Pump warm-up: ${stateStorageInput.chillerState.pumpRunningTime}/2 minutes`);
+            }
+          } else {
+            chillerEnabled = true;
+          }
+
+          // PID control for CW valve
+          if (!stateStorageInput.pidState) {
+            stateStorageInput.pidState = { integral: 0, previousError: 0, lastOutput: 0 };
+          }
+
+          const coolingPID = pidControllerImproved({
+            input: currentTemp,
+            setpoint: supplySetpoint,
+            pidParams: {
+              kp: 2.8, ki: 0.17, kd: 0.01,
+              outputMin: 0, outputMax: 100, enabled: true,
+              reverseActing: false, maxIntegral: 10
+            },
+            dt: 1,
+            controllerType: "cooling",
+            pidState: stateStorageInput.pidState
+          });
+
+          coolingValvePosition = coolingPID.output;
+          logLocationEquipment(locationId, equipmentId, "air-handler",
+            `AHU-1: CW valve position: ${coolingValvePosition.toFixed(1)}% (PID control)`);
+        } else {
+          // Chiller shutdown sequence
+          if (stateStorageInput.chillerState && stateStorageInput.chillerState.isEnabled) {
+            chillerEnabled = false;
+            stateStorageInput.chillerState.isEnabled = false;
+            stateStorageInput.chillerState.pumpRunningTime = 0;
+
+            if (!stateStorageInput.chillerShutdownTimer) {
+              stateStorageInput.chillerShutdownTimer = 5;
+              cwCircPumpEnabled = true;
+              logLocationEquipment(locationId, equipmentId, "air-handler",
+                `AHU-1: CHILLER DISABLED, pump cooldown: 5 minutes`);
+            } else if (stateStorageInput.chillerShutdownTimer > 0) {
+              stateStorageInput.chillerShutdownTimer -= 1;
+              cwCircPumpEnabled = true;
+              logLocationEquipment(locationId, equipmentId, "air-handler",
+                `AHU-1: Pump cooldown: ${stateStorageInput.chillerShutdownTimer} minutes remaining`);
+            } else {
+              cwCircPumpEnabled = false;
+              stateStorageInput.chillerShutdownTimer = null;
+              logLocationEquipment(locationId, equipmentId, "air-handler",
+                `AHU-1: CW circulation pump DISABLED after cooldown`);
+            }
+          } else {
+            logLocationEquipment(locationId, equipmentId, "air-handler",
+              `AHU-1: CW circulation pump DISABLED (conditions not met)`);
+          }
+        }
+      } else if (ahuNumber === 2) {
+        // AHU-2: DX cooling with hysteresis and minimum runtime
+        const dxConditionsMet = outdoorTemp > 55 && mixedAirTemp > 38 && currentTemp > 38 && fanEnabled;
+
+        if (!stateStorageInput.dxState) {
+          stateStorageInput.dxState = {
+            isRunning: false,
+            runningTime: 0,
+            hysteresisPoint: 0
+          };
+        }
+
+        if (dxConditionsMet) {
+          const hysteresis = 7.5;
+
+          if (!stateStorageInput.dxState.isRunning) {
+            if (currentTemp > supplySetpoint + (hysteresis / 2)) {
+              stateStorageInput.dxState.isRunning = true;
+              stateStorageInput.dxState.runningTime = 1;
+              stateStorageInput.dxState.hysteresisPoint = supplySetpoint - (hysteresis / 2);
+              dxEnabled = true;
+              coolingValvePosition = 100;
+
+              logLocationEquipment(locationId, equipmentId, "air-handler",
+                `AHU-2: DX cooling TURNING ON (${currentTemp}°F > ${(supplySetpoint + hysteresis/2).toFixed(1)}°F)`);
+            }
+          } else {
+            stateStorageInput.dxState.runningTime += 1;
+
+            if (currentTemp < stateStorageInput.dxState.hysteresisPoint && 
+                stateStorageInput.dxState.runningTime >= 15) {
+              stateStorageInput.dxState.isRunning = false;
+              stateStorageInput.dxState.runningTime = 0;
+              dxEnabled = false;
+              coolingValvePosition = 0;
+
+              logLocationEquipment(locationId, equipmentId, "air-handler",
+                `AHU-2: DX cooling TURNING OFF (temp satisfied and minimum runtime met)`);
+            } else {
+              dxEnabled = true;
+              coolingValvePosition = 100;
+
+              if (stateStorageInput.dxState.runningTime < 15) {
+                logLocationEquipment(locationId, equipmentId, "air-handler",
+                  `AHU-2: DX cooling ON (minimum runtime: ${stateStorageInput.dxState.runningTime}/15 min)`);
+              } else {
+                logLocationEquipment(locationId, equipmentId, "air-handler",
+                  `AHU-2: DX cooling ON (running normally)`);
+              }
+            }
+          }
+        } else {
+          dxEnabled = false;
+          coolingValvePosition = 0;
+          if (stateStorageInput.dxState.isRunning) {
+            stateStorageInput.dxState.isRunning = false;
+            stateStorageInput.dxState.runningTime = 0;
+            logLocationEquipment(locationId, equipmentId, "air-handler",
+              `AHU-2: DX cooling FORCED OFF (conditions not met)`);
+          }
+        }
+      } else if (ahuNumber === 3) {
+        // AHU-3: Simplified CW actuator control
+        const cwValveConditionsMet = outdoorTemp > 55 && currentTemp > 38 && fanEnabled;
+
+        if (cwValveConditionsMet) {
+          if (!stateStorageInput.pidStateAhu3) {
+            stateStorageInput.pidStateAhu3 = { integral: 0, previousError: 0, lastOutput: 0 };
+          }
+
+          const coolingPID = pidControllerImproved({
+            input: currentTemp,
+            setpoint: supplySetpoint,
+            pidParams: {
+              kp: 2.8, ki: 0.17, kd: 0.01,
+              outputMin: 0, outputMax: 100, enabled: true,
+              reverseActing: false, maxIntegral: 10
+            },
+            dt: 1,
+            controllerType: "cooling",
+            pidState: stateStorageInput.pidStateAhu3
+          });
+
+          coolingValvePosition = coolingPID.output;
+          logLocationEquipment(locationId, equipmentId, "air-handler",
+            `AHU-3: CW valve position: ${coolingValvePosition.toFixed(1)}% (PID control)`);
+        } else {
+          coolingValvePosition = 0;
+          logLocationEquipment(locationId, equipmentId, "air-handler",
+            `AHU-3: CW valve CLOSED (conditions not met)`);
+        }
+      }
+    } else {
+      logLocationEquipment(locationId, equipmentId, "air-handler", 
+        `All cooling disabled (${!isOccupied ? "unoccupied" : "safety protection"})`);
+    }
+
+    // STEP 8: Construct result
+    const result = {
+      heatingValvePosition: 0,
+      coolingValvePosition: coolingValvePosition,
+      fanEnabled: fanEnabled,
+      fanSpeed: fanSpeed,
+      outdoorDamperPosition: outdoorDamperPosition,
+      supplyAirTempSetpoint: supplySetpoint,
+      temperatureSetpoint: 72,
+      unitEnable: true,
+      dxEnabled: dxEnabled,
+      cwCircPumpEnabled: cwCircPumpEnabled,
+      chillerEnabled: chillerEnabled,
+      isOccupied: isOccupied
+    };
+
+    logLocationEquipment(locationId, equipmentId, "air-handler",
+      `Final AHU-${ahuNumber} controls: Fan=${result.fanEnabled ? "ON" : "OFF"}, ` +
+      `Cooling=${result.coolingValvePosition.toFixed(1)}%, OA damper=${result.outdoorDamperPosition}%, ` +
+      `isOccupied=${result.isOccupied}` +
+      (ahuNumber === 1 ? `, CW pump=${result.cwCircPumpEnabled ? "ON" : "OFF"}, Chiller=${result.chillerEnabled ? "ON" : "OFF"}` :
+       ahuNumber === 2 ? `, DX=${result.dxEnabled ? "ON" : "OFF"}` :
+       `, CW valve=${result.coolingValvePosition.toFixed(1)}%`));
+
+    // STEP 9: Write to InfluxDB
+    await writeToInfluxDB(locationId, equipmentId, result, "airhandler");
+
+    // STEP 10: Return filtered result
+    return filterValidCommands(result);
+
+  } catch (error: any) {
+    logLocationEquipment(locationId, equipmentId, "air-handler", 
+      `ERROR in Hopebridge air handler control: ${error.message}`, error.stack);
+
+    const errorResult = {
+      heatingValvePosition: 0,
+      coolingValvePosition: 0,
+      fanEnabled: false,
+      fanSpeed: "off",
+      outdoorDamperPosition: 0,
+      supplyAirTempSetpoint: 50,
+      temperatureSetpoint: 72,
+      unitEnable: false,
+      dxEnabled: false,
+      cwCircPumpEnabled: false,
+      chillerEnabled: false,
+      isOccupied: false
+    };
+
+    try {
+      await writeToInfluxDB(locationId, equipmentId, errorResult, "airhandler");
+    } catch (writeError) {
+      logLocationEquipment(locationId, equipmentId, "air-handler", 
+        `Failed to write emergency state to InfluxDB: ${writeError.message}`);
+    }
+
+    return errorResult;
+  }
+}
+
 /**
- * Helper function to write air handler data to InfluxDB in an optimized batch
+ * Helper function to filter result to only include valid control commands
+ */
+function filterValidCommands(result: any): any {
+  const validControlCommands = [
+    'heatingValvePosition', 'coolingValvePosition', 'fanEnabled', 'fanSpeed',
+    'outdoorDamperPosition', 'supplyAirTempSetpoint', 'temperatureSetpoint',
+    'unitEnable', 'dxEnabled', 'cwCircPumpEnabled', 'chillerEnabled', 'isOccupied'
+  ];
+
+  const filteredResult = {};
+  for (const [key, value] of Object.entries(result)) {
+    if (validControlCommands.includes(key)) {
+      filteredResult[key] = value;
+    }
+  }
+
+  return filteredResult;
+}
+
+/**
+ * Helper function to write AIR HANDLER data to InfluxDB with proper error handling
  */
 async function writeToInfluxDB(locationId: string, equipmentId: string, data: any, equipmentType: string): Promise<void> {
   try {
-    // Create an array of commands to send to InfluxDB
+    // AIR HANDLER COMMANDS
     const commandsToSend = [
       { command_type: 'heatingValvePosition', equipment_id: equipmentId, value: data.heatingValvePosition },
       { command_type: 'coolingValvePosition', equipment_id: equipmentId, value: data.coolingValvePosition },
       { command_type: 'fanEnabled', equipment_id: equipmentId, value: data.fanEnabled },
+      { command_type: 'fanSpeed', equipment_id: equipmentId, value: data.fanSpeed },
       { command_type: 'outdoorDamperPosition', equipment_id: equipmentId, value: data.outdoorDamperPosition },
       { command_type: 'supplyAirTempSetpoint', equipment_id: equipmentId, value: data.supplyAirTempSetpoint },
       { command_type: 'temperatureSetpoint', equipment_id: equipmentId, value: data.temperatureSetpoint },
@@ -589,110 +644,92 @@ async function writeToInfluxDB(locationId: string, equipmentId: string, data: an
 
     // Add equipment-specific commands
     if (data.dxEnabled !== undefined) {
-      commandsToSend.push({
-        command_type: 'dxEnabled',
-        equipment_id: equipmentId,
-        value: data.dxEnabled
-      });
+      commandsToSend.push({ command_type: 'dxEnabled', equipment_id: equipmentId, value: data.dxEnabled });
     }
-
     if (data.cwCircPumpEnabled !== undefined) {
-      commandsToSend.push({
-        command_type: 'cwCircPumpEnabled',
-        equipment_id: equipmentId,
-        value: data.cwCircPumpEnabled
-      });
+      commandsToSend.push({ command_type: 'cwCircPumpEnabled', equipment_id: equipmentId, value: data.cwCircPumpEnabled });
     }
-
     if (data.chillerEnabled !== undefined) {
-      commandsToSend.push({
-        command_type: 'chillerEnabled',
-        equipment_id: equipmentId,
-        value: data.chillerEnabled
-      });
+      commandsToSend.push({ command_type: 'chillerEnabled', equipment_id: equipmentId, value: data.chillerEnabled });
     }
 
-    if (data.fanSpeed) {
-      commandsToSend.push({
-        command_type: 'fanSpeed',
-        equipment_id: equipmentId,
-        // Use explicit numeric values for fanSpeed
-        value: data.fanSpeed === "off" ? 0.0 : (data.fanSpeed === "low" ? 33.0 : (data.fanSpeed === "medium" ? 66.0 : 100.0))
-      });
-    }
-
-    if (data.safetyTripped) {
-      commandsToSend.push({
-        command_type: 'safetyTripped',
-        equipment_id: equipmentId,
-        value: 1.0
-      });
-    }
-
-    // Prepare numeric commands for batching
     const numericCommands = [];
 
-    // Process all commands to ensure they're FLOAT values only
+    // Process commands with correct data types for InfluxDB schema
     for (const cmd of commandsToSend) {
-      // Convert boolean to number with explicit decimal point
-      if (typeof cmd.value === 'boolean') {
-        cmd.value = cmd.value ? 1.0 : 0.0; // Use explicit float format with decimal point
-      } else if (typeof cmd.value === 'number') {
-        // For integers, add .0 to force float type
-        if (Number.isInteger(cmd.value)) {
-          cmd.value = parseFloat(cmd.value + '.0');
-        }
-        // No change for existing floats
-      } else if (cmd.value !== null && cmd.value !== undefined) {
-        // Try to convert to float
-        const numValue = parseFloat(cmd.value);
-        if (!isNaN(numValue)) {
-          cmd.value = numValue;
-          // Ensure it has decimal point
-          if (Number.isInteger(numValue)) {
-            cmd.value = parseFloat(numValue + '.0');
+      // Boolean fields - handle different types based on field
+      if (['fanEnabled'].includes(cmd.command_type)) {
+        cmd.value = cmd.value ? 1.0 : 0.0; // fanEnabled uses 1/0
+      } else if (['unitEnable', 'isOccupied', 'dxEnabled', 'cwCircPumpEnabled', 'chillerEnabled'].includes(cmd.command_type)) {
+        cmd.value = cmd.value ? 'true' : 'false'; // Other booleans use true/false
+      }
+      // Numeric fields
+      else if (['heatingValvePosition', 'coolingValvePosition', 'outdoorDamperPosition', 
+                'supplyAirTempSetpoint', 'temperatureSetpoint'].includes(cmd.command_type)) {
+        if (typeof cmd.value === 'number') {
+          // Already numeric
+        } else if (cmd.value !== null && cmd.value !== undefined) {
+          const numValue = Number(cmd.value);
+          if (!isNaN(numValue)) {
+            cmd.value = numValue;
+          } else {
+            continue;
           }
         } else {
-          // Skip any values that can't be converted to numbers
-          continue;
+          cmd.value = 0.0;
         }
-      } else {
-        // Handle null/undefined - use 0.0
-        cmd.value = 0.0;
+      }
+      // String fields
+      else if (['fanSpeed'].includes(cmd.command_type)) {
+        cmd.value = `"${cmd.value}"`;
       }
 
       numericCommands.push(cmd);
     }
 
     if (numericCommands.length > 0) {
-      // Build the batch line protocol string
-      let batchLineProtocol = '';
+      const { execSync } = require('child_process');
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Send each command individually using synchronous exec
       for (const cmd of numericCommands) {
-        // Ensure the value has a decimal point to be treated as float
-        const formattedValue = Number.isInteger(cmd.value) ? `${cmd.value}.0` : cmd.value;
-        batchLineProtocol += `${cmd.command_type},equipment_id=${cmd.equipment_id},location_id=${locationId},command_type=${cmd.command_type},source=server_logic,status=completed value=${formattedValue}\n`;
+        const lineProtocol = `update_${cmd.command_type},equipment_id=${cmd.equipment_id},location_id=${locationId},command_type=${cmd.command_type},equipment_type=airhandler,source=server_logic,status=completed value=${cmd.value}`;
+
+        // Write to ControlCommands DB
+        const controlCommand = `curl -s -X POST "http://localhost:8181/api/v3/write_lp?db=ControlCommands&precision=nanosecond" -H "Content-Type: text/plain" -d '${lineProtocol}'`;
+
+        try {
+          const result = execSync(controlCommand, { encoding: 'utf8', timeout: 5000 });
+          if (result && result.trim()) {
+            logLocationEquipment(locationId, equipmentId, equipmentType, `ControlCommands response for ${cmd.command_type}: ${result.trim()}`);
+          } else {
+            successCount++;
+            logLocationEquipment(locationId, equipmentId, equipmentType, `ControlCommands SUCCESS: ${cmd.command_type}=${cmd.value}`);
+          }
+        } catch (error) {
+          errorCount++;
+          logLocationEquipment(locationId, equipmentId, equipmentType, `ControlCommands ERROR for ${cmd.command_type}: ${error.message}`);
+        }
+
+        // Write to Locations DB
+        const locationsCommand = `curl -s -X POST "http://localhost:8181/api/v3/write_lp?db=Locations&precision=nanosecond" -H "Content-Type: text/plain" -d '${lineProtocol}'`;
+
+        try {
+          const result = execSync(locationsCommand, { encoding: 'utf8', timeout: 5000 });
+          if (result && result.trim()) {
+            logLocationEquipment(locationId, equipmentId, equipmentType, `Locations response for ${cmd.command_type}: ${result.trim()}`);
+          }
+        } catch (error) {
+          logLocationEquipment(locationId, equipmentId, equipmentType, `Locations ERROR for ${cmd.command_type}: ${error.message}`);
+        }
       }
 
-      // Remove trailing newline
-      batchLineProtocol = batchLineProtocol.trim();
-
-      // Use child_process.exec for curl commands
-      const { exec } = require('child_process');
-
-      // Write to Locations DB
-      const locationsCommand = `curl -s -X POST "http://localhost:8181/api/v3/write_lp?db=Locations&precision=nanosecond" -H "Content-Type: text/plain" -d "${batchLineProtocol}"`;
-      exec(locationsCommand);
-
-      // Write to ControlCommands DB
-      const controlCommand = `curl -s -X POST "http://localhost:8181/api/v3/write_lp?db=ControlCommands&precision=nanosecond" -H "Content-Type: text/plain" -d "${batchLineProtocol}"`;
-      exec(controlCommand);
-
-      logLocationEquipment(locationId, equipmentId, equipmentType,
-        `INFLUXDB BATCH: Sent ${numericCommands.length} commands in a single batch`);
+      logLocationEquipment(locationId, equipmentId, equipmentType, 
+        `InfluxDB write complete: ${successCount} success, ${errorCount} errors out of ${numericCommands.length} commands`);
     }
   } catch (error) {
-    logLocationEquipment(locationId, equipmentId, equipmentType,
-      `Error sending InfluxDB commands: ${error.message}`);
-    // Don't rethrow - we don't want InfluxDB errors to affect air handler operation
+    logLocationEquipment(locationId, equipmentId, equipmentType, `Error sending InfluxDB commands: ${error.message}`);
   }
 }

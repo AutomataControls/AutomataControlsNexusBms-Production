@@ -17,10 +17,17 @@ try {
 /**
  * Logs a message to the control commands log file
  */
-export function logCommand(message: string, level: 'info' | 'error' | 'warn' = 'info'): void {
+export function logCommand(message: string, level: 'info' | 'error' | 'warn' = 'info', data?: any): void {
   try {
     const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] [${level.toUpperCase()}] ${message}\n`;
+    let logEntry = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+    
+    // Add data if provided
+    if (data !== undefined) {
+      logEntry += ` | Data: ${typeof data === 'object' ? JSON.stringify(data) : data}`;
+    }
+    
+    logEntry += '\n';
     
     // Append to the log file
     fs.appendFileSync(COMMAND_LOG_FILE, logEntry);
