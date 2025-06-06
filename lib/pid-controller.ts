@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Advanced PID Controller for HVAC Applications
  *

@@ -1,3 +1,147 @@
+// components/settings/equipment-settings.tsx
+//
+// Author: Juelz NeuralBms DevOps
+// Last Updated: June 5, 2025
+//
+// ===============================================================================
+// NEURAL BMS EQUIPMENT SETTINGS COMPONENT - HVAC EQUIPMENT MANAGEMENT INTERFACE
+// ===============================================================================
+//
+// OVERVIEW:
+// This component provides a comprehensive interface for managing HVAC equipment
+// within the Neural BMS system. It handles equipment registration, configuration,
+// threshold setup, and Firebase Real-time Database integration for live data
+// monitoring and control across multiple building locations.
+//
+// CORE FUNCTIONALITY:
+// 1. **Equipment Registration** - Add/edit/delete HVAC equipment with full specifications
+// 2. **Type Management** - Support for 16 different equipment types with specific parameters
+// 3. **Threshold Configuration** - Detailed monitoring thresholds for each equipment type
+// 4. **Firebase Integration** - Real-time database path configuration for live data
+// 5. **Location Association** - Link equipment to specific building locations
+// 6. **Network Configuration** - IP address assignment for network-connected equipment
+//
+// SUPPORTED EQUIPMENT TYPES (16 Total):
+// - **Air Handler** - AHU systems with supply/return air monitoring
+// - **Boiler** - Hot water and steam boiler systems
+// - **Chiller** - Chilled water systems with compressor monitoring
+// - **Cooling Tower** - Heat rejection systems with fan control
+// - **DOAS** - Dedicated Outdoor Air Systems with energy recovery
+// - **Exhaust Fan** - Exhaust ventilation systems
+// - **Fan Coil** - Terminal units with heating/cooling coils
+// - **Greenhouse** - Specialized environmental control systems
+// - **Heat Exchanger** - Heat transfer equipment
+// - **Pump** - Water circulation pumps
+// - **RTU** - Rooftop units with integrated HVAC systems
+// - **Steam Bundle** - Steam heating distribution systems
+// - **Supply Fan** - Supply air fan systems
+// - **VAV Box** - Variable Air Volume terminal units
+// - **Water Heater** - Domestic and process water heating
+// - **Actuator** - Control actuators and dampers
+//
+// THRESHOLD MONITORING CATEGORIES (13 Types):
+// 1. **Supply Air** - Temperature, humidity, pressure, flow, CO2
+// 2. **Return Air** - Temperature, humidity, CO2 monitoring
+// 3. **Outside Air** - Outdoor conditions and damper positions
+// 4. **Exhaust Air** - Exhaust temperature, flow, and damper control
+// 5. **Energy Recovery** - Heat recovery efficiency and bypass control
+// 6. **Mixed Air** - Mixed air temperature and damper positions
+// 7. **Water Supply** - Supply water temperature, pressure, flow, valve position
+// 8. **Water Return** - Return water temperature, pressure, flow
+// 9. **Freeze Stat** - Freeze protection temperature monitoring
+// 10. **Differential Pressure** - Pressure differential and flow monitoring
+// 11. **Power** - Electrical monitoring (amps, voltage, power, frequency)
+// 12. **Fan** - Fan speed, status, and runtime monitoring
+// 13. **Compressor** - Compressor operation and pressure monitoring
+// 14. **Steam** - Steam temperature, pressure, flow, valve position
+// 15. **Zone** - Zone temperature, humidity, CO2, occupancy
+// 16. **Boiler** - Boiler-specific temperature, pressure, water level, flame signal
+//
+// FIREBASE INTEGRATION:
+// - **Real-time Database Paths** - Configurable paths for live data integration
+// - **Location Normalization** - Automatic path generation from location names
+// - **System Naming** - Equipment-specific system names for data organization
+// - **Live Monitoring** - Real-time equipment status and metrics
+//
+// EQUIPMENT CONFIGURATION FEATURES:
+// - **Automatic System Naming** - Default system names based on equipment type
+// - **Zone Assignment** - Optional zone designation for applicable equipment
+// - **IP Address Management** - Network configuration for connected devices
+// - **Threshold Templates** - Pre-configured monitoring thresholds by equipment type
+// - **Custom Parameters** - Flexible threshold configuration for specific requirements
+//
+// USER INTERFACE FEATURES:
+// - **Responsive Design** - Optimized for desktop and tablet interfaces
+// - **Modal Dialogs** - Full-screen equipment configuration dialogs
+// - **Scrollable Content** - Large forms with proper scroll handling
+// - **Form Validation** - Real-time validation with error messaging
+// - **Bulk Operations** - Efficient management of multiple equipment pieces
+// - **Location Filtering** - Filter equipment by location with counts
+// - **Sorting** - Alphabetical sorting by location and equipment name
+//
+// DATA MANAGEMENT:
+// - **Firestore Integration** - Equipment data stored in Firebase Firestore
+// - **Location Linking** - Dynamic location dropdown from locations collection
+// - **Real-time Updates** - Live synchronization of equipment changes
+// - **Error Handling** - Comprehensive error management with user feedback
+// - **Data Validation** - Server-side and client-side validation
+//
+// SECURITY FEATURES:
+// - **Role-based Access** - Equipment management restricted to devops users
+// - **Input Sanitization** - Safe handling of user input data
+// - **Firebase Security** - Secure database operations with proper authentication
+// - **Audit Trail** - Equipment changes logged with timestamps
+//
+// PERFORMANCE OPTIMIZATIONS:
+// - **Lazy Loading** - Equipment data loaded on demand
+// - **Efficient Rendering** - Optimized React rendering for large equipment lists
+// - **Debounced Inputs** - Smooth form interactions without excessive re-renders
+// - **Memory Management** - Proper cleanup of event listeners and subscriptions
+//
+// ADVANCED FEATURES:
+// - **Equipment Templates** - Pre-configured settings for common equipment types
+// - **Bulk Import/Export** - Future capability for equipment data management
+// - **Equipment Grouping** - Logical grouping by location, type, or zone
+// - **Status Monitoring** - Real-time equipment online/offline status
+// - **Maintenance Scheduling** - Integration points for maintenance management
+//
+// INTEGRATION POINTS:
+// - **Logic Factory** - Equipment data consumed by control logic systems
+// - **Metrics Collection** - Real-time data collection from configured equipment
+// - **Alert System** - Threshold-based alerting for equipment monitoring
+// - **Dashboard Integration** - Equipment status displayed in main dashboard
+// - **Reporting System** - Equipment performance and status reporting
+//
+// COMPONENT ARCHITECTURE:
+// - **React Hooks** - Modern React patterns with useState and useEffect
+// - **TypeScript** - Full type safety with comprehensive interfaces
+// - **shadcn/ui Components** - Consistent design system components
+// - **Firebase Context** - Centralized Firebase integration
+// - **Toast Notifications** - User feedback for all operations
+//
+// ERROR HANDLING:
+// - **Graceful Degradation** - System continues operating during partial failures
+// - **User Feedback** - Clear error messages and resolution guidance
+// - **Logging Integration** - Comprehensive error logging for troubleshooting
+// - **Retry Mechanisms** - Automatic retry for transient failures
+//
+// FUTURE ENHANCEMENTS:
+// - **Equipment Discovery** - Automatic detection of network-connected equipment
+// - **Template Library** - Expandable library of equipment configuration templates
+// - **Maintenance Integration** - Work order and maintenance schedule integration
+// - **Performance Analytics** - Equipment efficiency and performance trending
+// - **Mobile Optimization** - Enhanced mobile interface for field technicians
+//
+// TECHNICAL SPECIFICATIONS:
+// - **Framework** - React 18+ with TypeScript
+// - **State Management** - React Hooks with local component state
+// - **Database** - Firebase Firestore for equipment configuration
+// - **Real-time Data** - Firebase Realtime Database for live metrics
+// - **UI Framework** - shadcn/ui with Tailwind CSS
+// - **Validation** - Client-side validation with server-side verification
+//
+// ===============================================================================
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -262,6 +406,7 @@ interface Equipment {
 export function EquipmentSettings() {
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [locations, setLocations] = useState<any[]>([])
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState<string>("all")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(false)
@@ -281,6 +426,26 @@ export function EquipmentSettings() {
   const { db } = useFirebase()
   const { toast } = useToast()
 
+  // Helper function to get location name
+  const getLocationName = (locationId: string) => {
+    const location = locations.find((loc) => loc.id === locationId)
+    return location ? location.name : "Unknown Location"
+  }
+
+  // Filter equipment based on selected location
+  const filteredEquipment = selectedLocationFilter === "all" 
+    ? equipment.sort((a, b) => {
+        // Sort by location name first, then by equipment name
+        const locationA = getLocationName(a.locationId) || ""
+        const locationB = getLocationName(b.locationId) || ""
+        if (locationA !== locationB) {
+          return locationA.localeCompare(locationB)
+        }
+        return (a.name || "").localeCompare(b.name || "")
+      })
+    : equipment.filter(item => item.locationId === selectedLocationFilter)
+        .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+
   // Fetch locations
   useEffect(() => {
     const fetchLocations = async () => {
@@ -292,7 +457,7 @@ export function EquipmentSettings() {
         const locationData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        }))
+        } as any))
         console.log("Fetched locations for equipment settings:", locationData)
         setLocations(locationData)
       } catch (error) {
@@ -319,7 +484,7 @@ export function EquipmentSettings() {
         const equipmentData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        }))
+        } as Equipment))
         setEquipment(equipmentData)
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -361,7 +526,7 @@ export function EquipmentSettings() {
           ...equipmentData,
           firebasePath: {
             location: locationName || "",
-            system: equipmentData.type === "Air Handler" ? "AHU-1" : getDefaultSystemName(equipmentData.type || ""),
+            system: getDefaultSystemName(equipmentData.type || ""),
           },
         }
       }
@@ -522,11 +687,6 @@ export function EquipmentSettings() {
     }
   }
 
-  const getLocationName = (locationId: string) => {
-    const location = locations.find((loc) => loc.id === locationId)
-    return location ? location.name : "Unknown Location"
-  }
-
   // Update renderThresholdFields function
   const renderThresholdFields = (equipmentType: string, isEdit = false) => {
     const equipment = EQUIPMENT_THRESHOLDS[equipmentType as keyof typeof EQUIPMENT_THRESHOLDS]
@@ -638,13 +798,38 @@ export function EquipmentSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Equipment</h2>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Equipment
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-4">
+          {/* Location Filter */}
+          <div className="flex items-center gap-2">
+            <Label htmlFor="location-filter" className="text-sm font-medium">Filter by Location:</Label>
+            <Select value={selectedLocationFilter} onValueChange={setSelectedLocationFilter}>
+              <SelectTrigger className="w-[200px]" id="location-filter">
+                <SelectValue placeholder="Select location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations ({equipment.length})</SelectItem>
+                {locations
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((location) => {
+                    const count = equipment.filter(eq => eq.locationId === location.id).length
+                    return (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name} ({count})
+                      </SelectItem>
+                    )
+                  })
+                }
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Equipment
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-4xl flex flex-col h-[80vh]">
             <DialogHeader>
               <DialogTitle>Add New Equipment</DialogTitle>
@@ -681,7 +866,6 @@ export function EquipmentSettings() {
                               ...newEquipment,
                               type: value,
                               firebasePath: {
-                                ...(newEquipment.firebasePath || {}),
                                 location: locationName,
                                 system: getDefaultSystemName(value),
                               },
@@ -713,8 +897,8 @@ export function EquipmentSettings() {
                             ...newEquipment,
                             locationId: value,
                             firebasePath: {
-                              ...(newEquipment.firebasePath || {}),
                               location: locationName,
+                              system: newEquipment.firebasePath?.system || getDefaultSystemName(newEquipment.type || ""),
                             },
                           })
                         }}
@@ -755,8 +939,8 @@ export function EquipmentSettings() {
                             setNewEquipment({
                               ...newEquipment,
                               firebasePath: {
-                                ...newEquipment.firebasePath!,
                                 location: e.target.value,
+                                system: newEquipment.firebasePath?.system || "",
                               },
                             })
                           }
@@ -774,7 +958,7 @@ export function EquipmentSettings() {
                             setNewEquipment({
                               ...newEquipment,
                               firebasePath: {
-                                ...newEquipment.firebasePath!,
+                                location: newEquipment.firebasePath?.location || "",
                                 system: e.target.value,
                               },
                             })
@@ -889,6 +1073,7 @@ export function EquipmentSettings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -897,17 +1082,24 @@ export function EquipmentSettings() {
           <CardDescription>View and manage all equipment in your building management system</CardDescription>
         </CardHeader>
         <CardContent>
-          {equipment.length === 0 ? (
+          {filteredEquipment.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <Settings className="h-10 w-10 text-muted-foreground mb-2" />
-              <p className="text-lg font-medium">No Equipment</p>
-              <p className="text-sm text-muted-foreground">Add your first equipment to get started</p>
+              <p className="text-lg font-medium">
+                {selectedLocationFilter === "all" ? "No Equipment" : "No Equipment at This Location"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {selectedLocationFilter === "all" 
+                  ? "Add your first equipment to get started" 
+                  : "Try selecting a different location or add equipment to this location"}
+              </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Equipment ID</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Firebase Path</TableHead>
@@ -917,9 +1109,10 @@ export function EquipmentSettings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {equipment.map((item) => (
+                {filteredEquipment.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="font-mono text-xs bg-gray-50 rounded px-2 py-1">{item.id}</TableCell>
                     <TableCell>{item.type}</TableCell>
                     <TableCell>{getLocationName(item.locationId)}</TableCell>
                     <TableCell>
@@ -1008,7 +1201,6 @@ export function EquipmentSettings() {
                           ...editEquipment,
                           type: value,
                           firebasePath: {
-                            ...(editEquipment.firebasePath || {}),
                             location: locationName,
                             system: getDefaultSystemName(value),
                           },
@@ -1040,8 +1232,8 @@ export function EquipmentSettings() {
                         ...editEquipment,
                         locationId: value,
                         firebasePath: {
-                          ...(editEquipment.firebasePath || {}),
                           location: locationName,
+                          system: editEquipment.firebasePath?.system || getDefaultSystemName(editEquipment.type),
                         },
                       })
                     }}
@@ -1086,8 +1278,8 @@ export function EquipmentSettings() {
                           setEditEquipment({
                             ...editEquipment,
                             firebasePath: {
-                              ...(editEquipment.firebasePath || {}),
                               location: e.target.value,
+                              system: editEquipment.firebasePath?.system || getDefaultSystemName(editEquipment.type),
                             },
                           })
                         }
@@ -1105,7 +1297,7 @@ export function EquipmentSettings() {
                           setEditEquipment({
                             ...editEquipment,
                             firebasePath: {
-                              ...(editEquipment.firebasePath || {}),
+                              location: editEquipment.firebasePath?.location || "",
                               system: e.target.value,
                             },
                           })

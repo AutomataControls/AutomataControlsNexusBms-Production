@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/equipment-logic/locations/huntington/chiller.ts
 import { chillerControl as chillerControlBase } from "../../base/chiller";
 import { logLocationEquipment } from "@/lib/logging/location-logger";

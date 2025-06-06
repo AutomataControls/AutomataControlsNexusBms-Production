@@ -1,4 +1,4 @@
-// /server/monitoring-service.js
+// /server/monitoring-service.js - Updated for InfluxDB3
 // Load environment variables from .env file
 require("dotenv").config()
 const path = require("path")
@@ -10,37 +10,36 @@ try {
     console.log("No .env.local file found, using .env")
 }
 
-// Import Firebase modules
+// Import Firebase modules (only for Firestore)
 const { getFirestore, collection, doc, getDoc, getDocs, addDoc, query, where, limit } = require("firebase/firestore")
-const { getDatabase, ref, onValue, get } = require("firebase/database")
 const fetch = require("node-fetch")
-// Import the metric mappings
-const { getMetricValue, getMetricType } = require("./metric-mappings")
 
-console.log("🔄 Initializing monitoring service...")
+// Import the InfluxDB3 metric mappings
+const { mapMetricNameToInfluxColumn, getAlternativeColumnNames } = require("./influx-metric-mappings")
+
+console.log("🔄 Initializing monitoring service for InfluxDB3...")
 
 // Debug environment variables
 console.log("Checking environment variables:")
-console.log("- NEXT_PUBLIC_FIREBASE_DATABASE_URL:", process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? "Set" : "Not set")
+console.log("- APP_URL:", process.env.APP_URL || "http://localhost:3000")
 console.log("- NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? "Set" : "Not set")
 
 // Use existing Firebase instances if they exist, otherwise initialize them
-let db, rtdb
+let db
 
 // Function to initialize Firebase if not already initialized
 function initializeFirebase() {
     // Check if Firebase is already initialized
-    if (global.firebaseApp && global.secondaryFirebaseApp) {
-        console.log("Using existing Firebase instances")
+    if (global.firebaseApp) {
+        console.log("Using existing Firebase instance")
         db = getFirestore(global.firebaseApp)
-        rtdb = getDatabase(global.secondaryFirebaseApp)
         return
     }
 
     // Import Firebase app initialization only if needed
     const { initializeApp } = require("firebase/app")
 
-    // Initialize primary Firebase (for Firestore)
+    // Initialize primary Firebase (for Firestore only)
     const firebaseConfig = {
         apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
         authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -51,41 +50,12 @@ function initializeFirebase() {
         measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
     }
 
-    // Initialize secondary Firebase for RTDB
-    // IMPORTANT: We need to hardcode the databaseURL if the environment variable is not available
-    const databaseURL =
-        process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
-        `https://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`
-
-    console.log("Using database URL:", databaseURL)
-
-    const secondaryFirebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-        databaseURL: databaseURL, // Explicitly set the database URL
-    }
-
     try {
         // Initialize primary Firebase app
         global.firebaseApp = initializeApp(firebaseConfig)
         // Get Firestore instance using the modular API
         db = getFirestore(global.firebaseApp)
-        console.log("✅ Primary Firebase initialized successfully")
-
-        // Initialize secondary Firebase app for RTDB
-        global.secondaryFirebaseApp = initializeApp(secondaryFirebaseConfig, "secondary")
-        console.log("Secondary Firebase app initialized with config:", {
-            projectId: secondaryFirebaseConfig.projectId,
-            databaseURL: secondaryFirebaseConfig.databaseURL,
-        })
-
-        // Get RTDB instance using the modular API
-        rtdb = getDatabase(global.secondaryFirebaseApp)
-        console.log("✅ Secondary Firebase initialized successfully")
+        console.log("✅ Firebase initialized successfully")
     } catch (error) {
         console.error("❌ Firebase initialization error:", error)
         throw error
@@ -116,6 +86,108 @@ const TEMP_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 // Track previous values for rate-of-change validation
 const lastValidReadings = {}
 
+// InfluxDB query function using Next.js API proxy
+async function queryInfluxDB(query) {
+    try {
+        const appUrl = process.env.APP_URL || "http://localhost:3000"
+        console.log(`🔍 Querying InfluxDB via Next.js API: ${appUrl}/api/influx`)
+        console.log(`📝 Query: ${query}`)
+        
+        const response = await fetch(`${appUrl}/api/influx`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: query })
+        })
+
+        if (!response.ok) {
+            const errorText = await response.text()
+            throw new Error(`InfluxDB query failed: ${response.status} ${response.statusText} - ${errorText}`)
+        }
+
+        const result = await response.json()
+        
+        if (!result.success) {
+            throw new Error(result.error || 'InfluxDB query failed')
+        }
+
+        console.log(`✅ Query successful, returned ${result.data?.length || 0} rows`)
+        return result.data || []
+    } catch (error) {
+        console.error("InfluxDB query error:", error)
+        return null
+    }
+}
+
+// Function to get metric value from InfluxDB3
+async function getMetricValueFromInflux(locationId, equipmentId, metricName) {
+    try {
+        console.log(`🔍 Querying InfluxDB for ${metricName} from equipment ${equipmentId} at location ${locationId}`)
+        
+        // Get recent data for this equipment
+        const exploreQuery = `
+            SELECT *
+            FROM metrics
+            WHERE location_id = '${locationId}'
+            AND "equipmentId" = '${equipmentId}'
+            AND time >= now() - INTERVAL '15 minutes'
+            ORDER BY time DESC
+            LIMIT 1
+        `
+
+        const result = await queryInfluxDB(exploreQuery)
+        
+        if (result && result.length > 0) {
+            const row = result[0]
+            console.log(`📊 Available columns for equipment ${equipmentId}:`, Object.keys(row))
+            
+            // Map the metric name to actual column name
+            const actualColumnName = mapMetricNameToInfluxColumn(metricName)
+            console.log(`📝 Mapped "${metricName}" to column "${actualColumnName}"`)
+            
+            // Try the mapped column name first
+            if (row[actualColumnName] !== null && row[actualColumnName] !== undefined) {
+                const value = row[actualColumnName]
+                console.log(`✅ Found ${metricName} as ${actualColumnName}: ${value}`)
+                return value
+            }
+
+            // Try alternative names
+            const alternativeNames = getAlternativeColumnNames(metricName)
+            console.log(`🔍 Trying alternative names:`, alternativeNames)
+
+            for (const altName of alternativeNames) {
+                if (row[altName] !== null && row[altName] !== undefined) {
+                    const value = row[altName]
+                    console.log(`✅ Found ${metricName} as ${altName}: ${value}`)
+                    return value
+                }
+            }
+
+            // Try partial matches (for complex metric names)
+            for (const [key, value] of Object.entries(row)) {
+                if (key.toLowerCase().includes(actualColumnName.toLowerCase()) || 
+                    actualColumnName.toLowerCase().includes(key.toLowerCase())) {
+                    if (value !== null && value !== undefined) {
+                        console.log(`✅ Found partial match: ${key} = ${value} for metric ${metricName}`)
+                        return value
+                    }
+                }
+            }
+
+            console.log(`❌ Metric ${metricName} (${actualColumnName}) not found in available columns:`, Object.keys(row))
+        } else {
+            console.log(`❌ No recent data found for equipment ${equipmentId} at location ${locationId}`)
+        }
+
+        return null
+    } catch (error) {
+        console.error(`Error querying InfluxDB for ${metricName}:`, error)
+        return null
+    }
+}
+
 // Function to extract thresholds from equipment documents
 async function extractThresholdsFromEquipment() {
     try {
@@ -140,7 +212,7 @@ async function extractThresholdsFromEquipment() {
             console.log(`   Location: ${locationId}, System: ${systemId}`)
             console.log(`   Thresholds:`, JSON.stringify(equipmentData.thresholds, null, 2))
 
-            // Process thresholds based on their structure - IMPROVED VERSION
+            // Process thresholds based on their structure
             const processNestedThresholds = (parentPath, thresholdObj, parentName) => {
                 // Check if this object has min/max properties directly
                 if (thresholdObj.min !== undefined || thresholdObj.max !== undefined) {
@@ -204,7 +276,7 @@ async function fetchLocationPersonnel() {
             ...doc.data(),
         }))
 
-        // Fetch all recipients (replacing users)
+        // Fetch all recipients
         const recipientsSnapshot = await getDocs(collection(db, "recipients"))
         const recipients = recipientsSnapshot.docs.map((doc) => ({
             id: doc.id,
@@ -224,7 +296,7 @@ async function fetchLocationPersonnel() {
             }
         })
 
-        // Map recipients to locations (replacing users mapping)
+        // Map recipients to locations
         const recipientMap = {}
         recipients.forEach((recipient) => {
             if (recipient.locationId) {
@@ -237,7 +309,7 @@ async function fetchLocationPersonnel() {
         })
 
         locationTechnicians = techMap
-        locationRecipients = recipientMap // Replace locationUsers with locationRecipients
+        locationRecipients = recipientMap
 
         console.log("Personnel data loaded:", {
             technicians: Object.keys(techMap).length,
@@ -251,328 +323,29 @@ async function fetchLocationPersonnel() {
     }
 }
 
-// Function to get location name from ID - UPDATED
+// Function to get location name from ID
 async function getLocationName(locationId) {
     if (!locationId) return null
 
     try {
-        // First try to get from Firestore
+        // Try to get from Firestore
         const locationQuery = query(collection(db, "locations"), where("id", "==", locationId), limit(1))
         const locationSnapshot = await getDocs(locationQuery)
 
         if (!locationSnapshot.empty) {
             const name = locationSnapshot.docs[0].data().name
-            return name || null
+            return name || locationId
         }
 
-        // If not found in Firestore, try RTDB
-        const locationsRef = ref(rtdb, "/locations")
-        const snapshot = await get(locationsRef)
-        const rtdbData = snapshot.val() || {}
-
-        // First check: Is the locationId itself a key in the RTDB?
-        if (rtdbData[locationId]) {
-            console.log(`Found location key "${locationId}" directly in RTDB`)
-            // Use the key itself as the name since that's the actual location name
-            return locationId
-        }
-
-        // Second check: Search through all locations in RTDB for matching id field
-        for (const [key, value] of Object.entries(rtdbData)) {
-            if (value.id === locationId) {
-                // Found a match by id
-                console.log(`Found location with matching id field: ${key}`)
-                // Use the key as the name since that's the actual location name
-                return key
-            }
-        }
-
-        return null
+        return locationId
     } catch (error) {
         console.error("Error getting location name:", error)
-        return null
-    }
-}
-
-// Function to send alarm email
-async function sendAlarmEmail(alarmData, alarmId) {
-    try {
-        // Get the location identifiers
-        const locationId = alarmData.locationId
-        const locationName = alarmData.locationName
-
-        console.log(`Sending alarm email for location: ${locationName} (ID: ${locationId})`)
-
-        // Step 1: Gather all possible location identifiers by cross-referencing
-        const locationIdentifiers = new Set([locationId])
-        const locationNames = new Set([locationName])
-
-        // Try to find the location document in Firestore to get all possible identifiers
-        try {
-            // First try by locationId
-            if (locationId) {
-                // Try direct document lookup
-                const locationDoc = await getDoc(doc(db, "locations", locationId))
-                if (locationDoc.exists()) {
-                    const data = locationDoc.data()
-                    if (data.id) locationIdentifiers.add(data.id)
-                    if (data.name) locationNames.add(data.name)
-                    console.log(`Found location document by direct ID lookup: ${locationDoc.id}`)
-                }
-
-                // Try by 'id' field
-                const locationQuery1 = query(collection(db, "locations"), where("id", "==", locationId), limit(1))
-                const locationSnapshot1 = await getDocs(locationQuery1)
-                if (!locationSnapshot1.empty) {
-                    const data = locationSnapshot1.docs[0].data()
-                    locationIdentifiers.add(locationSnapshot1.docs[0].id)
-                    if (data.id) locationIdentifiers.add(data.id)
-                    if (data.name) locationNames.add(data.name)
-                    console.log(`Found location by 'id' field: ${locationSnapshot1.docs[0].id}`)
-                }
-            }
-
-            // Then try by locationName
-            if (locationName) {
-                const locationQuery2 = query(collection(db, "locations"), where("name", "==", locationName), limit(1))
-                const locationSnapshot2 = await getDocs(locationQuery2)
-                if (!locationSnapshot2.empty) {
-                    const data = locationSnapshot2.docs[0].data()
-                    locationIdentifiers.add(locationSnapshot2.docs[0].id)
-                    if (data.id) locationIdentifiers.add(data.id)
-                    console.log(`Found location by 'name' field: ${locationSnapshot2.docs[0].id}`)
-                }
-            }
-
-            // Also check RTDB for additional identifiers
-            const locationsRef = ref(rtdb, "/locations")
-            const rtdbSnapshot = await get(locationsRef)
-            const rtdbData = rtdbSnapshot.val() || {}
-
-            // Search through all locations in RTDB
-            for (const [key, value] of Object.entries(rtdbData)) {
-                // Match by ID
-                if (locationIdentifiers.has(key) || (value.id && locationIdentifiers.has(value.id))) {
-                    locationIdentifiers.add(key)
-                    if (value.id) locationIdentifiers.add(value.id)
-                    if (value.name) locationNames.add(value.name)
-                    console.log(`Found matching location in RTDB: ${key}`)
-                }
-
-                // Match by name
-                if (value.name && locationNames.has(value.name)) {
-                    locationIdentifiers.add(key)
-                    if (value.id) locationIdentifiers.add(value.id)
-                    console.log(`Found matching location by name in RTDB: ${key}`)
-                }
-            }
-
-            console.log(`All possible location identifiers:`, [...locationIdentifiers])
-            console.log(`All possible location names:`, [...locationNames])
-        } catch (error) {
-            console.error("Error gathering location identifiers:", error)
-        }
-
-        // Step 2: Find technicians and recipients using all possible identifiers
-        let techs = []
-        let recipients = []
-
-        // Check for technicians using all location identifiers
-        for (const id of locationIdentifiers) {
-            if (locationTechnicians[id] && locationTechnicians[id].length > 0) {
-                console.log(`Found ${locationTechnicians[id].length} technicians for location ID: ${id}`)
-                techs = [...techs, ...locationTechnicians[id]]
-            }
-        }
-
-        // Check for recipients using all location identifiers
-        for (const id of locationIdentifiers) {
-            if (locationRecipients[id] && locationRecipients[id].length > 0) {
-                console.log(`Found ${locationRecipients[id].length} recipients for location ID: ${id}`)
-                recipients = [...recipients, ...locationRecipients[id]]
-            }
-        }
-
-        // Step 3: If still no recipients, query Firestore directly
-        if (recipients.length === 0) {
-            console.log(`No recipients found in cache, querying Firestore directly`)
-            try {
-                // Try each location identifier
-                for (const id of locationIdentifiers) {
-                    const recipientsQuery = query(collection(db, "recipients"), where("locationId", "==", id), limit(10))
-                    const recipientsSnapshot = await getDocs(recipientsQuery)
-
-                    if (!recipientsSnapshot.empty) {
-                        console.log(`Found ${recipientsSnapshot.docs.length} recipients by locationId ${id} in Firestore`)
-                        recipients = [...recipients, ...recipientsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))]
-                        break // Found some recipients, no need to continue
-                    }
-                }
-
-                // If still no recipients, try by location names
-                if (recipients.length === 0) {
-                    for (const name of locationNames) {
-                        const recipientsQuery = query(collection(db, "recipients"), where("locationName", "==", name), limit(10))
-                        const recipientsSnapshot = await getDocs(recipientsQuery)
-
-                        if (!recipientsSnapshot.empty) {
-                            console.log(`Found ${recipientsSnapshot.docs.length} recipients by locationName ${name} in Firestore`)
-                            recipients = [...recipients, ...recipientsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))]
-                            break // Found some recipients, no need to continue
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error("Error querying recipients from Firestore:", error)
-            }
-        }
-
-        // Step 4: If still no technicians, query Firestore directly
-        if (techs.length === 0) {
-            console.log(`No technicians found in cache, querying Firestore directly`)
-            try {
-                const techniciansQuery = query(collection(db, "technicians"), limit(20))
-                const techniciansSnapshot = await getDocs(techniciansQuery)
-
-                if (!techniciansSnapshot.empty) {
-                    // Filter technicians that have any of our location identifiers in their assignedLocations array
-                    const allTechs = techniciansSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-
-                    techs = allTechs.filter((tech) => {
-                        if (!tech.assignedLocations || !Array.isArray(tech.assignedLocations)) return false
-
-                        // Check if any of our location identifiers match this tech's assigned locations
-                        return tech.assignedLocations.some(
-                            (loc) => locationIdentifiers.has(loc) || [...locationNames].some((name) => loc.includes(name)),
-                        )
-                    })
-
-                    console.log(`Found ${techs.length} technicians for this location through direct query`)
-                }
-            } catch (error) {
-                console.error("Error querying technicians from Firestore:", error)
-            }
-        }
-        // Step 5: Get location contactEmail if available
-        let locationContactEmail = null
-        try {
-            // First check if we already have the location document
-            let locationDoc = null
-
-            // Try direct document lookup if we haven't already
-            if (locationId) {
-                locationDoc = await getDoc(doc(db, "locations", locationId))
-                if (locationDoc.exists() && locationDoc.data().contactEmail) {
-                    locationContactEmail = locationDoc.data().contactEmail
-                    console.log(`Found location contactEmail from direct lookup: ${locationContactEmail}`)
-                }
-            }
-
-            // If not found directly, try searching by ID
-            if (!locationContactEmail) {
-                for (const id of locationIdentifiers) {
-                    // Skip if we already tried this ID
-                    if (id === locationId) continue
-
-                    const locationQuery = query(collection(db, "locations"), where("id", "==", id), limit(1))
-                    const locationSnapshot = await getDocs(locationQuery)
-
-                    if (!locationSnapshot.empty && locationSnapshot.docs[0].data().contactEmail) {
-                        locationContactEmail = locationSnapshot.docs[0].data().contactEmail
-                        console.log(`Found contactEmail via ID query: ${locationContactEmail}`)
-                        break
-                    }
-                }
-            }
-
-            // If still not found, try by name
-            if (!locationContactEmail) {
-                for (const name of locationNames) {
-                    const locationQuery = query(collection(db, "locations"), where("name", "==", name), limit(1))
-                    const locationSnapshot = await getDocs(locationQuery)
-
-                    if (!locationSnapshot.empty && locationSnapshot.docs[0].data().contactEmail) {
-                        locationContactEmail = locationSnapshot.docs[0].data().contactEmail
-                        console.log(`Found contactEmail via name query: ${locationContactEmail}`)
-                        break
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error getting location contactEmail:", error)
-        }
-
-        // Remove duplicates from techs and recipients
-        techs = [...new Map(techs.map((item) => [item.id, item])).values()]
-        recipients = [...new Map(recipients.map((item) => [item.id, item])).values()]
-
-        // Combine emails from both groups
-        const techEmails = techs.map((tech) => tech.email).filter(Boolean)
-        const recipientEmails = recipients.map((recipient) => recipient.email).filter(Boolean)
-        let allEmails = [...new Set([...techEmails, ...recipientEmails])]
-
-        // Add the location contact email to the recipients list if found
-        if (locationContactEmail) {
-            console.log(`Adding location contactEmail to recipients: ${locationContactEmail}`)
-            allEmails.push(locationContactEmail)
-            // Remove duplicates again just to be safe
-            allEmails = [...new Set(allEmails)]
-        }
-
-        // Get tech names for the email
-        const techNames = techs.map((tech) => tech.name).join(", ")
-
-        // Skip email sending if no recipients
-        if (allEmails.length === 0) {
-            console.log(`Skipping email send - no recipients found for location ${locationName} (${locationId})`)
-            return
-        }
-
-        console.log(`Sending alarm email to ${allEmails.length} recipients for alarm ${alarmId}`)
-        console.log(`Recipients: ${allEmails.join(", ")}`)
-
-        console.log("Sending email with location data:", {
-            locationId: alarmData.locationId,
-            locationName: alarmData.locationName,
-        })
-
-        try {
-            const response = await fetch(`${process.env.APP_URL || "http://localhost:3000"}/api/send-alarm-email`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    alarmType: alarmData.name,
-                    details: alarmData.message,
-                    locationId: alarmData.locationId,
-                    locationName: alarmData.locationName,
-                    equipmentName: alarmData.equipmentName,
-                    alarmId: alarmId,
-                    severity: alarmData.severity,
-                    recipients: allEmails,
-                    assignedTechs: techNames || "None",
-                }),
-            })
-
-            if (!response.ok) {
-                console.warn("Email API returned error status:", response.status)
-                const errorData = await response.json()
-                console.error("Email API error details:", errorData)
-            } else {
-                const result = await response.json()
-                console.log("Alarm email sent successfully to", allEmails.length, "recipients. Message ID:", result.messageId)
-            }
-        } catch (error) {
-            console.warn("Email sending failed but continuing alarm creation:", error)
-        }
-    } catch (error) {
-        console.error("Error in sendAlarmEmail function:", error)
+        return locationId
     }
 }
 
 // Enhanced function to get outdoor temperature for a location
-async function getOutdoorTemperature(locationId, rtdbData) {
+async function getOutdoorTemperature(locationId) {
     try {
         console.log(`🌡️ Attempting to get outdoor temperature for location ${locationId}`);
 
@@ -583,9 +356,9 @@ async function getOutdoorTemperature(locationId, rtdbData) {
             return outdoorTempCache[locationId].temperature;
         }
 
-        // 1. First try to get from OpenWeatherMap API (same approach as WeatherDisplay component)
+        // 1. First try to get from OpenWeatherMap API
         try {
-            // Get location weather settings (same as in WeatherDisplay)
+            // Get location weather settings
             const weatherSettingsDoc = await getDoc(doc(db, "locations", locationId, "settings", "weather"));
             let apiKey = null;
             let zipCode = "46803"; // Default zip code
@@ -601,7 +374,6 @@ async function getOutdoorTemperature(locationId, rtdbData) {
 
             // If no location-specific settings, try global config
             if (!apiKey) {
-                // Get global weather API key
                 const configDoc = await getDoc(doc(db, "config", "global"));
                 if (configDoc.exists() && configDoc.data().weatherApiKey) {
                     apiKey = configDoc.data().weatherApiKey;
@@ -623,16 +395,16 @@ async function getOutdoorTemperature(locationId, rtdbData) {
 
                 const data = await response.json();
                 const temperature = data.main.temp;
-                
+
                 console.log(`Retrieved temperature from OpenWeatherMap: ${temperature}°F`);
-                
+
                 // Cache the result
                 outdoorTempCache[locationId] = {
                     temperature,
                     timestamp: now,
                     source: 'openweathermap'
                 };
-                
+
                 return temperature;
             } else {
                 console.log(`No OpenWeatherMap API key available`);
@@ -641,150 +413,48 @@ async function getOutdoorTemperature(locationId, rtdbData) {
             console.error("Error fetching from OpenWeatherMap:", error);
         }
 
-        // 2. Check for equipment with outdoor temperature sensors
-        console.log(`Checking equipment with outdoor sensors for location ${locationId}`);
+        // 2. Try to get outdoor temperature from InfluxDB metrics
+        console.log(`Checking InfluxDB for outdoor temperature metrics for location ${locationId}`);
         try {
-            // Query Firestore for equipment that might have outdoor sensors
-            const outdoorSensorQuery = query(
-                collection(db, "equipment"),
-                where("locationId", "==", locationId),
-                where("type", "in", ["weather_station", "outdoor_sensor", "temperature_sensor"]),
-                limit(1)
-            );
-            
-            const sensorSnapshot = await getDocs(outdoorSensorQuery);
-            if (!sensorSnapshot.empty) {
-                const sensorEquipment = sensorSnapshot.docs[0].data();
-                const equipId = sensorSnapshot.docs[0].id;
-                console.log(`Found outdoor sensor equipment: ${equipId}`);
-                
-                // Use your existing getMetricValue function to get the temperature
-                // This assumes getMetricValue can get metrics from your storage (InfluxDB)
-                const sensorTemp = getMetricValue(locationId, equipId, 'temperature', rtdbData);
-                if (sensorTemp !== null) {
-                    console.log(`Found temperature from sensor equipment: ${sensorTemp}°F`);
-                    
-                    // Cache the result
-                    outdoorTempCache[locationId] = {
-                        temperature: sensorTemp,
-                        timestamp: now,
-                        source: 'sensor'
-                    };
-                    
-                    return sensorTemp;
-                }
-            }
-        } catch (error) {
-            console.error("Error checking for outdoor sensor equipment:", error);
-        }
+            // Query for outdoor temperature metrics
+            const outdoorTempQuery = `
+                SELECT outdoorAir, Outdoor_Air, OutdoorTemp, outdoor_temp, time
+                FROM metrics
+                WHERE location_id = '${locationId}'
+                AND time >= now() - INTERVAL '1 hour'
+                ORDER BY time DESC
+                LIMIT 5
+            `;
 
-        // 3. Try more general equipment search
-        console.log(`Checking all equipment for outdoor temperature metrics for location ${locationId}`);
-        try {
-            const generalEquipQuery = query(
-                collection(db, "equipment"),
-                where("locationId", "==", locationId),
-                limit(20)
-            );
+            const result = await queryInfluxDB(outdoorTempQuery);
             
-            const equipSnapshot = await getDocs(generalEquipQuery);
-            for (const equipDoc of equipSnapshot.docs) {
-                const equipment = equipDoc.data();
-                const equipId = equipDoc.id;
-                
-                // Look for metrics that might contain outdoor temperature
-                const metricNames = ['outdoorTemp', 'outdoor_temp', 'OutdoorTemperature', 'OAT', 
-                                    'outside_temp', 'ambient_temp', 'outside_air_temperature'];
-                
-                for (const metricName of metricNames) {
-                    const tempValue = getMetricValue(locationId, equipId, metricName, rtdbData);
-                    if (tempValue !== null) {
-                        console.log(`Found outdoor temperature in equipment ${equipId} as ${metricName}: ${tempValue}°F`);
-                        
-                        // Cache the result
-                        outdoorTempCache[locationId] = {
-                            temperature: tempValue,
-                            timestamp: now,
-                            source: 'equipment_metric'
-                        };
-                        
-                        return tempValue;
-                    }
-                }
-                
-                // Check if equipment has metrics.outdoor.temperature structure
-                if (equipment.metrics && equipment.metrics.outdoor && 
-                    equipment.metrics.outdoor.temperature !== undefined) {
-                    const tempValue = equipment.metrics.outdoor.temperature;
-                    if (tempValue !== null && !isNaN(parseFloat(tempValue))) {
-                        const temp = parseFloat(tempValue);
-                        console.log(`Found outdoor temperature in equipment ${equipId} metrics: ${temp}°F`);
-                        
+            if (result && result.length > 0) {
+                for (const row of result) {
+                    const temperature = row.outdoorAir || row.Outdoor_Air || row.OutdoorTemp || row.outdoor_temp;
+                    
+                    if (temperature !== null && temperature !== undefined && !isNaN(parseFloat(temperature))) {
+                        const temp = parseFloat(temperature);
+                        console.log(`Found outdoor temperature in InfluxDB: ${temp}°F`);
+
                         // Cache the result
                         outdoorTempCache[locationId] = {
                             temperature: temp,
                             timestamp: now,
-                            source: 'equipment_metrics_object'
+                            source: 'influxdb'
                         };
-                        
+
                         return temp;
                     }
                 }
             }
         } catch (error) {
-            console.error("Error checking equipment for outdoor temperature:", error);
+            console.error("Error checking InfluxDB for outdoor temperature:", error);
         }
 
-        // 4. Check RTDB as a fallback
-        if (rtdbData && rtdbData[locationId]) {
-            if (rtdbData[locationId].weather && rtdbData[locationId].weather.temperature !== undefined) {
-                const temp = rtdbData[locationId].weather.temperature;
-                console.log(`Found outdoor temperature in RTDB: ${temp}°F`);
-                
-                // Cache the result
-                outdoorTempCache[locationId] = {
-                    temperature: temp,
-                    timestamp: now,
-                    source: 'rtdb'
-                };
-                
-                return temp;
-            }
-            
-            // Check more RTDB paths
-            if (rtdbData[locationId].outdoor && rtdbData[locationId].outdoor.temperature !== undefined) {
-                const temp = rtdbData[locationId].outdoor.temperature;
-                console.log(`Found outdoor temperature in RTDB at outdoor/temperature: ${temp}°F`);
-                
-                outdoorTempCache[locationId] = {
-                    temperature: temp,
-                    timestamp: now,
-                    source: 'rtdb_outdoor'
-                };
-                
-                return temp;
-            }
-            
-            if (rtdbData[locationId].sensors && 
-                rtdbData[locationId].sensors.outdoor && 
-                rtdbData[locationId].sensors.outdoor.temperature !== undefined) {
-                const temp = rtdbData[locationId].sensors.outdoor.temperature;
-                console.log(`Found outdoor temperature in RTDB at sensors/outdoor/temperature: ${temp}°F`);
-                
-                outdoorTempCache[locationId] = {
-                    temperature: temp,
-                    timestamp: now,
-                    source: 'rtdb_sensors'
-                };
-                
-                return temp;
-            }
-        }
-
-        // 5. Last resort - use a hardcoded default temp based on month
+        // 3. Last resort - use a seasonal default temp based on month
         const month = new Date().getMonth(); // 0-11 for Jan-Dec
         let defaultTemp;
-        
+
         if (month >= 5 && month <= 8) {
             // Summer months (Jun-Sep)
             defaultTemp = 75;
@@ -798,9 +468,9 @@ async function getOutdoorTemperature(locationId, rtdbData) {
             // Spring months (Mar-May)
             defaultTemp = 60;
         }
-        
+
         console.log(`❌ Could not find outdoor temperature for location ${locationId}, using seasonal default: ${defaultTemp}°F`);
-        
+
         // Cache the default value with a shorter TTL (10 minutes)
         outdoorTempCache[locationId] = {
             temperature: defaultTemp,
@@ -808,7 +478,7 @@ async function getOutdoorTemperature(locationId, rtdbData) {
             source: 'seasonal_default',
             ttl: 10 * 60 * 1000 // 10 minutes for default values
         };
-        
+
         return defaultTemp;
     } catch (error) {
         console.error("Error getting outdoor temperature:", error);
@@ -846,25 +516,15 @@ function calculateDynamicThresholds(baseMinThreshold, baseMaxThreshold, equipmen
         switch (equipmentType) {
             case 'boiler':
                 if (outdoorTemp >= 50) {
-                    // When outdoor temp is 50°F or higher, boilers may be shut off or running at lower temps
-                    adjustedMin = 60 // Allow temps as low as 60°F when it's warm outside
-
-                    // Keep the max if it's higher than our winter max, otherwise use winter max
+                    adjustedMin = 60
                     adjustedMax = Math.max(baseMaxThreshold, 160)
-
                     console.log(`Adjusted boiler thresholds for warm weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
                 } else {
-                    // When outdoor temp is below 50°F, ensure boilers are in proper winter range
-                    adjustedMin = Math.max(baseMinThreshold, 120) // Min should be at least 120°F
-                    adjustedMax = Math.min(baseMaxThreshold, 180) // Max should be at most 180°F
+                    adjustedMin = Math.max(baseMinThreshold, 120)
+                    adjustedMax = Math.min(baseMaxThreshold, 180)
 
-                    // For very cold temps, adjust the minimum upward
                     if (outdoorTemp < 20) {
-                        // Linear scaling: colder outdoor temp = higher minimum threshold
-                        // At 20°F outdoor, min is 120°F
-                        // At 0°F outdoor, min is 140°F
-                        // At -20°F outdoor, min is 160°F
-                        const coldAdjustment = Math.max(0, (20 - outdoorTemp)) * 1.0; // 1°F higher min per 1°F colder outdoor
+                        const coldAdjustment = Math.max(0, (20 - outdoorTemp)) * 1.0;
                         adjustedMin = Math.min(160, Math.max(baseMinThreshold, 120 + coldAdjustment));
                         console.log(`Cold weather adjustment applied: +${coldAdjustment.toFixed(1)}°F to minimum threshold`);
                     }
@@ -875,135 +535,28 @@ function calculateDynamicThresholds(baseMinThreshold, baseMaxThreshold, equipmen
 
             case 'steam_bundle':
                 if (outdoorTemp >= 50) {
-                    // Different thresholds for warm weather
-                    adjustedMin = Math.min(baseMinThreshold, 70) // Can go lower in warm weather
-                    
-                    // Linear adjustment of maximum based on outdoor temperature
-                    // Hotter outside = lower maximum threshold
+                    adjustedMin = Math.min(baseMinThreshold, 70)
                     if (outdoorTemp > 70) {
-                        const reductionFactor = Math.min(30, (outdoorTemp - 70) * 1.5); // 1.5°F lower per 1°F hotter
+                        const reductionFactor = Math.min(30, (outdoorTemp - 70) * 1.5);
                         adjustedMax = Math.max(140, baseMaxThreshold - reductionFactor);
                         console.log(`Hot weather adjustment for steam bundle: -${reductionFactor.toFixed(1)}°F to maximum threshold`);
                     }
-                    
                     console.log(`Adjusted steam bundle thresholds for warm weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
                 } else {
-                    // Cold weather adjustments
-                    // As it gets colder, increase the minimum threshold
-                    const coldAdjustment = Math.max(0, (50 - outdoorTemp) * 0.5); // 0.5°F higher per 1°F colder
+                    const coldAdjustment = Math.max(0, (50 - outdoorTemp) * 0.5);
                     adjustedMin = Math.min(120, Math.max(baseMinThreshold, baseMinThreshold + coldAdjustment));
-                    
                     console.log(`Adjusted steam bundle thresholds for cold weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
                 }
                 break
 
-            case 'residential_system':
-                if (outdoorTemp >= 70) {
-                    // Hot summer day - cooling mode
-                    adjustedMin = 55 // Allow cooler supply temps for A/C
-                    adjustedMax = 85 // Upper limit for return air
-                    console.log(`Adjusted residential thresholds for hot weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
-                } else if (outdoorTemp >= 50 && outdoorTemp < 70) {
-                    // Mild temperatures - shoulder season
-                    adjustedMin = 60
-                    adjustedMax = 85
-                    console.log(`Adjusted residential thresholds for mild weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
-                } else {
-                    // Cold weather - heating mode
-                    // For residential, implement a true outdoor reset curve
-                    // As outside temp drops, supply temp increases on a linear scale
-                    
-                    // For cold weather:
-                    // At 50°F outdoor, min supply = 100°F
-                    // At 30°F outdoor, min supply = 120°F
-                    // At 10°F outdoor, min supply = 140°F
-                    // At -10°F outdoor, min supply = 160°F
-                    
-                    // Linear formula: min_supply = 100 + (50 - outdoor_temp) * (60/60) = 100 + (50 - outdoor_temp)
-                    // But limit between 100-160°F
-                    if (metricNameLower.includes('supply') || metricNameLower.includes('water')) {
-                        adjustedMin = Math.min(160, Math.max(100, 100 + Math.max(0, 50 - outdoorTemp)));
-                        adjustedMax = Math.min(180, adjustedMin + 40); // Max is 40°F above min, but not more than 180°F
-                    } else {
-                        // For return/air temps in cold weather
-                        adjustedMin = 65;
-                        adjustedMax = 85;
-                    }
-                    
-                    console.log(`Adjusted residential thresholds for cold weather (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}, Max: ${adjustedMax}`)
-                }
-                break
-
-            case 'fan_coil':
-            case 'air_handler':
-                if (outdoorTemp >= 65) {
-                    // Cooling mode
-                    if (metricNameLower.includes('supply') || metricNameLower.includes('discharge')) {
-                        adjustedMin = 50;  // Cool supply air in cooling mode
-                        adjustedMax = 65;
-                    } else if (metricNameLower.includes('return')) {
-                        adjustedMin = 65;
-                        adjustedMax = 85;  // Higher return temps in cooling mode
-                    } else {
-                        // General air temperature
-                        adjustedMin = 55;
-                        adjustedMax = 80;
-                    }
-                } else if (outdoorTemp >= 45 && outdoorTemp < 65) {
-                    // Shoulder season
-                    adjustedMin = 60;
-                    adjustedMax = 80;
-                } else {
-                    // Heating mode
-                    if (metricNameLower.includes('supply') || metricNameLower.includes('discharge')) {
-                        // Linear reset curve for supply air in heating mode
-                        // At 45°F outdoor, min supply = 70°F
-                        // At 0°F outdoor, min supply = 110°F
-                        adjustedMin = Math.min(120, Math.max(70, 70 + (45 - Math.max(0, outdoorTemp)) * (40/45)));
-                        adjustedMax = adjustedMin + 40; // Max is 40°F above min
-                    } else if (metricNameLower.includes('return')) {
-                        adjustedMin = 65;
-                        adjustedMax = 80;
-                    } else {
-                        // General air temperature
-                        adjustedMin = 65;
-                        adjustedMax = 90;
-                    }
-                }
-                console.log(`Adjusted air system thresholds for outdoor temp ${outdoorTemp}°F: Min: ${adjustedMin}, Max: ${adjustedMax}`)
-                break
-
-            case 'chiller':
-                if (outdoorTemp >= 75) {
-                    // On very hot days, chillers work harder
-                    if (metricNameLower.includes('leaving') || metricNameLower.includes('supply')) {
-                        // Leaving water temperature can be higher on hot days
-                        const tempAdjustment = Math.min(8, (outdoorTemp - 75) * 0.4); // 0.4°F higher per 1°F hotter, max 8°F
-                        adjustedMax = Math.min(55, baseMaxThreshold + tempAdjustment);
-                        console.log(`Hot weather adjustment for chiller: +${tempAdjustment.toFixed(1)}°F to maximum threshold`);
-                    }
-                    
-                    // For condensers, adjust the maximum threshold based on outdoor temp
-                    if (metricNameLower.includes('condenser')) {
-                        // Condenser temperature is typically 10-15°F above outdoor temperature
-                        adjustedMax = Math.max(baseMaxThreshold, outdoorTemp + 15);
-                        console.log(`Adjusted condenser max threshold to outdoor + 15°F: ${adjustedMax}°F`);
-                    }
-                }
-                break
-
             default:
-                // For unknown equipment types with temperature metrics, make a reasonable guess
                 if (outdoorTemp >= 60) {
-                    // In warm weather, lower the minimum threshold for most heating equipment
-                    if (baseMinThreshold > 80) { // If this seems to be a heating setpoint
-                        adjustedMin = 60 // Allow it to go much lower in warm weather
+                    if (baseMinThreshold > 80) {
+                        adjustedMin = 60
                         console.log(`Applied general warm weather adjustment (outdoor: ${outdoorTemp}°F): Min: ${adjustedMin}`)
                     }
                 } else if (outdoorTemp <= 30) {
-                    // In cold weather, increase minimum thresholds for heating equipment
-                    if (baseMinThreshold > 80) { // If this seems to be a heating setpoint
-                        // Increase min threshold by 0.5°F for each degree below 30°F
+                    if (baseMinThreshold > 80) {
                         const coldAdjustment = Math.max(0, (30 - outdoorTemp) * 0.5);
                         adjustedMin = Math.min(160, Math.max(baseMinThreshold, baseMinThreshold + coldAdjustment));
                         console.log(`Applied general cold weather adjustment (outdoor: ${outdoorTemp}°F): +${coldAdjustment.toFixed(1)}°F to Min: ${adjustedMin}`)
@@ -1016,217 +569,46 @@ function calculateDynamicThresholds(baseMinThreshold, baseMaxThreshold, equipmen
     return { adjustedMin, adjustedMax }
 }
 
-// Enhanced validation function with tighter bounds and equipment-specific rules
+// Enhanced validation function
 function validateMetricValue(value, metricName, equipmentType, systemId) {
-    // If value is null or undefined, it's invalid
     if (value === null || value === undefined) {
         console.log(`❌ REJECTED ${metricName}: Value is null or undefined`)
         return null
     }
 
-    // Parse the value to a number if it's not already
     const numValue = typeof value === 'number' ? value : Number(value)
 
-    // Check if parsing resulted in a valid number
     if (isNaN(numValue)) {
         console.log(`❌ REJECTED ${metricName}: Value "${value}" is not a valid number`)
         return null
     }
 
-    // Get the metric type to apply appropriate validation
-    const metricType = getMetricType(metricName)
-    let isValid = true
-    let validationMessage = ""
-
-    // First apply universal sanity checks
-    // Check for values that are clearly outside any possible real-world reading
     if (Math.abs(numValue) > 10000) {
         console.log(`❌ REJECTED ${metricName}: Value ${numValue} is an extreme outlier (absolute value > 10000)`)
         return null
     }
 
-    // Apply metric-specific validation
-    switch (metricType) {
-        case 'temperature':
-            // Apply general temperature bounds first
-            if (numValue < -50 || numValue > 250) {
-                isValid = false
-                validationMessage = `Temperature outside physical range (-50°F to 250°F)`
-            } else {
-                // Apply equipment-specific temperature validation
-                switch (equipmentType) {
-                    case 'boiler':
-                        // Boiler temperatures should never be below freezing when active
-                        // and rarely exceed 200°F for safety reasons
-                        if (numValue < 32 || numValue > 200) {
-                            isValid = false
-                            validationMessage = `Boiler temperature outside expected range (32°F to 200°F)`
-                        }
-                        break
-
-                    case 'chiller':
-                        // Chiller temperatures typically operate between 35°F and 75°F
-                        if (numValue < 35 || numValue > 75) {
-                            isValid = false
-                            validationMessage = `Chiller temperature outside expected range (35°F to 75°F)`
-                        }
-                        break
-
-                    case 'residential_system':
-                        // Residential systems typically operate between 45°F and 95°F
-                        // for supply/return air, but water temps can be higher
-                        if (metricName.toLowerCase().includes('water')) {
-                            if (numValue < 40 || numValue > 180) {
-                                isValid = false
-                                validationMessage = `Residential water temperature outside expected range (40°F to 180°F)`
-                            }
-                        } else {
-                            if (numValue < 45 || numValue > 95) {
-                                isValid = false
-                                validationMessage = `Residential air temperature outside expected range (45°F to 95°F)`
-                            }
-                        }
-                        break
-
-                    case 'steam_bundle':
-                        // Steam temperatures typically range from 100°F to 212°F
-                        if (numValue < 100 || numValue > 220) {
-                            isValid = false
-                            validationMessage = `Steam temperature outside expected range (100°F to 220°F)`
-                        }
-                        break
-                }
-            }
-            break
-
-        case 'pressure':
-            // General pressure validation (assuming PSI)
-            if (numValue < 0 || numValue > 200) {
-                isValid = false
-                validationMessage = `Pressure outside physical range (0 to 200 PSI)`
-            } else {
-                // Equipment-specific pressure validation
-                switch (equipmentType) {
-                    case 'boiler':
-                        // Typical boiler pressure ranges from 5-30 PSI for residential,
-                        // and up to 150 PSI for commercial
-                        if (systemId && systemId.toLowerCase().includes('residential')) {
-                            if (numValue < 5 || numValue > 30) {
-                                isValid = false
-                                validationMessage = `Residential boiler pressure outside expected range (5 to 30 PSI)`
-                            }
-                        } else if (numValue < 5 || numValue > 150) {
-                            isValid = false
-                            validationMessage = `Commercial boiler pressure outside expected range (5 to 150 PSI)`
-                        }
-                        break
-
-                    case 'chiller':
-                        // Chiller refrigerant pressures vary by refrigerant type,
-                        // but generally stay between 50-250 PSI
-                        if (numValue < 50 || numValue > 250) {
-                            isValid = false
-                            validationMessage = `Chiller pressure outside expected range (50 to 250 PSI)`
-                        }
-                        break
-                }
-            }
-            break
-
-        case 'humidity':
-            // Humidity must be between 0-100%
-            if (numValue < 0 || numValue > 100) {
-                isValid = false
-                validationMessage = `Humidity outside physical range (0% to 100%)`
-            }
-            break
-
-        case 'flow':
-            // Flow must be non-negative and has reasonable upper bounds
-            // depending on the system
-            if (numValue < 0) {
-                isValid = false
-                validationMessage = `Flow cannot be negative`
-            } else if (numValue > 5000) {
-                // Generic high limit for any flow
-                isValid = false
-                validationMessage = `Flow exceeds maximum expected value`
-            } else {
-                // System-specific flow validation
-                switch (equipmentType) {
-                    case 'residential_system':
-                        // Residential flow rates typically don't exceed a few dozen GPM
-                        if (numValue > 50) {
-                            isValid = false
-                            validationMessage = `Residential flow rate exceeds expected maximum (50 GPM)`
-                        }
-                        break
-
-                    case 'boiler':
-                        // Commercial boiler flow rates are higher but still have limits
-                        if (numValue > 500) {
-                            isValid = false
-                            validationMessage = `Boiler flow rate exceeds expected maximum (500 GPM)`
-                        }
-                        break
-                }
-            }
-            break
-
-        case 'voltage':
-            // Common voltage levels: 5V, 12V, 24V, 120V, 208V, 240V, 480V
-            // Allow some fluctuation but catch values outside physical ranges
-            if (numValue < 0 || numValue > 600) {
-                isValid = false
-                validationMessage = `Voltage outside physical range (0V to 600V)`
-            }
-            break
-
-        case 'current':
-            // Current (amps) validation depends on the equipment type
-            if (numValue < 0) {
-                isValid = false
-                validationMessage = `Current cannot be negative`
-            } else {
-                switch (equipmentType) {
-                    case 'residential_system':
-                        // Typical residential equipment rarely exceeds 30A
-                        if (numValue > 50) {
-                            isValid = false
-                            validationMessage = `Residential current exceeds expected maximum (50A)`
-                        }
-                        break
-
-                    case 'boiler':
-                    case 'chiller':
-                        // Commercial equipment can pull higher current
-                        if (numValue > 200) {
-                            isValid = false
-                            validationMessage = `Commercial equipment current exceeds expected maximum (200A)`
-                        }
-                        break
-                }
-            }
-            break
-
-        // Add more specific metric types as needed
-
-        default:
-            // For unknown metric types, apply basic sanity checks
-            if (Math.abs(numValue) > 1000) {
-                isValid = false
-                validationMessage = `Value outside reasonable range for unknown metric type`
-            }
+    // Apply basic validation based on metric name
+    const metricNameLower = metricName.toLowerCase()
+    
+    if (metricNameLower.includes('temp') || metricNameLower.includes('temperature')) {
+        if (numValue < -50 || numValue > 250) {
+            console.log(`❌ REJECTED ${metricName}: Temperature ${numValue} outside physical range (-50°F to 250°F)`)
+            return null
+        }
+    } else if (metricNameLower.includes('pressure')) {
+        if (numValue < 0 || numValue > 200) {
+            console.log(`❌ REJECTED ${metricName}: Pressure ${numValue} outside physical range (0 to 200 PSI)`)
+            return null
+        }
+    } else if (metricNameLower.includes('humidity') || metricNameLower.includes('rh')) {
+        if (numValue < 0 || numValue > 100) {
+            console.log(`❌ REJECTED ${metricName}: Humidity ${numValue} outside physical range (0% to 100%)`)
+            return null
+        }
     }
 
-    // If value failed validation, log and return null
-    if (!isValid) {
-        console.log(`❌ REJECTED ${metricName}: ${numValue} - ${validationMessage}`)
-        return null
-    }
-
-    // Value passed all validation checks
-    console.log(`✅ Validated ${metricType} value for ${metricName}: ${numValue}`)
+    console.log(`✅ Validated value for ${metricName}: ${numValue}`)
     return numValue
 }
 
@@ -1234,7 +616,6 @@ function validateMetricValue(value, metricName, equipmentType, systemId) {
 function validateRateOfChange(equipmentId, metricName, currentValue, metricType) {
     const key = `${equipmentId}-${metricName}`
 
-    // If we don't have a previous reading, store this one and return true
     if (!lastValidReadings[key]) {
         lastValidReadings[key] = {
             value: currentValue,
@@ -1248,7 +629,6 @@ function validateRateOfChange(equipmentId, metricName, currentValue, metricType)
     const timeDiffSeconds = (Date.now() - previousReading.timestamp) / 1000
     const valueDiff = Math.abs(currentValue - previousReading.value)
 
-    // Don't validate if readings are too far apart (more than 10 minutes)
     if (timeDiffSeconds > 600) {
         console.log(`⏱️ Readings are ${(timeDiffSeconds / 60).toFixed(1)} minutes apart - too long to validate rate of change, accepting value`)
         lastValidReadings[key] = {
@@ -1258,50 +638,22 @@ function validateRateOfChange(equipmentId, metricName, currentValue, metricType)
         return true
     }
 
-    // Define maximum allowable rate of change per second for different metric types
-    let maxRateOfChange
+    // Define maximum allowable rate of change per second
+    let maxRateOfChange = 0.1 // Default
 
-    switch (metricType) {
-        case 'temperature':
-            // Temperature shouldn't change more than 5°F per minute in most HVAC systems
-            // So that's about 0.083°F per second
-            maxRateOfChange = 0.083
-            break
-
-        case 'pressure':
-            // Pressure shouldn't change more than 5 PSI per minute
-            // So that's about 0.083 PSI per second
-            maxRateOfChange = 0.083
-            break
-
-        case 'humidity':
-            // Humidity typically changes slowly, maybe 2% per minute at most
-            // So that's about 0.033% per second
-            maxRateOfChange = 0.033
-            break
-
-        case 'flow':
-            // Flow can change more rapidly, maybe 20% of max flow per minute
-            // This is very system-dependent
-            maxRateOfChange = 0.5 // Higher to allow for flow changes
-            break
-
-        default:
-            // Default to a reasonable value for unknown metrics
-            maxRateOfChange = 0.1
+    if (metricName.toLowerCase().includes('temp')) {
+        maxRateOfChange = 0.083 // ~5°F per minute
+    } else if (metricName.toLowerCase().includes('pressure')) {
+        maxRateOfChange = 0.083 // ~5 PSI per minute
     }
 
-    // Calculate the actual rate of change per second
     const rateOfChange = valueDiff / timeDiffSeconds
 
-    // If the rate of change exceeds our maximum, reject the value
-    if (rateOfChange > maxRateOfChange * 60) { // Convert to per-minute for easier reading
+    if (rateOfChange > maxRateOfChange * 60) {
         console.log(`❌ REJECTED ${metricName}: ${currentValue} - Rate of change too high (${rateOfChange.toFixed(2)} per minute vs max ${(maxRateOfChange * 60).toFixed(2)})`)
-        // Don't update the last valid reading since this one failed
         return false
     }
 
-    // Update the last valid reading
     lastValidReadings[key] = {
         value: currentValue,
         timestamp: Date.now()
@@ -1311,22 +663,96 @@ function validateRateOfChange(equipmentId, metricName, currentValue, metricType)
     return true
 }
 
-// Function to monitor equipment metrics
+// Function to send alarm email
+async function sendAlarmEmail(alarmData, alarmId) {
+    try {
+        const locationId = alarmData.locationId
+        const locationName = alarmData.locationName
+
+        console.log(`Sending alarm email for location: ${locationName} (ID: ${locationId})`)
+
+        // Get technicians and recipients for this location
+        let techs = locationTechnicians[locationId] || []
+        let recipients = locationRecipients[locationId] || []
+
+        // If no recipients found, query Firestore directly
+        if (recipients.length === 0) {
+            console.log(`No recipients found in cache, querying Firestore directly`)
+            try {
+                const recipientsQuery = query(collection(db, "recipients"), where("locationId", "==", locationId), limit(10))
+                const recipientsSnapshot = await getDocs(recipientsQuery)
+
+                if (!recipientsSnapshot.empty) {
+                    console.log(`Found ${recipientsSnapshot.docs.length} recipients by locationId ${locationId} in Firestore`)
+                    recipients = recipientsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+                }
+            } catch (error) {
+                console.error("Error querying recipients from Firestore:", error)
+            }
+        }
+
+        // Combine emails from both groups
+        const techEmails = techs.map((tech) => tech.email).filter(Boolean)
+        const recipientEmails = recipients.map((recipient) => recipient.email).filter(Boolean)
+        let allEmails = [...new Set([...techEmails, ...recipientEmails])]
+
+        // Get tech names for the email
+        const techNames = techs.map((tech) => tech.name).join(", ")
+
+        // Skip email sending if no recipients
+        if (allEmails.length === 0) {
+            console.log(`Skipping email send - no recipients found for location ${locationName} (${locationId})`)
+            return
+        }
+
+        console.log(`Sending alarm email to ${allEmails.length} recipients for alarm ${alarmId}`)
+        console.log(`Recipients: ${allEmails.join(", ")}`)
+
+        try {
+            const appUrl = process.env.APP_URL || "http://localhost:3000"
+            const response = await fetch(`${appUrl}/api/send-alarm-email`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    alarmType: alarmData.name,
+                    details: alarmData.message,
+                    locationId: alarmData.locationId,
+                    locationName: alarmData.locationName,
+                    equipmentName: alarmData.equipmentName,
+                    alarmId: alarmId,
+                    severity: alarmData.severity,
+                    recipients: allEmails,
+                    assignedTechs: techNames || "None",
+                }),
+            })
+
+            if (!response.ok) {
+                console.warn("Email API returned error status:", response.status)
+                const errorData = await response.json()
+                console.error("Email API error details:", errorData)
+            } else {
+                const result = await response.json()
+                console.log("Alarm email sent successfully to", allEmails.length, "recipients. Message ID:", result.messageId)
+            }
+        } catch (error) {
+            console.warn("Email sending failed but continuing alarm creation:", error)
+        }
+    } catch (error) {
+        console.error("Error in sendAlarmEmail function:", error)
+    }
+}
+
+// Function to monitor equipment metrics using InfluxDB3
 async function monitorEquipmentMetrics() {
     try {
-        // Get RTDB data
-        const locationsRef = ref(rtdb, "/locations")
-        const snapshot = await get(locationsRef)
-        const rtdbData = snapshot.val() || {}
-
         console.log("🔍 monitorEquipmentMetrics called with", {
             thresholdCount: thresholdSettings.length,
-            rtdbAvailable: !!rtdbData,
-            locationCount: Object.keys(rtdbData).length,
         })
 
-        if (!rtdbData || !thresholdSettings.length) {
-            console.log("Cannot monitor metrics - missing dependencies")
+        if (!thresholdSettings.length) {
+            console.log("Cannot monitor metrics - no thresholds configured")
             return
         }
 
@@ -1363,8 +789,7 @@ async function monitorEquipmentMetrics() {
 
                 console.log(`📍 Equipment: ${equipmentData.name} (${threshold.equipmentId}) at location ${locationId}`)
 
-                // IMPORTANT: Re-verify the threshold values from the equipment document
-                // This ensures we're using the most up-to-date thresholds
+                // Re-verify the threshold values from the equipment document
                 let currentMinThreshold = threshold.minThreshold
                 let currentMaxThreshold = threshold.maxThreshold
 
@@ -1397,7 +822,7 @@ async function monitorEquipmentMetrics() {
                     console.log(`⚠️ Using original thresholds: Min: ${currentMinThreshold}, Max: ${currentMaxThreshold}`)
                 }
 
-                // Get equipment type - either from a dedicated field or infer from name/system
+                // Get equipment type
                 const equipmentType = equipmentData.type ||
                     (equipmentData.name && equipmentData.name.toLowerCase().includes('boiler') ? 'boiler' :
                         (equipmentData.name && equipmentData.name.toLowerCase().includes('steam') ? 'steam_bundle' :
@@ -1406,7 +831,7 @@ async function monitorEquipmentMetrics() {
                 console.log(`🔧 Equipment type: ${equipmentType}`)
 
                 // Get outdoor temperature for this location
-                const outdoorTemp = await getOutdoorTemperature(locationId, rtdbData)
+                const outdoorTemp = await getOutdoorTemperature(locationId)
 
                 // Calculate dynamic thresholds based on outdoor temperature
                 const { adjustedMin, adjustedMax } = calculateDynamicThresholds(
@@ -1417,24 +842,20 @@ async function monitorEquipmentMetrics() {
                     threshold.metricName
                 )
 
-                // Try to get the metric value from RTDB using the improved function
-                let currentValue = getMetricValue(locationId, systemId, threshold.metricName, rtdbData)
-                let metricSource = ""
+                // Get the metric value from InfluxDB3
+                let currentValue = await getMetricValueFromInflux(locationId, threshold.equipmentId, threshold.metricName)
 
                 if (currentValue !== null) {
-                    metricSource = "RTDB"
-                    console.log(`📈 Raw value for ${threshold.metricName}: ${currentValue} (source: ${metricSource})`)
+                    console.log(`📈 Raw value for ${threshold.metricName}: ${currentValue} (source: InfluxDB)`)
 
                     // Validate the metric value before processing
                     currentValue = validateMetricValue(currentValue, threshold.metricName, equipmentType, systemId)
 
                     if (currentValue !== null) {
                         // If the value passed basic validation, check the rate of change
-                        const metricType = getMetricType(threshold.metricName)
-                        const rateValid = validateRateOfChange(threshold.equipmentId, threshold.metricName, currentValue, metricType)
+                        const rateValid = validateRateOfChange(threshold.equipmentId, threshold.metricName, currentValue, 'temperature')
 
                         if (!rateValid) {
-                            // Skip this reading if the rate of change is invalid
                             console.log(`⚠️ Skipping threshold check for ${threshold.metricName} - rate of change invalid`)
                             continue
                         }
@@ -1443,55 +864,10 @@ async function monitorEquipmentMetrics() {
                         console.log(`✅ Validated value for ${threshold.metricName}: ${currentValue}`)
                     } else {
                         console.log(`❌ Invalid value detected for ${threshold.metricName}, skipping threshold check`)
-                        continue // Skip to the next threshold check
+                        continue
                     }
                 } else {
-                    // If we still don't have a value, try to get it from Firestore
-                    console.log(`⚠️ Metric not found in RTDB, checking Firestore at path: thresholds.${threshold.metricPath}`)
-                    const firestoreValue = threshold.metricPath
-                        .split("/")
-                        .reduce((obj, key) => (obj && typeof obj === "object" ? obj[key] : null), equipmentData.thresholds || {})
-
-                    if (
-                        firestoreValue &&
-                        (typeof firestoreValue.value !== "undefined" || typeof firestoreValue.current !== "undefined")
-                    ) {
-                        // Extract the raw value
-                        const rawValue = typeof firestoreValue.value !== "undefined"
-                            ? firestoreValue.value
-                            : firestoreValue.current
-
-                        console.log(`📈 Raw value from Firestore for ${threshold.metricName}: ${rawValue}`)
-
-                        // Validate the value
-                        currentValue = validateMetricValue(rawValue, threshold.metricName, equipmentType, systemId)
-
-                        if (currentValue !== null) {
-                            // If the value passed basic validation, check the rate of change
-                            const metricType = getMetricType(threshold.metricName)
-                            const rateValid = validateRateOfChange(threshold.equipmentId, threshold.metricName, currentValue, metricType)
-
-                            if (!rateValid) {
-                                // Skip this reading if the rate of change is invalid
-                                console.log(`⚠️ Skipping threshold check for ${threshold.metricName} - rate of change invalid`)
-                                continue
-                            }
-
-                            metricsFound++
-                            metricSource = "Firestore"
-                            console.log(`✅ Validated value for ${threshold.metricName}: ${currentValue} (source: ${metricSource})`)
-                        } else {
-                            console.log(`❌ Invalid value detected in Firestore for ${threshold.metricName}, skipping threshold check`)
-                            continue // Skip to the next threshold check
-                        }
-                    } else {
-                        console.log(`❌ Metric not found in Firestore either`)
-                    }
-                }
-
-                // Skip if no valid metric value found
-                if (currentValue === null) {
-                    console.log(`⚠️ Skipping alarm creation for ${threshold.metricName} - no valid metric value found`)
+                    console.log(`❌ Metric ${threshold.metricName} not found in InfluxDB`)
                     continue
                 }
 
@@ -1536,82 +912,21 @@ async function monitorEquipmentMetrics() {
 
                     if (existingAlarmSnapshot.empty) {
                         // Get location name
-                        let locationName = equipmentData.locationName || equipmentData.location || null
-
-                        // Try to get a better location name if we don't have one
-                        if (!locationName) {
-                            console.log(`Attempting to resolve location name for ID: ${locationId}`)
-
-                            try {
-                                // First try direct lookup in Firestore
-                                const locationDocRef = doc(db, "locations", locationId)
-                                const locationDocSnap = await getDoc(locationDocRef)
-
-                                if (locationDocSnap.exists() && locationDocSnap.data().name) {
-                                    locationName = locationDocSnap.data().name
-                                    console.log(`Found location name via direct lookup: ${locationName}`)
-                                } else {
-                                    // Try query by ID field
-                                    const locationQuery = query(collection(db, "locations"), where("id", "==", locationId), limit(1))
-                                    const locationSnapshot = await getDocs(locationQuery)
-
-                                    if (!locationSnapshot.empty && locationSnapshot.docs[0].data().name) {
-                                        locationName = locationSnapshot.docs[0].data().name
-                                        console.log(`Found location name via query: ${locationName}`)
-                                    } else {
-                                        // Try RTDB lookup
-                                        if (rtdbData && rtdbData[locationId] && rtdbData[locationId].name) {
-                                            locationName = rtdbData[locationId].name
-                                            console.log(`Found location name in RTDB direct: ${locationName}`)
-                                        } else {
-                                            // Search through RTDB
-                                            for (const [key, value] of Object.entries(rtdbData)) {
-                                                if (value.id === locationId && value.name) {
-                                                    locationName = value.name
-                                                    console.log(`Found location name in RTDB search: ${locationName}`)
-                                                    break
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            } catch (error) {
-                                console.error(`Error resolving location name for ${locationId}:`, error)
-                            }
-
-                            // If still no name found, use a placeholder
-                            if (!locationName) {
-                                locationName = `Location ${locationId}`
-                                console.log(`Using placeholder name: ${locationName}`)
-                            }
-                        }
+                        let locationName = equipmentData.locationName || equipmentData.location || await getLocationName(locationId)
 
                         // Get a better equipment name
-                        let equipmentName = "Unknown Equipment"
-                        if (equipmentData.name) {
-                            equipmentName = equipmentData.name
-                        } else if (equipmentData.system) {
-                            equipmentName = equipmentData.system
-                        } else if (equipmentData.type) {
-                            equipmentName = `${equipmentData.type} System`
-                        } else if (threshold.metricName.includes("Boiler")) {
-                            equipmentName = "Boiler System"
-                        } else if (threshold.metricName.includes("Chiller")) {
-                            equipmentName = "Chiller System"
-                        } else if (threshold.metricName.includes("Steam")) {
-                            equipmentName = "Steam System"
-                        }
+                        let equipmentName = equipmentData.name || equipmentData.system || "Unknown Equipment"
 
                         console.log(`Using equipment name: ${equipmentName}`)
+                        console.log(`Using location name: ${locationName}`)
 
-                        // Create new alarm with the resolved location name and better equipment name
+                        // Create new alarm
                         const alarmData = {
                             name: `${threshold.metricName} Threshold Exceeded`,
                             equipmentId: threshold.equipmentId,
                             equipmentName: equipmentName,
                             locationId: locationId,
-                            // Use the location key as the name when no name field is available
-                            locationName: locationName || locationId || "Unknown Location", // This ensures we use the location ID as name if no name is found
+                            locationName: locationName,
                             severity,
                             message,
                             active: true,
@@ -1620,7 +935,7 @@ async function monitorEquipmentMetrics() {
                             timestamp: new Date(),
                         }
 
-                        console.log(`Creating alarm with location name: "${locationName || locationId}" and ID: "${locationId}"`)
+                        console.log(`Creating alarm with location name: "${locationName}" and ID: "${locationId}"`)
 
                         // Add to Firestore
                         const alarmsCollection = collection(db, "alarms")
@@ -1651,27 +966,6 @@ async function monitorEquipmentMetrics() {
     }
 }
 
-// Function to get seasonal threshold rules from Firestore (for future expansion)
-async function getSeasonalThresholdRules() {
-    try {
-        const rulesSnapshot = await getDocs(collection(db, "seasonalThresholdRules"))
-        const rules = []
-
-        rulesSnapshot.forEach(doc => {
-            rules.push({
-                id: doc.id,
-                ...doc.data()
-            })
-        })
-
-        console.log(`Loaded ${rules.length} seasonal threshold rules`)
-        return rules
-    } catch (error) {
-        console.error("Error loading seasonal threshold rules:", error)
-        return []
-    }
-}
-
 // Initialize the monitoring service
 async function initializeMonitoring() {
     try {
@@ -1685,25 +979,18 @@ async function initializeMonitoring() {
         await fetchLocationPersonnel()
         console.log("✅ Loaded personnel data")
 
-        // Test outdoor temperature retrieval for a few locations
-        console.log("🌡️ Testing outdoor temperature retrieval...")
+        // Test InfluxDB connection via Next.js API
+        console.log("🔍 Testing InfluxDB connection via Next.js API...")
         try {
-            // Get some location IDs to test with
-            const locationsSnapshot = await getDocs(collection(db, "locations"));
-            const locationIds = locationsSnapshot.docs.map(doc => doc.id).slice(0, 3); // Test first 3 locations
-            
-            // Get RTDB data
-            const locationsRef = ref(rtdb, "/locations")
-            const snapshot = await get(locationsRef)
-            const rtdbData = snapshot.val() || {}
-            
-            for (const locationId of locationIds) {
-                console.log(`Testing outdoor temperature for location: ${locationId}`);
-                const temp = await getOutdoorTemperature(locationId, rtdbData);
-                console.log(`Result for ${locationId}: ${temp !== null ? temp + '°F' : 'Temperature not found'}`);
+            const testQuery = "SELECT COUNT(*) as count FROM metrics WHERE time >= now() - INTERVAL '1 hour'"
+            const testResult = await queryInfluxDB(testQuery)
+            if (testResult && testResult.length > 0) {
+                console.log(`✅ InfluxDB connection via Next.js API successful. Found ${testResult[0].count} recent metrics.`)
+            } else {
+                console.log("⚠️ InfluxDB connection successful but no recent metrics found.")
             }
-        } catch (tempTestError) {
-            console.error("Error testing outdoor temperature:", tempTestError);
+        } catch (error) {
+            console.error("❌ InfluxDB connection test failed:", error)
         }
 
         // Start monitoring
@@ -1748,3 +1035,6 @@ module.exports = {
         thresholdCount: thresholdSettings.length,
     }),
 }
+
+// Initialize and start monitoring
+initializeMonitoring()

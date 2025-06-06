@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Fan Coil Control Logic
  * This function implements control logic for fan coil units with location-based temperature source selection

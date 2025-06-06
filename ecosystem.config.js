@@ -1,31 +1,18 @@
 // File: /opt/productionapp/ecosystem.config.js
+// CORE SERVICES ONLY - Location processors/factories moved to individual configs
 module.exports = {
   apps: [
     {
-      name: 'bms-server-logic-runner',
-      script: './scripts/server-logic-scheduler.js',
-      watch: false,
-      instances: 1,
-      autorestart: true,
-      max_memory_restart: '200M',
-      env: {
-        NODE_ENV: 'production',
-        NEXT_APP_URL: 'http://localhost:3000',
-        SERVER_ACTION_SECRET_KEY: 'Invertedskynet2',
-        LOGIC_SCHEDULE_INTERVAL: '60000'
-      }
-    },
-    {
       name: 'neural',
       script: '/usr/bin/bash',
-      args: '-c "npx next dev -p 3000"',
+      args: '-c "npx next start -p 3000"',
       cwd: '/opt/productionapp',
       watch: false,
       instances: 1,
       autorestart: true,
       max_memory_restart: '500M',
       env: {
-        NODE_ENV: 'development'
+        NODE_ENV: 'production'
       }
     },
     {
@@ -39,18 +26,25 @@ module.exports = {
         NODE_ENV: 'production'
       }
     },
-    // Add the equipment worker
     {
-      name: 'equipment-worker',
-      script: './worker.js',
+      name: 'enhanced-equipment-worker',
+      script: './dist/workers/enhanced-equipment-worker.js',
       watch: false,
-      instances: 4,
+      instances: 2,
       exec_mode: 'cluster',
       autorestart: true,
       max_memory_restart: '300M',
+      out_file: './logs/ui-worker.log',
+      error_file: './logs/ui-worker-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        INFLUXDB_URL: 'http://143.198.162.31:8181',
+        INFLUXDB_DATABASE3: 'UIControlCommands',
+        INFLUXDB_DATABASE4: 'EquipmentConfig',
+        INFLUXDB_DATABASE5: 'NeuralControlCommands',
+        INFLUXDB_LOCATIONS_BUCKET: 'Locations'
       }
     }
   ]
-};
+}

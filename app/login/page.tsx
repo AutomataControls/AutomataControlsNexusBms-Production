@@ -3,9 +3,7 @@
 // Add this at the very top of your login page.tsx file
 export const dynamic = 'force-dynamic'
 
-
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -25,17 +23,43 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail } from "firebase/auth"
+import { Progress } from "@/components/ui/progress"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  MapPin,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  Building,
+  Shield,
+  Zap,
+} from "lucide-react"
+import { createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail, sendPasswordResetEmail } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { doc, setDoc, getFirestore } from "firebase/firestore"
 import { collection, getDocs } from "firebase/firestore"
 
-export default function LoginPage() {
+interface PasswordStrength {
+  score: number
+  feedback: string[]
+  color: string
+}
+
+export default function EnhancedLoginPage() {
   const [email, setEmail] = useState("")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [loginMethod, setLoginMethod] = useState<"email" | "username">("email")
   const [isSignUpOpen, setIsSignUpOpen] = useState(false)
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("")
   const [signUpData, setSignUpData] = useState({
     email: "",
     username: "",
@@ -44,9 +68,13 @@ export default function LoginPage() {
     name: "",
     location: "",
   })
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSigningUp, setIsSigningUp] = useState(false)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [isGoogleLoggingIn, setIsGoogleLoggingIn] = useState(false)
+  const [isSendingReset, setIsSendingReset] = useState(false)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const { user, loginWithEmail, loginWithUsername, loginWithGoogle } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -103,10 +131,18 @@ export default function LoginPage() {
         // If user has roles and permissions, proceed with role-based redirects
         if (Array.isArray(user.roles) && hasAdminAccess(user.roles)) {
           console.log("User check - User has admin access, redirecting to /dashboard")
+          toast({
+            title: "Login Successful",
+            description: "Welcome back! Redirecting to dashboard...",
+          })
           router.push("/dashboard")
         } else if (user.assignedLocations && user.assignedLocations.length > 0) {
           const locationId = user.assignedLocations[0]
           console.log(`User check - User has assigned locations, redirecting to /dashboard/location/${locationId}`)
+          toast({
+            title: "Login Successful",
+            description: `Welcome back! Redirecting to location...`,
+          })
           router.push(`/dashboard/location/${locationId}`)
         } else {
           console.log("User check - User has no admin access or assigned locations")
@@ -161,6 +197,53 @@ export default function LoginPage() {
     }
   }, [db, isMounted])
 
+  // Password strength checker
+  const checkPasswordStrength = (password: string): PasswordStrength => {
+    let score = 0
+    const feedback: string[] = []
+
+    if (password.length >= 8) score += 1
+    else feedback.push("At least 8 characters")
+
+    if (/[a-z]/.test(password)) score += 1
+    else feedback.push("Lowercase letter")
+
+    if (/[A-Z]/.test(password)) score += 1
+    else feedback.push("Uppercase letter")
+
+    if (/\d/.test(password)) score += 1
+    else feedback.push("Number")
+
+    if (/[^a-zA-Z\d]/.test(password)) score += 1
+    else feedback.push("Special character")
+
+    const colors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"]
+    return {
+      score,
+      feedback,
+      color: colors[score] || "bg-gray-500",
+    }
+  }
+
+  const passwordStrength = checkPasswordStrength(signUpData.password)
+
+  // Form validation
+  const validateForm = (data: typeof signUpData): Record<string, string> => {
+    const errors: Record<string, string> = {}
+
+    if (!data.name.trim()) errors.name = "Full name is required"
+    if (!data.username.trim()) errors.username = "Username is required"
+    if (data.username.length < 3) errors.username = "Username must be at least 3 characters"
+    if (!data.email.trim()) errors.email = "Email is required"
+    if (!/\S+@\S+\.\S+/.test(data.email)) errors.email = "Email is invalid"
+    if (!data.password) errors.password = "Password is required"
+    if (passwordStrength.score < 3) errors.password = "Password is too weak"
+    if (data.password !== data.confirmPassword) errors.confirmPassword = "Passwords do not match"
+    if (!data.location) errors.location = "Location is required"
+
+    return errors
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoggingIn(true)
@@ -201,12 +284,49 @@ export default function LoginPage() {
     }
   }
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (signUpData.password !== signUpData.confirmPassword) {
+    if (!forgotPasswordEmail) {
       toast({
         title: "Error",
-        description: "Passwords do not match",
+        description: "Please enter your email address",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsSendingReset(true)
+      await sendPasswordResetEmail(auth, forgotPasswordEmail)
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Check your email for password reset instructions.",
+        duration: 6000,
+      })
+      setIsForgotPasswordOpen(false)
+      setForgotPasswordEmail("")
+    } catch (error: any) {
+      console.error("Password reset error:", error)
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to send password reset email",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSendingReset(false)
+    }
+  }
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const errors = validateForm(signUpData)
+    setFormErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors in the form",
         variant: "destructive",
       })
       return
@@ -296,6 +416,7 @@ export default function LoginPage() {
         name: "",
         location: "",
       })
+      setFormErrors({})
     } catch (error: any) {
       console.error("Sign up error:", error)
 
@@ -324,29 +445,31 @@ export default function LoginPage() {
   // Show loading state until component is mounted
   if (!isMounted) {
     return (
-      <div className="flex items-center justify-center min-h-screen w-full bg-zinc-900">
-        <div className="w-full max-w-2xl px-4">
-          <Card className="w-full bg-gray-800 border-gray-700">
-            <CardHeader className="space-y-4">
-              <div className="flex items-center justify-center mb-6">
-                <div className="w-[150px] h-[150px] bg-gray-600 animate-pulse rounded mr-6"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-3xl">
+          <Card className="bg-white border shadow-2xl overflow-hidden">
+            <CardHeader className="space-y-6 pb-8">
+              <div className="flex items-center justify-center mb-8">
+                <div className="w-[120px] h-[120px] bg-gray-200 animate-pulse rounded-full mr-8"></div>
                 <div>
-                  <div className="h-8 bg-gray-600 animate-pulse rounded mb-2 w-64"></div>
-                  <div className="h-6 bg-gray-600 animate-pulse rounded w-48"></div>
+                  <div className="h-10 bg-gray-200 animate-pulse rounded mb-2 w-80"></div>
+                  <div className="h-6 bg-gray-200 animate-pulse rounded w-64"></div>
                 </div>
               </div>
-              <div className="h-8 bg-gray-600 animate-pulse rounded w-32 mx-auto"></div>
-              <div className="h-6 bg-gray-600 animate-pulse rounded w-64 mx-auto"></div>
+              <div className="text-center space-y-4">
+                <div className="h-10 bg-gray-200 animate-pulse rounded w-48 mx-auto"></div>
+                <div className="h-6 bg-gray-200 animate-pulse rounded w-64 mx-auto"></div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="h-10 bg-gray-600 animate-pulse rounded"></div>
-              <div className="h-12 bg-gray-600 animate-pulse rounded"></div>
-              <div className="h-12 bg-gray-600 animate-pulse rounded"></div>
+              <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
             </CardContent>
             <CardFooter className="space-y-4">
               <div className="flex gap-4 w-full">
-                <div className="h-12 bg-gray-600 animate-pulse rounded flex-1"></div>
-                <div className="h-12 bg-gray-600 animate-pulse rounded w-24"></div>
+                <div className="h-12 bg-gray-200 animate-pulse rounded flex-1"></div>
+                <div className="h-12 bg-gray-200 animate-pulse rounded w-32"></div>
               </div>
             </CardFooter>
           </Card>
@@ -356,56 +479,100 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen w-full bg-zinc-900">
-      <div className="w-full max-w-2xl px-4">
-        <Card className="w-full bg-gray-800 border-gray-700">
-          <CardHeader className="space-y-4">
-            <div className="flex items-center justify-center mb-6">
-              <Image
-                src="/neural-loader.png"
-                alt="Automata Controls Logo"
-                width={150}
-                height={150}
-                className="mr-6"
-                priority
-              />
-              <div>
-                <h1 className="font-cinzel text-4xl text-orange-300">Automata Controls</h1>
-                <h2 className="text-2xl text-teal-200">Building Management System</h2>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="w-full max-w-4xl">
+        <Card className="bg-white border shadow-2xl">
+          <CardHeader className="space-y-6 pb-8">
+            {/* Logo Section */}
+            <div className="flex items-center justify-center mb-8">
+              <div className="relative">
+                <div className="bg-white rounded-full p-4 shadow-md animate-float">
+                  <Image
+                    src="/neural-loader.png"
+                    alt="Automata Controls Neural Network"
+                    width={120}
+                    height={120}
+                    className="drop-shadow-sm"
+                    priority
+                  />
+                </div>
+              </div>
+              <div className="ml-8">
+                <h1 className="font-cinzel text-4xl font-bold text-[#14b8a6] drop-shadow-md">AUTOMATA CONTROLS</h1>
+                <p className="text-xl text-[#fb923c] font-light tracking-wide drop-shadow-sm">
+                  Building Management System
+                </p>
               </div>
             </div>
-            <CardTitle className="text-3xl text-amber-200/70 text-center">Login</CardTitle>
-            <CardDescription className="text-lg text-teal-200/80 text-center">
-              Enter your credentials to access the system
-            </CardDescription>
+
+            {/* Welcome Back Section */}
+            <div className="text-center space-y-4 relative">
+              <div className="relative inline-block">
+                <CardTitle className="text-4xl font-cinzel font-bold text-slate-800 relative z-10">
+                  Welcome Back
+                </CardTitle>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#14b8a6]/20 via-transparent to-[#fb923c]/20 blur-xl transform scale-110"></div>
+              </div>
+              <div className="max-w-md mx-auto">
+                <CardDescription className="text-lg text-slate-600 leading-relaxed font-medium">
+                  Access your intelligent building management dashboard
+                </CardDescription>
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <div className="h-px bg-gradient-to-r from-transparent via-[#14b8a6]/50 to-transparent flex-1"></div>
+                  <div className="w-2 h-2 rounded-full bg-[#14b8a6]/30"></div>
+                  <div className="h-px bg-gradient-to-r from-transparent via-[#fb923c]/50 to-transparent flex-1"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature Pills */}
+            <div className="flex justify-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2 bg-[#14b8a6]/10 text-[#14b8a6] px-3 py-1 rounded-full text-sm font-medium">
+                <Building className="w-4 h-4" />
+                Smart Controls
+              </div>
+              <div className="flex items-center gap-2 bg-[#fb923c]/10 text-[#fb923c] px-3 py-1 rounded-full text-sm font-medium">
+                <Zap className="w-4 h-4" />
+                Real-time Monitoring
+              </div>
+              <div className="flex items-center gap-2 bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-sm font-medium">
+                <Shield className="w-4 h-4" />
+                Secure Access
+              </div>
+            </div>
           </CardHeader>
+
           <Tabs
             value={loginMethod}
             onValueChange={(value) => {
               setLoginMethod(value as "email" | "username")
             }}
-            className="w-full"
+            className="w-full px-0"
           >
-            <TabsList className="grid w-full grid-cols-2 h-10 mb-4 bg-gray-700">
+            <TabsList className="grid w-full grid-cols-2 h-8 mb-4 bg-slate-100 mx-8 max-w-none">
               <TabsTrigger
                 value="email"
-                className="text-base data-[state=active]:bg-teal-500/10 data-[state=active]:text-teal-200 data-[state=active]:border-b-2 data-[state=active]:border-teal-500/50"
+                className="text-xs px-2 data-[state=active]:bg-white data-[state=active]:text-[#14b8a6] data-[state=active]:shadow-sm transition-all duration-200"
               >
+                <Mail className="w-3 h-3 mr-1" />
                 Email
               </TabsTrigger>
               <TabsTrigger
                 value="username"
-                className="text-base data-[state=active]:bg-teal-500/10 data-[state=active]:text-teal-200 data-[state=active]:border-b-2 data-[state=active]:border-teal-500/50"
+                className="text-xs px-2 data-[state=active]:bg-white data-[state=active]:text-[#14b8a6] data-[state=active]:shadow-sm transition-all duration-200"
               >
+                <User className="w-3 h-3 mr-1" />
                 Username
               </TabsTrigger>
             </TabsList>
+
             <form onSubmit={handleLogin}>
-              <CardContent className="space-y-6 pt-6">
-                <TabsContent value="email">
-                  <div className="space-y-3">
-                    <Label htmlFor="email" className="text-lg text-amber-200/60">
-                      Email
+              <CardContent className="space-y-4 px-6 pb-0">
+                <TabsContent value="email" className="mt-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium text-slate-700 flex items-center">
+                      <Mail className="w-3 h-3 mr-1 text-[#14b8a6]" />
+                      Email Address
                     </Label>
                     <Input
                       id="email"
@@ -414,13 +581,15 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="h-12 text-lg bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
+                      className="h-10 text-sm border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors"
                     />
                   </div>
                 </TabsContent>
-                <TabsContent value="username">
-                  <div className="space-y-3">
-                    <Label htmlFor="username" className="text-lg text-amber-200/60">
+
+                <TabsContent value="username" className="mt-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-sm font-medium text-slate-700 flex items-center">
+                      <User className="w-3 h-3 mr-1 text-[#14b8a6]" />
                       Username
                     </Label>
                     <Input
@@ -429,111 +598,175 @@ export default function LoginPage() {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       required
-                      className="h-12 text-lg bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
+                      className="h-10 text-sm border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors"
                     />
                   </div>
                 </TabsContent>
-                <div className="space-y-3">
-                  <Label htmlFor="password" className="text-lg text-amber-200/60">
-                    Password
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="h-12 text-lg bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
-                  />
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-sm font-medium text-slate-700 flex items-center">
+                      <Lock className="w-3 h-3 mr-1 text-[#14b8a6]" />
+                      Password
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-[#fb923c] hover:text-[#fb923c]/80 p-0 h-auto text-xs font-medium"
+                      onClick={() => setIsForgotPasswordOpen(true)}
+                    >
+                      Forgot password?
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-10 text-sm border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-slate-100"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-3 w-3 text-slate-500" />
+                      ) : (
+                        <Eye className="h-3 w-3 text-slate-500" />
+                      )}
+                      <span className="sr-only">Toggle password visibility</span>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-col space-y-6 pt-6">
+
+              <CardFooter className="flex flex-col space-y-4 px-6 pb-6 pt-4">
                 <div className="flex justify-between w-full gap-4">
                   <Button
                     type="submit"
                     disabled={isLoggingIn}
-                    className="flex-1 h-12 text-lg text-white font-medium bg-gradient-to-r from-teal-500/80 to-teal-100/80 hover:from-teal-500 hover:to-teal-100"
+                    className="flex-1 h-10 text-sm font-medium bg-[#14b8a6]/80 hover:bg-[#14b8a6] text-white shadow-md transition-all duration-200"
                   >
                     {isLoggingIn ? (
                       <div className="flex items-center">
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                        </svg>
-                        Logging in...
+                        <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                        Signing in...
                       </div>
                     ) : (
-                      "Login"
+                      "Sign In"
                     )}
                   </Button>
+
                   <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
                     <DialogTrigger asChild>
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-12 text-lg bg-gray-700 text-white hover:bg-gray-600"
+                        className="h-10 text-sm border-[#fb923c] text-[#fb923c] hover:bg-[#fb923c]/10 hover:text-black transition-all duration-200"
                       >
-                        Sign Up
+                        Create Account
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-gray-800 border-gray-700 max-w-2xl">
+                    <DialogContent className="bg-white border shadow-xl max-w-3xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
-                        <DialogTitle className="text-2xl text-amber-200/70">Create Account</DialogTitle>
-                        <DialogDescription className="text-lg text-teal-200/80">
-                          Fill in your details to create a new account
+                        <DialogTitle className="text-2xl font-cinzel font-semibold text-slate-800">
+                          Create New Account
+                        </DialogTitle>
+                        <DialogDescription className="text-base text-slate-600">
+                          Join the Automata Controls Building Management System
                         </DialogDescription>
                       </DialogHeader>
+
                       <form onSubmit={handleSignUp} className="space-y-6">
                         <div className="space-y-3">
-                          <Label htmlFor="signup-name" className="text-lg text-amber-200/60">
-                            Full Name
+                          <Label
+                            htmlFor="signup-name"
+                            className="text-base font-medium text-slate-700 flex items-center"
+                          >
+                            <User className="w-4 h-4 mr-2 text-[#14b8a6]" />
+                            Full Name *
                           </Label>
                           <Input
                             id="signup-name"
                             value={signUpData.name}
                             onChange={(e) => setSignUpData({ ...signUpData, name: e.target.value })}
                             required
-                            className="h-12 text-lg bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
+                            className="h-12 text-base border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors"
                           />
+                          {formErrors.name && (
+                            <p className="text-red-500 text-sm flex items-center">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {formErrors.name}
+                            </p>
+                          )}
                         </div>
+
                         <div className="space-y-3">
-                          <Label htmlFor="signup-username" className="text-lg text-amber-200/60">
-                            Username
+                          <Label
+                            htmlFor="signup-username"
+                            className="text-base font-medium text-slate-700 flex items-center"
+                          >
+                            <User className="w-4 h-4 mr-2 text-[#14b8a6]" />
+                            Username *
                           </Label>
                           <Input
                             id="signup-username"
                             value={signUpData.username}
                             onChange={(e) => setSignUpData({ ...signUpData, username: e.target.value })}
                             required
-                            className="h-12 text-lg bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
+                            className="h-12 text-base border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors"
                           />
+                          {formErrors.username && (
+                            <p className="text-red-500 text-sm flex items-center">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {formErrors.username}
+                            </p>
+                          )}
                         </div>
+
                         <div className="space-y-3">
-                          <Label htmlFor="signup-location" className="text-lg text-amber-200/60">
-                            Location
+                          <Label
+                            htmlFor="signup-email"
+                            className="text-base font-medium text-slate-700 flex items-center"
+                          >
+                            <Mail className="w-4 h-4 mr-2 text-[#14b8a6]" />
+                            Email Address *
+                          </Label>
+                          <Input
+                            id="signup-email"
+                            type="email"
+                            value={signUpData.email}
+                            onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                            required
+                            className="h-12 text-base border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors"
+                          />
+                          {formErrors.email && (
+                            <p className="text-red-500 text-sm flex items-center">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {formErrors.email}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label
+                            htmlFor="signup-location"
+                            className="text-base font-medium text-slate-700 flex items-center"
+                          >
+                            <MapPin className="w-4 h-4 mr-2 text-[#14b8a6]" />
+                            Location *
                           </Label>
                           <select
                             id="signup-location"
                             value={signUpData.location}
                             onChange={(e) => setSignUpData({ ...signUpData, location: e.target.value })}
-                            className="h-12 text-lg bg-gray-700 border-gray-600 text-white w-full rounded-md px-3"
+                            className="h-12 text-base border border-slate-200 rounded-md px-3 w-full focus:border-[#14b8a6] focus:ring-2 focus:ring-[#14b8a6]/20 transition-colors"
                           >
                             <option value="">Select a location</option>
                             {locations.map((location) => (
@@ -542,78 +775,158 @@ export default function LoginPage() {
                               </option>
                             ))}
                           </select>
+                          {formErrors.location && (
+                            <p className="text-red-500 text-sm flex items-center">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {formErrors.location}
+                            </p>
+                          )}
                         </div>
+
                         <div className="space-y-3">
-                          <Label htmlFor="signup-email" className="text-lg text-amber-200/60">
-                            Email
+                          <Label
+                            htmlFor="signup-password"
+                            className="text-base font-medium text-slate-700 flex items-center"
+                          >
+                            <Lock className="w-4 h-4 mr-2 text-[#14b8a6]" />
+                            Password *
                           </Label>
-                          <Input
-                            id="signup-email"
-                            type="email"
-                            value={signUpData.email}
-                            onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
-                            required
-                            className="h-12 text-lg bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
-                          />
+                          <div className="relative">
+                            <Input
+                              id="signup-password"
+                              type={showSignUpPassword ? "text" : "password"}
+                              value={signUpData.password}
+                              onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                              required
+                              className="h-12 text-base border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors pr-12"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-slate-100"
+                              onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                            >
+                              {showSignUpPassword ? (
+                                <EyeOff className="h-4 w-4 text-slate-500" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-slate-500" />
+                              )}
+                            </Button>
+                          </div>
+
+                          {signUpData.password && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600">Password strength:</span>
+                                <span
+                                  className={`font-medium ${
+                                    passwordStrength.score < 2
+                                      ? "text-red-500"
+                                      : passwordStrength.score < 4
+                                        ? "text-yellow-500"
+                                        : "text-green-500"
+                                  }`}
+                                >
+                                  {passwordStrength.score < 2
+                                    ? "Weak"
+                                    : passwordStrength.score < 4
+                                      ? "Medium"
+                                      : "Strong"}
+                                </span>
+                              </div>
+                              <Progress value={(passwordStrength.score / 5) * 100} className="h-2" />
+                              {passwordStrength.feedback.length > 0 && (
+                                <div className="text-sm text-slate-500">
+                                  Missing: {passwordStrength.feedback.join(", ")}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {formErrors.password && (
+                            <p className="text-red-500 text-sm flex items-center">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {formErrors.password}
+                            </p>
+                          )}
                         </div>
+
                         <div className="space-y-3">
-                          <Label htmlFor="signup-password" className="text-lg text-amber-200/60">
-                            Password
+                          <Label
+                            htmlFor="signup-confirm-password"
+                            className="text-base font-medium text-slate-700 flex items-center"
+                          >
+                            <Lock className="w-4 h-4 mr-2 text-[#14b8a6]" />
+                            Confirm Password *
                           </Label>
-                          <Input
-                            id="signup-password"
-                            type="password"
-                            value={signUpData.password}
-                            onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
-                            required
-                            className="h-12 text-lg bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
-                          />
+                          <div className="relative">
+                            <Input
+                              id="signup-confirm-password"
+                              type={showConfirmPassword ? "text" : "password"}
+                              value={signUpData.confirmPassword}
+                              onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
+                              required
+                              className="h-12 text-base border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors pr-12"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-slate-100"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-4 w-4 text-slate-500" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-slate-500" />
+                              )}
+                            </Button>
+                          </div>
+
+                          {signUpData.confirmPassword && signUpData.password !== signUpData.confirmPassword && (
+                            <p className="text-red-500 text-sm flex items-center">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Passwords do not match
+                            </p>
+                          )}
+
+                          {signUpData.confirmPassword && signUpData.password === signUpData.confirmPassword && (
+                            <p className="text-green-500 text-sm flex items-center">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Passwords match
+                            </p>
+                          )}
+
+                          {formErrors.confirmPassword && (
+                            <p className="text-red-500 text-sm flex items-center">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {formErrors.confirmPassword}
+                            </p>
+                          )}
                         </div>
-                        <div className="space-y-3">
-                          <Label htmlFor="signup-confirm-password" className="text-lg text-amber-200/60">
-                            Confirm Password
-                          </Label>
-                          <Input
-                            id="signup-confirm-password"
-                            type="password"
-                            value={signUpData.confirmPassword}
-                            onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
-                            required
-                            className="h-12 text-lg bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
-                          />
-                        </div>
+
+                        <Alert className="bg-blue-50 border-blue-200">
+                          <AlertCircle className="h-4 w-4 text-blue-600" />
+                          <AlertDescription className="text-blue-800">
+                            Your account will require email verification and administrator approval before you can
+                            access the system.
+                          </AlertDescription>
+                        </Alert>
+
                         <DialogFooter>
                           <Button
                             type="submit"
-                            disabled={isSigningUp}
-                            className="w-full h-12 text-lg text-white font-medium bg-gradient-to-r from-teal-500/80 to-teal-100/80 hover:from-teal-500 hover:to-teal-100"
+                            disabled={isSigningUp || Object.keys(validateForm(signUpData)).length > 0}
+                            className="w-full h-12 text-base font-medium bg-[#fb923c]/80 hover:bg-[#fb923c] text-white shadow-md transition-all duration-200"
                           >
                             {isSigningUp ? (
                               <div className="flex items-center justify-center">
-                                <svg
-                                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                  ></circle>
-                                  <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                  ></path>
-                                </svg>
+                                <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
                                 Creating Account...
                               </div>
                             ) : (
-                              "Sign Up"
+                              "Create Account"
                             )}
                           </Button>
                         </DialogFooter>
@@ -625,47 +938,29 @@ export default function LoginPage() {
                 <div className="w-full space-y-4">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-600"></span>
+                      <span className="w-full border-t border-slate-200"></span>
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-gray-800 px-2 text-gray-400">Or continue with</span>
+                      <span className="bg-white px-2 text-slate-500 font-medium">Or continue with</span>
                     </div>
                   </div>
+
                   <div className="flex justify-center">
                     <Button
                       type="button"
                       variant="outline"
                       disabled={isGoogleLoggingIn}
-                      className="h-12 text-lg bg-gray-700 text-white hover:bg-gray-600"
+                      className="h-10 text-sm border-slate-200 hover:bg-slate-50 transition-all duration-200 shadow-sm"
                       onClick={handleGoogleLogin}
                     >
                       {isGoogleLoggingIn ? (
                         <div className="flex items-center">
-                          <svg
-                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          Connecting to Google...
+                          <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                          Connecting...
                         </div>
                       ) : (
                         <>
-                          <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
+                          <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                             <path
                               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                               fill="#4285F4"
@@ -694,6 +989,57 @@ export default function LoginPage() {
           </Tabs>
         </Card>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+        <DialogContent className="bg-white border shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-cinzel font-semibold text-slate-800">Reset Password</DialogTitle>
+            <DialogDescription className="text-base text-slate-600">
+              Enter your email address and we'll send you a password reset link.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleForgotPassword} className="space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="forgot-email" className="text-base font-medium text-slate-700 flex items-center">
+                <Mail className="w-4 h-4 mr-2 text-[#14b8a6]" />
+                Email Address
+              </Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                placeholder="Enter your email"
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                required
+                className="h-12 text-base border-slate-200 focus:border-[#14b8a6] focus:ring-[#14b8a6]/20 transition-colors"
+              />
+            </div>
+
+            <DialogFooter className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsForgotPasswordOpen(false)}
+                className="border-slate-200 hover:bg-slate-50"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSendingReset} className="bg-[#14b8a6] hover:bg-[#14b8a6]/90 text-white">
+                {isSendingReset ? (
+                  <div className="flex items-center">
+                    <Loader2 className="animate-spin -ml-1 mr-3 h-4 w-4" />
+                    Sending...
+                  </div>
+                ) : (
+                  "Send Reset Link"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

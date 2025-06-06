@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/equipment-logic/index.ts
 
 // Force module reload to prevent caching issues

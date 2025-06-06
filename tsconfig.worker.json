@@ -17,6 +17,10 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["worker.ts", "lib/queues.ts"],
+  "include": [
+    "lib/workers/enhanced-equipment-worker.ts",
+    "lib/workers/location-processors/*.ts",
+    "lib/influxdb-client.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

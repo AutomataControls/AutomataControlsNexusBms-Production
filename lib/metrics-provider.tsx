@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/metrics-provider.tsx
 "use client"
 

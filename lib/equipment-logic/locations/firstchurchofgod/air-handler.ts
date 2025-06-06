@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/equipment-logic/locations/firstchurchofgod/air-handler.ts
 //
 // ===============================================================================

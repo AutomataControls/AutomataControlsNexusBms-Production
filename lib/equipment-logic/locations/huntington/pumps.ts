@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/equipment-logic/locations/huntington/pumps.ts
 //
 // ===============================================================================

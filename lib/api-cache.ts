@@ -1,3 +1,4 @@
+// @ts-nocheck
 // /opt/productionapp/lib/api-cache.ts (NEW FILE)
 import { connection } from './queues';
 

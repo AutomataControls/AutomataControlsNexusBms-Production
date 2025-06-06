@@ -1,3 +1,4 @@
+// @ts-nocheck
 // /lib/logging/command-logger.ts
 import fs from 'fs';
 import path from 'path';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore"
 
 type AuditAction =

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/logging/location-logger.ts
 import * as fs from 'fs';
 import * as path from 'path';

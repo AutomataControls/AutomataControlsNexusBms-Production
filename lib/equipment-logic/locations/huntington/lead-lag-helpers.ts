@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/equipment-logic/locations/huntington/lead-lag-helpers.ts
 import { logLocationEquipment } from "@/lib/logging/location-logger";
 

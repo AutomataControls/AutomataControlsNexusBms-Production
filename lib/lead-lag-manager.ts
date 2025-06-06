@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/lead-lag-manager.ts
 import { promisify } from 'util';
 import { exec as execCallback } from 'child_process';

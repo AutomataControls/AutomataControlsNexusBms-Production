@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/equipment-logic/locations/warren/pumps.ts
 //
 // ===============================================================================

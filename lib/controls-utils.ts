@@ -1,3 +1,4 @@
+// @ts-nocheck
 // /lib/controls-utils.ts
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";

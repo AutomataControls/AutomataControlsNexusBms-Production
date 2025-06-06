@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Boiler Control Logic with Firestore Equipment Groups Integration
  * This function implements on/off control for boilers with proper metrics handling

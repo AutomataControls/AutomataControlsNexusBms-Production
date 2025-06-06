@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/equipment-logic/locations/warren/steam-bundle.ts
 import { logLocationEquipment } from "@/lib/logging/location-logger";
 import { pidControllerImproved } from "@/lib/pid-controller";

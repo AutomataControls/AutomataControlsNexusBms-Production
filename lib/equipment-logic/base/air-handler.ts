@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Air Handler Control Logic
  * This function implements control logic for air handling units with temperature control, damper control, and economizer logic

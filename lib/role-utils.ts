@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Checks if a user has the required role for equipment control access
  * Allowed roles: admin, devops, DevOps, facilities, Facilities

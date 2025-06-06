@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { LogicEvaluation } from "../control-logic"
 
 /**

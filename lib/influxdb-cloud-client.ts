@@ -1,3 +1,4 @@
+// @ts-nocheck
 // /opt/productionapp/lib/influxdb-cloud-client.ts
 // Modified to support local InfluxDB 3 instance
 

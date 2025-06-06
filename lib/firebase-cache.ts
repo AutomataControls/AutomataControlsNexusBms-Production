@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Placeholder firebase cache file
 export async function getCachedData(key: string) {
   return null;

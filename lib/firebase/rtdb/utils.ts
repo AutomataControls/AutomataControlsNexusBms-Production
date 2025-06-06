@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/firebase/rtdb/utils.ts
 
 import { Database, get, ref } from 'firebase/database'

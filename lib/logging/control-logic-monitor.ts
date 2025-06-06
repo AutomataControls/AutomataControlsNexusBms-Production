@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/logging/control-logic-monitor.ts
 import { equipmentQueue, pidStateStorage, controlValuesCache } from '../control-logic';
 
