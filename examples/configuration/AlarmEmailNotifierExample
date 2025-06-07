@@ -1,0 +1,789 @@
+# Email Integration Example
+
+This example demonstrates how to implement the complete email notification system in Automata Controls Nexus BMS, including alarm notifications, React Email templates, and multi-recipient handling.
+
+## 📁 File Structure
+
+```
+examples/email-integration/
+├── README.md                           # This guide
+├── api/
+│   └── send-alarm-email.ts            # API route for sending alarm emails
+├── emails/
+│   └── alarm-notification.tsx         # React Email template
+├── components/
+│   └── alarm-trigger.tsx              # Component to trigger alarms
+├── utils/
+│   ├── email-helpers.ts               # Email utility functions
+│   └── location-mapping.ts            # Location ID mapping
+├── .env.example                       # Environment variables
+└── package.json                       # Dependencies
+```
+
+## 🚀 Overview
+
+The email system provides:
+
+✅ **Alarm Notifications** - Critical system alerts via email  
+✅ **React Email Templates** - Professional HTML email templates  
+✅ **Multi-Recipient Support** - Send to multiple technicians  
+✅ **Technician Detection** - Different content based on recipient type  
+✅ **Location Resolution** - Automatic location name lookup  
+✅ **Resend Integration** - Modern email delivery service  
+✅ **Firebase Integration** - Location data from Firebase  
+
+## ⚙️ Step 1: Environment Configuration
+
+```bash
+# .env.example for Email Integration
+# Copy to .env.local and update with your values
+
+# Resend API Configuration
+RESEND_API_KEY=re_your_resend_api_key_here
+
+# Firebase Configuration (for location lookup)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=yourproject.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-firebase-project
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://yourproject-default-rtdb.firebaseio.com/
+
+# Application URL
+APP_URL=https://yourdomain.com
+
+# Default Recipients (always receive critical alerts)
+DEFAULT_ALARM_RECIPIENTS=admin@yourcompany.com,alerts@yourcompany.com
+```
+
+## 📧 Step 2: React Email Template
+
+Create a professional alarm notification template:
+
+```tsx
+// emails/alarm-notification.tsx
+import {
+  Body,
+  Button,
+  Container,
+  Head,
+  Hr,
+  Html,
+  Img,
+  Preview,
+  Row,
+  Section,
+  Text,
+  Column,
+} from "@react-email/components";
+
+interface AlarmNotificationProps {
+  alarmType: string;
+  severity: string;
+  details: string;
+  locationName: string;
+  locationId: string;
+  equipmentName: string;
+  timestamp: string;
+  assignedTechs?: string;
+  dashboardUrl: string;
+  alarmId: string;
+  isTechnician?: boolean;
+}
+
+export const AlarmNotification = ({
+  alarmType,
+  severity,
+  details,
+  locationName,
+  locationId,
+  equipmentName,
+  timestamp,
+  assignedTechs,
+  dashboardUrl,
+  alarmId,
+  isTechnician = false,
+}: AlarmNotificationProps) => {
+  const severityColor = getSeverityColor(severity);
+  const logoUrl = "https://yourdomain.com/logo.png";
+  const showDashboardButton = isTechnician;
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <Html>
+      <Head />
+      <Preview>{`${severity.toUpperCase()} ALARM: ${alarmType} at ${locationName}`}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          {/* Header with Logo */}
+          <Section style={{ textAlign: "center", marginBottom: "20px" }}>
+            <Img
+              src={logoUrl}
+              width="120"
+              height="120"
+              alt="BMS Logo"
+              style={{ margin: "0 auto" }}
+            />
+          </Section>
+
+          {/* Alarm Type Header */}
+          <Section style={{ textAlign: "center" }}>
+            <Text
+              style={{
+                fontSize: "24px",
+                fontWeight: "bold",
+                color: severityColor,
+                margin: "10px 0",
+              }}
+            >
+              {severity.toUpperCase()} ALARM
+            </Text>
+          </Section>
+
+          {/* Alarm Details */}
+          <Section style={{ marginTop: "20px" }}>
+            <Text
+              style={{
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "10px",
+              }}
+            >
+              {alarmType}
+            </Text>
+            <Text style={{ fontSize: "16px", lineHeight: "1.5", color: "#333" }}>
+              {details}
+            </Text>
+          </Section>
+
+          <Hr style={hr} />
+
+          {/* Location and Equipment Information */}
+          <Section style={{ marginTop: "15px" }}>
+            <Row>
+              <Column>
+                <Text style={labelStyle}>Location:</Text>
+                <Text style={valueStyle}>{locationName}</Text>
+              </Column>
+              <Column>
+                <Text style={labelStyle}>Equipment:</Text>
+                <Text style={valueStyle}>{equipmentName}</Text>
+              </Column>
+            </Row>
+          </Section>
+
+          {/* Time and Assignment Information */}
+          <Section style={{ marginTop: "15px" }}>
+            <Row>
+              <Column>
+                <Text style={labelStyle}>Time:</Text>
+                <Text style={valueStyle}>{timestamp}</Text>
+              </Column>
+              <Column>
+                <Text style={labelStyle}>Assigned to:</Text>
+                <Text style={valueStyle}>{assignedTechs || "Unassigned"}</Text>
+              </Column>
+            </Row>
+          </Section>
+
+          {/* Dashboard Button - Only for technicians */}
+          {showDashboardButton && (
+            <Section style={{ textAlign: "center", marginTop: "30px" }}>
+              <Button
+                href={dashboardUrl}
+                style={{
+                  backgroundColor: "#0070f3",
+                  color: "white",
+                  padding: "12px 20px",
+                  textDecoration: "none",
+                  borderRadius: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                View in Dashboard
+              </Button>
+            </Section>
+          )}
+
+          {/* Professional Footer */}
+          <Section style={{ backgroundColor: '#1f2937', padding: '24px 15px', borderRadius: '4px', marginTop: '35px' }}>
+            <Row>
+              <Column style={{ textAlign: 'center' }}>
+                <Text style={{ 
+                  fontSize: '18px', 
+                  fontWeight: '700', 
+                  letterSpacing: '0.05em',
+                  margin: '0 0 10px 0',
+                  color: '#14b8a6'
+                }}>
+                  BUILDING MANAGEMENT SYSTEM
+                </Text>
+              </Column>
+            </Row>
+            
+            <Hr style={{ 
+              borderColor: '#374151', 
+              borderWidth: '1px', 
+              width: '80%', 
+              margin: '10px auto' 
+            }} />
+            
+            <Row style={{ marginTop: '10px' }}>
+              <Column style={{ textAlign: 'center' }}>
+                <Text style={{ 
+                  color: '#fcd34d', 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  margin: '0' 
+                }}>
+                  © {currentYear} Your Company
+                </Text>
+              </Column>
+            </Row>
+          </Section>
+
+          {/* Alarm ID Footer */}
+          <Section style={{ marginTop: "15px", textAlign: "center" }}>
+            <Text style={{ fontSize: "12px", color: "#666", margin: "5px 0" }}>
+              This is an automated message from the monitoring system.
+              Alarm ID: {alarmId}
+            </Text>
+          </Section>
+        </Container>
+      </Body>
+    </Html>
+  );
+};
+
+// Helper function to get color based on severity
+function getSeverityColor(severity: string): string {
+  switch (severity.toLowerCase()) {
+    case "critical":
+      return "#ef4444"; // Red
+    case "warning":
+      return "#f59e0b"; // Orange
+    case "info":
+      return "#3b82f6"; // Blue
+    default:
+      return "#6b7280"; // Gray
+  }
+}
+
+// Email styles
+const main = {
+  backgroundColor: "#f6f9fc",
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  padding: "20px 0",
+};
+
+const container = {
+  backgroundColor: "#ffffff",
+  border: "1px solid #e6e6e6",
+  borderRadius: "5px",
+  margin: "0 auto",
+  padding: "30px",
+  maxWidth: "600px",
+};
+
+const hr = {
+  borderColor: "#e6e6e6",
+  margin: "20px 0",
+};
+
+const labelStyle = {
+  fontSize: "14px",
+  color: "#6b7280",
+  marginBottom: "5px",
+  fontWeight: "500",
+};
+
+const valueStyle = {
+  fontSize: "16px",
+  color: "#111827",
+  marginTop: "0",
+  fontWeight: "600",
+};
+
+export default AlarmNotification;
+```
+
+## 🛠️ Step 3: Location Mapping Utility
+
+Create utility for location ID to name mapping:
+
+```typescript
+// utils/location-mapping.ts
+
+export const LOCATION_ID_MAPPING: Record<string, string> = {
+  "1": "Sample Building A",
+  "2": "Sample Building B", 
+  "3": "Sample Building C",
+  "4": "Sample Building D",
+  "5": "Sample Building E",
+  // Add your actual locations here
+};
+
+export function getLocationName(locationId: string): string {
+  return LOCATION_ID_MAPPING[locationId] || `Location ${locationId}`;
+}
+
+export function formatDateInET(date: Date): string {
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: true
+  };
+  
+  return new Intl.DateTimeFormat('en-US', options).format(date);
+}
+```
+
+## 📬 Step 4: Email Helper Functions
+
+Create utilities for email validation and technician detection:
+
+```typescript
+// utils/email-helpers.ts
+
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+export function isTechnician(email: string): boolean {
+  const emailLower = email.toLowerCase();
+  
+  // Define your technician domains
+  const techDomains = [
+    '@yourtechcompany.com',
+    '@yourservicecompany.com',
+    '@yourdomain.com'
+  ];
+  
+  return techDomains.some(domain => emailLower.endsWith(domain));
+}
+
+export function getDefaultRecipients(): string[] {
+  const defaultRecipientsEnv = process.env.DEFAULT_ALARM_RECIPIENTS || '';
+  return defaultRecipientsEnv.split(',').filter(email => isValidEmail(email.trim()));
+}
+
+export function validateAndFilterRecipients(recipients: string | string[]): string[] {
+  let recipientArray: string[] = [];
+  
+  if (Array.isArray(recipients)) {
+    recipientArray = recipients;
+  } else if (typeof recipients === 'string') {
+    recipientArray = [recipients];
+  }
+  
+  return recipientArray.filter(email => isValidEmail(email.trim()));
+}
+```
+
+## 🔧 Step 5: API Route Implementation
+
+Create the email sending API route:
+
+```typescript
+// api/send-alarm-email.ts
+import { NextResponse } from "next/server";
+import { Resend } from "resend";
+import { AlarmNotification } from "@/emails/alarm-notification";
+import { 
+  getLocationName, 
+  formatDateInET 
+} from "@/utils/location-mapping";
+import { 
+  isValidEmail, 
+  isTechnician, 
+  getDefaultRecipients, 
+  validateAndFilterRecipients 
+} from "@/utils/email-helpers";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function POST(request: Request) {
+  try {
+    const data = await request.json();
+    const {
+      alarmType,
+      details,
+      locationId,
+      alarmId,
+      severity,
+      recipients,
+      assignedTechs,
+      locationName: originalLocationName,
+      equipmentName: originalEquipmentName,
+    } = data;
+
+    // Format timestamp in Eastern Time
+    const timestamp = formatDateInET(new Date());
+    
+    // Dashboard URL
+    const dashboardUrl = `${process.env.APP_URL || "http://localhost:3000"}/dashboard/alarms`;
+
+    // Resolve location name
+    const displayLocationName = originalLocationName || getLocationName(locationId) || "Unknown Location";
+    const displayEquipmentName = originalEquipmentName || "Unknown Equipment";
+
+    console.log("Processing alarm email:", {
+      alarmType,
+      severity,
+      locationName: displayLocationName,
+      equipmentName: displayEquipmentName
+    });
+
+    // Validate and prepare recipients
+    let validRecipients = validateAndFilterRecipients(recipients);
+    
+    // Add default recipients
+    const defaultRecipients = getDefaultRecipients();
+    defaultRecipients.forEach(defaultEmail => {
+      if (!validRecipients.includes(defaultEmail)) {
+        validRecipients.push(defaultEmail);
+      }
+    });
+
+    if (validRecipients.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: "No valid recipients provided" 
+      }, { status: 400 });
+    }
+
+    console.log(`Sending to ${validRecipients.length} recipients:`, validRecipients);
+
+    // Send individual emails to each recipient
+    const emailResults = [];
+    const emailErrors = [];
+
+    for (const recipient of validRecipients) {
+      const recipientIsTechnician = isTechnician(recipient);
+      
+      try {
+        const { data: emailData, error } = await resend.emails.send({
+          from: "Building Management <alerts@yourdomain.com>",
+          to: recipient,
+          subject: `ALERT: ${severity.toUpperCase()} - ${alarmType} at ${displayLocationName}`,
+          react: AlarmNotification({
+            alarmType,
+            severity,
+            details,
+            locationName: displayLocationName,
+            locationId: locationId || "",
+            equipmentName: displayEquipmentName,
+            timestamp,
+            assignedTechs,
+            dashboardUrl,
+            alarmId,
+            isTechnician: recipientIsTechnician,
+          }),
+          text: `${severity.toUpperCase()} ALARM: ${alarmType}
+
+${details}
+
+Location: ${displayLocationName}
+Equipment: ${displayEquipmentName}
+Time: ${timestamp}
+Assigned to: ${assignedTechs}
+Alarm ID: ${alarmId}
+${recipientIsTechnician ? `\nView in dashboard: ${dashboardUrl}` : ''}`,
+        });
+
+        if (error) {
+          console.error(`Email error for ${recipient}:`, error);
+          emailErrors.push({ recipient, error: error.message });
+        } else {
+          console.log(`Email sent successfully to ${recipient}`);
+          emailResults.push({ recipient, messageId: emailData?.id });
+        }
+      } catch (emailError: any) {
+        console.error(`Exception sending email to ${recipient}:`, emailError);
+        emailErrors.push({ recipient, error: emailError.message });
+      }
+    }
+
+    // Return results
+    if (emailErrors.length > 0 && emailResults.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: "Failed to send emails", 
+        details: emailErrors 
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      results: emailResults,
+      errors: emailErrors.length > 0 ? emailErrors : undefined
+    });
+
+  } catch (error: any) {
+    console.error("Error in send-alarm-email API:", error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
+  }
+}
+```
+
+## 🎯 Step 6: Alarm Trigger Component
+
+Create a component to trigger alarm emails:
+
+```tsx
+// components/alarm-trigger.tsx
+import { useState } from 'react';
+
+interface AlarmTriggerProps {
+  locationId: string;
+  locationName: string;
+  equipmentName: string;
+}
+
+export function AlarmTrigger({ locationId, locationName, equipmentName }: AlarmTriggerProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const triggerAlarm = async (severity: string, alarmType: string) => {
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/send-alarm-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          alarmType,
+          severity,
+          details: `${alarmType} detected on ${equipmentName}. Immediate attention required.`,
+          locationId,
+          locationName,
+          equipmentName,
+          alarmId: `ALM-${Date.now()}`,
+          assignedTechs: 'On-Call Technician',
+          recipients: [
+            'tech1@yourcompany.com',
+            'tech2@yourcompany.com'
+          ]
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ Alarm email sent successfully to ${result.results.length} recipients`);
+      } else {
+        setMessage(`❌ Failed to send alarm: ${result.error}`);
+      }
+    } catch (error) {
+      setMessage(`❌ Error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-4 border rounded-lg">
+      <h3 className="text-lg font-semibold mb-4">Test Alarm Notifications</h3>
+      
+      <div className="space-y-2 mb-4">
+        <p><strong>Location:</strong> {locationName}</p>
+        <p><strong>Equipment:</strong> {equipmentName}</p>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => triggerAlarm('critical', 'High Temperature')}
+          disabled={isLoading}
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+        >
+          Critical Alarm
+        </button>
+        
+        <button
+          onClick={() => triggerAlarm('warning', 'Low Pressure')}
+          disabled={isLoading}
+          className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
+        >
+          Warning Alarm
+        </button>
+        
+        <button
+          onClick={() => triggerAlarm('info', 'Maintenance Due')}
+          disabled={isLoading}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          Info Alarm
+        </button>
+      </div>
+
+      {isLoading && <p className="text-blue-600">Sending email...</p>}
+      {message && <p className="mt-2">{message}</p>}
+    </div>
+  );
+}
+```
+
+## 📦 Step 7: Package Dependencies
+
+```json
+{
+  "name": "email-integration-example",
+  "version": "1.0.0",
+  "description": "Email integration example for Automata Controls Nexus BMS",
+  "dependencies": {
+    "@react-email/components": "^0.0.36",
+    "resend": "^4.2.0",
+    "firebase": "latest",
+    "next": "15.1.0",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "scripts": {
+    "test-email": "tsx test-email-locally.ts",
+    "preview-email": "email dev"
+  }
+}
+```
+
+## 🧪 Step 8: Testing Your Email System
+
+### Test Email Sending Locally
+
+```typescript
+// test-email-locally.ts
+import { AlarmNotification } from './emails/alarm-notification';
+
+async function testEmailLocally() {
+  console.log('Testing email generation...');
+  
+  // Test data
+  const testProps = {
+    alarmType: 'High Temperature Alert',
+    severity: 'critical',
+    details: 'Boiler temperature has exceeded safe operating limits. Immediate attention required.',
+    locationName: 'Sample Building A',
+    locationId: '1',
+    equipmentName: 'Boiler-1',
+    timestamp: '6/7/2025, 10:30:45 AM',
+    assignedTechs: 'John Smith',
+    dashboardUrl: 'http://localhost:3000/dashboard/alarms',
+    alarmId: 'ALM-1733678445123',
+    isTechnician: true
+  };
+
+  // Generate email HTML
+  const emailHtml = AlarmNotification(testProps);
+  
+  console.log('Email template generated successfully!');
+  console.log('Preview the email by running: npm run preview-email');
+  
+  return emailHtml;
+}
+
+testEmailLocally().catch(console.error);
+```
+
+### Test API Endpoint
+
+```bash
+# Test the email API endpoint
+curl -X POST http://localhost:3000/api/send-alarm-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "alarmType": "High Temperature Alert",
+    "severity": "critical", 
+    "details": "Test alarm for verification",
+    "locationId": "1",
+    "locationName": "Sample Building A",
+    "equipmentName": "Test Equipment",
+    "alarmId": "TEST-123",
+    "assignedTechs": "Test Technician",
+    "recipients": ["test@yourdomain.com"]
+  }'
+```
+
+## 🎨 Step 9: Email Preview Development
+
+```bash
+# Install React Email CLI
+npm install -g @react-email/cli
+
+# Preview emails in development
+npm run preview-email
+
+# This opens http://localhost:3000 with email previews
+```
+
+## 🔧 Step 10: Integration with Your BMS
+
+### Equipment Logic Integration
+
+```javascript
+// In your equipment logic files, trigger alarms:
+function checkBoilerSafety(metricsInput, settingsInput) {
+  const supplyTemp = parseFloat(metricsInput.H20Supply || 0);
+  
+  if (supplyTemp > 185) {
+    // Trigger critical alarm
+    triggerAlarm({
+      alarmType: 'Critical Temperature Exceeded',
+      severity: 'critical',
+      details: `Boiler supply temperature ${supplyTemp}°F exceeds safety limit of 185°F`,
+      locationId: settingsInput.locationId,
+      equipmentName: settingsInput.equipmentId,
+      recipients: ['emergency@yourcompany.com']
+    });
+  }
+}
+```
+
+### API Integration
+
+```javascript
+// Utility function to trigger alarms from anywhere in your app
+export async function triggerAlarm(alarmData) {
+  try {
+    const response = await fetch('/api/send-alarm-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...alarmData,
+        alarmId: `ALM-${Date.now()}`,
+        timestamp: new Date().toISOString()
+      })
+    });
+    
+    const result = await response.json();
+    console.log('Alarm triggered:', result);
+    return result;
+  } catch (error) {
+    console.error('Failed to trigger alarm:', error);
+    throw error;
+  }
+}
+```
+
+## 📈 Key Learning Outcomes
+
+After implementing this email integration example, you'll understand:
+
+✅ **React Email Templates** - How to create professional HTML emails with React  
+✅ **Multi-Recipient Handling** - Send personalized emails to different user types  
+✅ **Technician Detection** - Customize content based on recipient roles  
+✅ **Location Resolution** - Automatically resolve location names from IDs  
+✅ **Error Handling** - Robust error handling for email delivery  
+✅ **API Integration** - How to trigger emails from your BMS equipment logic  
+✅ **Testing Strategies** - Local testing and email preview workflows  
+✅ **Production Deployment** - Environment setup and configuration  
+
+This email integration provides a complete foundation for professional alarm notifications in your building management system! 📧🏗️
