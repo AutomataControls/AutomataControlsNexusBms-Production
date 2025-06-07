@@ -110,8 +110,15 @@ Equipment Sensors → InfluxDB 3.0 Databases
 
 1. **Clone and Install**
 ```bash
-git clone <repository-url>
-cd automata-controls-nexus-bms
+git clone https://github.com/AutomataControls/AutomataControlsNexusBms-Production.git
+cd AutomataControlsNexusBms-Production
+npm install
+```
+
+Or using GitHub CLI:
+```bash
+gh repo clone AutomataControls/AutomataControlsNexusBms-Production
+cd AutomataControlsNexusBms-Production
 npm install
 ```
 
@@ -220,7 +227,7 @@ pm2 status
 pm2 logs
 
 # Individual process management
-pm2 restart huntington-processor
+pm2 restart location-processor-1
 pm2 logs enhanced-equipment-worker
 ```
 
@@ -557,7 +564,7 @@ mkdir lib/equipment-logic/locations/newlocation
 ## 🤝 Contributing
 
 ### Development Setup
-1. Fork the repository
+1. Fork the repository: **[AutomataControls/AutomataControlsNexusBms-Production](https://github.com/AutomataControls/AutomataControlsNexusBms-Production/fork)**
 2. Create feature branch: `git checkout -b feature/amazing-feature`
 3. Install dependencies: `npm install`
 4. Configure environment: `cp .env.example .env`
@@ -581,14 +588,14 @@ mkdir lib/equipment-logic/locations/newlocation
 ## 🆘 Support & Community
 
 ### 📖 Documentation
-- **[API Documentation](docs/api.md)** - Complete API reference
-- **[Equipment Logic Guide](docs/equipment-logic.md)** - Building custom control algorithms
-- **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
-- **[InfluxDB Integration](docs/influxdb.md)** - Time-series data best practices
+- **[API Documentation](https://github.com/AutomataControls/AutomataControlsNexusBms-Production/blob/main/docs/api.md)** - Complete API reference
+- **[Equipment Logic Guide](https://github.com/AutomataControls/AutomataControlsNexusBms-Production/blob/main/docs/equipment-logic.md)** - Building custom control algorithms
+- **[Deployment Guide](https://github.com/AutomataControls/AutomataControlsNexusBms-Production/blob/main/docs/deployment.md)** - Production deployment instructions
+- **[InfluxDB Integration](https://github.com/AutomataControls/AutomataControlsNexusBms-Production/blob/main/docs/influxdb.md)** - Time-series data best practices
 
 ### 💬 Community Support
-- **GitHub Issues** - Bug reports and feature requests
-- **GitHub Discussions** - Community Q&A and ideas
+- **[GitHub Issues](https://github.com/AutomataControls/AutomataControlsNexusBms-Production/issues)** - Bug reports and feature requests
+- **[GitHub Discussions](https://github.com/AutomataControls/AutomataControlsNexusBms-Production/discussions)** - Community Q&A and ideas
 - **Discord Server** - Real-time community chat
 - **Stack Overflow** - Tag: `automata-controls-nexus`
 
