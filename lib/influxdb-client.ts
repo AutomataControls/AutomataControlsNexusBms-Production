@@ -3,7 +3,7 @@
 // IMPROVED VERSION with better error handling and retry mechanism
 
 // Configuration from environment with fallbacks
-export const INFLUXDB_URL = process.env.INFLUXDB_URL || 'http://143.198.162.31:8181';
+export const INFLUXDB_URL = process.env.INFLUXDB_URL || 'your-ip:8181';
 export const INFLUXDB_DATABASE = process.env.INFLUXDB_DATABASE || 'Locations';
 export const INFLUXDB_TIMEOUT = parseInt(process.env.INFLUXDB_TIMEOUT || '30000'); // 30 seconds
 export const INFLUXDB_MAX_RETRIES = parseInt(process.env.INFLUXDB_MAX_RETRIES || '3');
