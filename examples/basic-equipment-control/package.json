@@ -1,1 +1,24 @@
-
+{
+  "name": "basic-equipment-control-example",
+  "version": "1.0.0",
+  "description": "Basic equipment control examples for Automata Controls Nexus BMS",
+  "main": "test-equipment-locally.js",
+  "scripts": {
+    "test": "node test-equipment-locally.js",
+    "demo-api": "node api-integration.js",
+    "test-boiler": "node -e \"require('./simple-boiler.js'); console.log('Boiler logic loaded successfully')\"",
+    "test-pump": "node -e \"require('./simple-pump.js'); console.log('Pump logic loaded successfully')\""
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "keywords": [
+    "hvac",
+    "building-management",
+    "equipment-control",
+    "iot",
+    "automation"
+  ],
+  "author": "Automata Controls",
+  "license": "MIT"
+}
