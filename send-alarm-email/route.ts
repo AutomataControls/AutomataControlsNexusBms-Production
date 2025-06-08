@@ -11,7 +11,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const DEBUG_EMAIL = true;
 
 // Default recipients who should always receive alarm emails
-const DEFAULT_RECIPIENTS = ['agjewell@currenthvac.net'];
+const DEFAULT_RECIPIENTS = ['youremail'];
 
 // Initialize Firebase for RTDB access
 const firebaseConfig = {
@@ -189,9 +189,9 @@ function isTechnician(email: string): boolean {
   console.log(`Checking if ${emailLower} is a technician email`);
   
   // Check against specific domains
-  const isTech = emailLower.endsWith('@automatacontrols.com') || 
-                emailLower.endsWith('@currenthvac.net') || 
-                emailLower.endsWith('@currenthvac.com');
+  const isTech = emailLower.endsWith('@yourdomain.com') || 
+                emailLower.endsWith('@yourdomain.com') || 
+                emailLower.endsWith('@yourdomain.com');
   
   console.log(`Result: ${isTech ? 'IS a technician' : 'is NOT a technician'}`);
   
@@ -225,7 +225,7 @@ export async function POST(request: Request) {
     console.log(`Formatted timestamp in ET: ${timestamp}`)
 
     // Dashboard URL
-    const dashboardUrl = `${process.env.APP_URL || "https://neuralbms.automatacontrols.com"}/dashboard/alarms`
+    const dashboardUrl = `${process.env.APP_URL || "https://yourdomain"}/dashboard/alarms`
 
     // Log the incoming data
     console.log("Received email request with data:", {
@@ -328,7 +328,7 @@ export async function POST(request: Request) {
 
         // Send email with updated sender address and isTechnician flag
         const { data: emailData, error } = await resend.emails.send({
-          from: "Automata Controls DevOps <DevOps@automatacontrols.com>",
+          from: "Automata Controls DevOps <yourdomain@yourdomain.com>",
           to: recipient,
           subject: `ALERT: ${severity.toUpperCase()} - ${alarmType} at ${displayLocationName}`,
           react: AlarmNotification({
