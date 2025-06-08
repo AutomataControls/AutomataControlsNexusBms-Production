@@ -6,9 +6,10 @@
 [![Node.js](https://img.shields.io/badge/node.js-20.x-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Redis](https://img.shields.io/badge/redis-6.x-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
 [![InfluxDB 3.0](https://img.shields.io/badge/influxdb-3.0-22ADF6?style=for-the-badge&logo=influxdb&logoColor=white)](https://www.influxdata.com/)
-[![Multi-Plugin Engine](https://img.shields.io/badge/multi--plugin-processing%20engine-FF6B35?style=for-the-badge&logo=influxdb&logoColor=white)](https://docs.influxdata.com/influxdb3/core/process-data/)
+[![Multi-Plugin Engine](https://img.shields.io/badge/4--plugin-processing%20engine-FF6B35?style=for-the-badge&logo=influxdb&logoColor=white)](https://docs.influxdata.com/influxdb3/core/process-data/)
 [![Predictive AI](https://img.shields.io/badge/predictive-maintenance-9B59B6?style=for-the-badge&logo=chart-line&logoColor=white)](#predictive-maintenance-engine)
 [![Energy Optimization](https://img.shields.io/badge/energy-optimization-27AE60?style=for-the-badge&logo=leaf&logoColor=white)](#energy-optimization-engine)
+[![Intelligent Alerts](https://img.shields.io/badge/intelligent-alerts-E74C3C?style=for-the-badge&logo=bell&logoColor=white)](#alert-engine)
 [![Firebase](https://img.shields.io/badge/firebase-auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![React](https://img.shields.io/badge/react-Next.js-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://nextjs.org/)
 [![PWA](https://img.shields.io/badge/pwa-ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
@@ -43,10 +44,11 @@ Automata Controls Nexus BMS is a production-ready, enterprise-grade Building Man
 ### 🌟 Key Features
 
 - **Real-time Equipment Control** - Live monitoring and control of boilers, chillers, air handlers, pumps, and more
-- **InfluxDB3 Multi-Plugin Processing Engine** - **Three simultaneous AI-driven plugins** with sub-second response times and zero connection leaks
+- **InfluxDB3 Multi-Plugin Processing Engine** - **Four simultaneous AI-driven plugins** with sub-second response times and zero connection leaks
+- **🔧 HVAC Control Engine** - Event-driven equipment control with sophisticated automation logic
 - **🔍 Predictive Maintenance Engine** - AI-powered equipment health monitoring, failure prediction, and maintenance optimization
 - **⚡ Energy Optimization Engine** - Real-time energy analysis, peak demand management, and cost optimization
-- **🔧 HVAC Control Engine** - Event-driven equipment control with sophisticated automation logic
+- **🚨 Intelligent Alert Engine** - Multi-channel notifications with Resend API integration, Slack, Discord, and custom webhooks
 - **Distributed Architecture** - Independent location processors for fault tolerance and scalability
 - **InfluxDB 3.0 Integration** - Lightning-fast time-series data storage with columnar architecture and Apache Arrow
 - **Intelligent Equipment Logic** - Sophisticated PID control, lead-lag coordination, and OAR (Outdoor Air Reset) calculations
@@ -59,7 +61,7 @@ Automata Controls Nexus BMS is a production-ready, enterprise-grade Building Man
 
 Automata Controls Nexus BMS leverages the cutting-edge **InfluxDB 3.0 Processing Engine** with **three simultaneous AI-driven plugins** for revolutionary building management capabilities:
 
-### 🎯 **Three-Plugin Architecture Overview**
+### 🎯 **Four-Plugin Architecture Overview**
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -68,25 +70,26 @@ Automata Controls Nexus BMS leverages the cutting-edge **InfluxDB 3.0 Processing
 │   (Real-time)   │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                                         │
-                        ┌───────────────────────────────┼───────────────────────────────┐
-                        ▼                               ▼                               ▼
-               ┌─────────────────┐             ┌─────────────────┐             ┌─────────────────┐
-               │ 🔧 HVAC Control │             │ 🔍 Predictive   │             │ ⚡ Energy       │
-               │ Engine          │             │ Maintenance     │             │ Optimization    │
-               │                 │             │ Engine          │             │ Engine          │
-               │ • Equipment     │             │ • Health Score  │             │ • Power Analysis│
-               │   Commands      │             │ • Failure       │             │ • Peak Demand   │
-               │ • Real-time     │             │   Prediction    │             │ • Cost Reduction│
-               │   Control       │             │ • Maintenance   │             │ • Load Shifting │
-               │ • Safety Logic  │             │   Scheduling    │             │ • Efficiency    │
-               └─────────────────┘             └─────────────────┘             └─────────────────┘
-                        │                               │                               │
-                        ▼                               ▼                               ▼
-               ┌─────────────────┐             ┌─────────────────┐             ┌─────────────────┐
-               │ Equipment       │             │ Maintenance     │             │ Energy          │
-               │ Commands        │             │ Analytics       │             │ Analytics       │
-               │                 │             │                 │             │                 │
-               └─────────────────┘             └─────────────────┘             └─────────────────┘
+          ┌─────────────┬─────────────┬─────────────────┼─────────────────┬─────────────┐
+          ▼             ▼             ▼                 ▼                 ▼             ▼
+ ┌─────────────┐┌─────────────┐┌─────────────┐ ┌─────────────┐ ┌─────────────┐┌─────────────┐
+ │🔧 HVAC      ││🔍 Predictive││⚡ Energy    │ │🚨 Alert     │ │📧 Email     ││📱 Slack/    │
+ │Control      ││Maintenance  ││Optimization │ │Engine       │ │(Resend API) ││Discord      │
+ │Engine       ││Engine       ││Engine       │ │             │ │Integration  ││Webhooks     │
+ │             ││             ││             │ │ • Equipment │ │             ││             │
+ │• Equipment  ││• Health     ││• Power      │ │   Alerts    │ │• Professional││• Real-time  │
+ │  Commands   ││  Scoring    ││  Analysis   │ │• Predictive │ │  HTML       ││  Notifications│
+ │• Real-time  ││• Failure    ││• Peak       │ │  Maintenance││• Delivery   ││• Multi-     │
+ │  Control    ││  Prediction ││  Demand     │ │  Alerts     │ │  Tracking   ││  channel    │
+ │• Safety     ││• Maintenance││• Cost       │ │• Energy     │ │• Alert      ││  Support    │
+ │  Logic      ││  Scheduling ││  Reduction  │ │  Alerts     │ │  History    ││             │
+ └─────────────┘└─────────────┘└─────────────┘ └─────────────┘ └─────────────┘└─────────────┘
+          │             │             │                 │                 │             │
+          ▼             ▼             ▼                 ▼                 ▼             ▼
+ ┌─────────────┐┌─────────────┐┌─────────────┐ ┌─────────────┐ ┌─────────────┐┌─────────────┐
+ │Equipment    ││Maintenance  ││Energy       │ │Alert        │ │Email        ││Webhook      │
+ │Commands     ││Analytics    ││Analytics    │ │History      │ │Delivery     ││Delivery     │
+ └─────────────┘└─────────────┘└─────────────┘ └─────────────┘ └─────────────┘└─────────────┘
 ```
 
 ### 🔧 **HVAC Control Engine**
@@ -179,16 +182,59 @@ def process_writes(influxdb3_local, table_batches, args=None):
 - **Real-time Rate Optimization** - Automatic adjustment to utility pricing
 - **Equipment Staging** - Efficiency-based equipment operation sequencing
 
+### 🚨 **Alert Engine**
+
+The **Automata Controls Alert Engine Plugin** provides intelligent, multi-channel alerting with seamless integration to your existing BMS infrastructure:
+
+```python
+# Automata Controls Nexus InfluxDB3 Alert Engine Plugin
+# Multi-channel alerting with Resend API integration
+def process_writes(influxdb3_local, table_batches, args=None):
+    for table_batch in table_batches:
+        if table_batch["table_name"] == "metrics":
+            for row in table_batch["rows"]:
+                # Analyze equipment conditions for critical alerts
+                alert = analyze_equipment_alerts(row)
+                if alert:
+                    # Send via multiple channels simultaneously
+                    send_resend_email(alert)  # Professional HTML emails
+                    send_slack_notification(alert)  # Real-time Slack alerts
+                    send_discord_notification(alert)  # Discord webhooks
+                    write_alert_history(alert)  # Tracking and analytics
+```
+
+**Alert Types & Triggers:**
+- **🌡️ Critical Temperature Alerts** - Immediate notifications when equipment exceeds safe operating temperatures
+- **🔧 Equipment Pressure Alerts** - High/low pressure warnings for boilers, pumps, and system safety
+- **🔍 Predictive Maintenance Alerts** - Health score warnings and failure predictions from AI analysis
+- **⚡ Energy Optimization Alerts** - High consumption warnings and efficiency opportunities
+- **📊 System Health Alerts** - Processing engine errors, database connectivity, and system status
+
+**Multi-Channel Delivery:**
+- **📧 Resend API Integration** - Professional HTML emails with delivery tracking
+- **📱 Slack Webhooks** - Real-time team notifications with rich formatting
+- **💬 Discord Integration** - Community and team alerts with embedded content
+- **🌐 Custom HTTP Endpoints** - Flexible webhook support for any service
+- **📊 Alert History Database** - Complete audit trail and analytics tracking
+
+**Smart Features:**
+- **⏰ Alert Cooldowns** - Prevent notification spam with intelligent timing
+- **🎯 Priority-Based Routing** - Critical alerts get immediate delivery across all channels
+- **🔄 Retry Logic** - Automatic retry with exponential backoff for delivery reliability
+- **🏷️ Equipment Classification** - Automatic equipment type detection and appropriate thresholds
+
 ### 🎯 **Multi-Plugin Performance Benefits**
 
-| Traditional Single-Plugin Systems | Automata Controls Multi-Plugin Engine |
-|-----------------------------------|---------------------------------------|
-| ❌ Limited to single function | ✅ **Three simultaneous AI engines** |
+| Traditional Single-Plugin Systems | Automata Controls 4-Plugin Processing Engine |
+|-----------------------------------|-----------------------------------------------|
+| ❌ Limited to single function | ✅ **Four simultaneous AI engines** |
 | ❌ Reactive maintenance only | ✅ **Predictive maintenance analytics** |
 | ❌ No energy optimization | ✅ **Real-time energy cost optimization** |
 | ❌ Basic equipment control | ✅ **Advanced HVAC automation + AI insights** |
-| ❌ Separate systems required | ✅ **Unified platform with 3 engines** |
+| ❌ Manual alert management | ✅ **Intelligent multi-channel alerting** |
+| ❌ Separate systems required | ✅ **Unified platform with 4 engines** |
 | ❌ Higher operational costs | ✅ **15-30% energy savings + reduced maintenance** |
+| ❌ Reactive problem solving | ✅ **Proactive AI-driven insights and notifications** |
 
 ### 🏗️ Processing Engine Architecture
 
@@ -433,15 +479,24 @@ influxdb3 serve \
   --without-auth
 ```
 
-2. **Deploy Multi-Plugin Architecture**
+### Deploy Multi-Plugin Architecture
+
+1. **Create Plugin Directories**
 ```bash
 # Create plugin directories
 mkdir -p /opt/productionapp/plugins/hvac
 mkdir -p /opt/productionapp/plugins/analytics
 mkdir -p /opt/productionapp/plugins/optimization
+mkdir -p /opt/productionapp/plugins/alerts
 
-# Deploy the Automata Controls Nexus plugins
+# Deploy the Automata Controls Nexus plugin suite
 # (Contact support for the full enterprise plugin suite)
+```
+
+2. **Install Required Packages**
+```bash
+# Install httpx for Alert Engine
+influxdb3 install package httpx
 ```
 
 3. **Create Multi-Plugin Processing Engine Triggers**
@@ -466,6 +521,14 @@ influxdb3 create trigger \
   --plugin-filename "optimization/energy_optimization_plugin.py" \
   --database Locations \
   energy_optimization_engine
+
+# Create Alert Engine trigger
+influxdb3 create trigger \
+  --trigger-spec "table:metrics" \
+  --plugin-filename "alerts/automata_alert_engine.py" \
+  --database Locations \
+  --trigger-arguments "api_base_url=https://yourapp.com,recipient_email=admin@yourcompany.com,alerts_db=alerts_history" \
+  equipment_alert_engine
 ```
 
 4. **Verify Multi-Plugin Processing Engine Status**
@@ -480,8 +543,8 @@ influxdb3 query \
   --database system \
   "SELECT * FROM processing_engine_logs ORDER BY time DESC LIMIT 20"
 
-# Verify real-time multi-plugin operation
-tail -f /var/log/influxdb3_plugins.log | grep -E "(HVAC|Predictive|Energy)"
+# Verify real-time 4-plugin operation
+tail -f /var/log/influxdb3_plugins.log | grep -E "(HVAC|Predictive|Energy|Alert)"
 ```
 
 ## 🏭 Production Deployment
@@ -511,7 +574,7 @@ pm2 logs enhanced-equipment-worker
 | `monitoring-service` | System alerts and monitoring | ~90MB |
 | `enhanced-equipment-worker` | UI command processing (2 instances) | ~80MB each |
 | `location-processor-*` | Independent location equipment logic | ~80-100MB each |
-| `influxdb3-multi-plugin-engine` | **Three AI-driven plugins** (HVAC + Predictive + Energy) | ~120MB |
+| `influxdb3-4-plugin-engine` | **Four AI-driven plugins** (HVAC + Predictive + Energy + Alerts) | ~140MB |
 
 ### Independent Location Processors + Multi-Plugin Engine
 
@@ -782,6 +845,22 @@ Fields: load_shifting_opportunities, efficiency_opportunities, peak_shaving_oppo
 Measurement: optimization_commands
 Tags: equipment_id, location_id, command_type, priority
 Fields: action, target_value, duration_minutes, expected_savings_kw
+```
+
+**🚨 Alert Engine Data:**
+
+**alert_history** - Real-time alert tracking
+```
+Measurement: alert_history
+Tags: alert_type, severity, source, equipment_id, location_id, equipment_type
+Fields: message, value, threshold, health_status, hourly_cost, total_power_kw
+```
+
+**alert_notifications** - Multi-channel delivery tracking
+```
+Measurement: alert_notifications
+Tags: alert_id, channel_type, delivery_status
+Fields: recipient, message_id, delivery_timestamp, retry_count
 ```
 
 ### Enhanced Redis State Management
