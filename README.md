@@ -264,20 +264,31 @@ def process_writes(influxdb3_local, table_batches, args=None):
 
 ### 🔧 Dual-Run Capabilities
 
-The system supports **dual-run operation** for safe migration while running **three Processing Engine plugins simultaneously**:
+The system supports **dual-run operation** with **multiple processing layers** for maximum reliability and coverage:
 
 ```bash
-# Production System (Port 8181)
+# Traditional Factory System (Port 8181) - PRODUCTION
 pm2 status | grep factory
-├── Warren Factory: ✅ Running (Traditional)
-├── Huntington Factory: ✅ Running (Traditional)
-└── Location Factories: ✅ Running (Traditional)
+├── Warren Factory: ✅ Running (Traditional polling-based)
+├── Huntington Factory: ✅ Running (Traditional polling-based)
+├── Hopebridge Factory: ✅ Running (Traditional polling-based)
+├── Element Factory: ✅ Running (Traditional polling-based)
+├── FirstChurch Factory: ✅ Running (Traditional polling-based)
+└── NE Realty Factory: ✅ Running (Traditional polling-based)
 
-# Multi-Plugin Processing Engine (Port 8182)
-influxdb3 list triggers
+# Independent Location Processors - CUSTOM LOGIC
+pm2 status | grep processor
+├── Location-A Processor: ✅ Running (Custom equipment logic)
+├── Location-B Processor: ✅ Running (Custom equipment logic)
+├── Location-C Processor: ✅ Running (Custom equipment logic)
+└── Location-D Processor: ✅ Running (Custom equipment logic)
+
+# 4-Plugin Processing Engine (Port 8182) - AI ENHANCEMENT
+influxdb3 list triggers --host http://localhost:8182
 ├── HVAC Control Engine: ✅ Active (Event-driven equipment control)
 ├── Predictive Maintenance Engine: ✅ Active (AI health monitoring)
-└── Energy Optimization Engine: ✅ Active (Cost reduction analytics)
+├── Energy Optimization Engine: ✅ Active (Cost reduction analytics)
+└── Alert Engine: ✅ Active (Multi-channel notifications)
 ```
 
 ### 📊 InfluxDB 3.0 Advantages
@@ -316,7 +327,7 @@ Equipment Sensors → InfluxDB 3.0 Databases
 - **Predictive maintenance** - Prevent failures before they occur
 - **Multi-engine processing** - Three AI systems working simultaneously
 
-## 🏗️ System Architecture
+## 🏗️ Enhanced Hybrid System Architecture
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   React PWA     │    │  Enhanced       │    │  Location       │
@@ -327,27 +338,37 @@ Equipment Sensors → InfluxDB 3.0 Databases
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Firebase      │    │   Redis +       │    │   InfluxDB3     │
-│   (Auth/RTDB)   │    │   BullMQ        │    │   (Time-series) │
+│   (Auth/RTDB)   │    │   BullMQ        │    │   (Dual System) │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                                         │
-                                                        ▼
-                               ┌─────────────────┐
-                               │ Multi-Plugin    │
-                               │ Processing      │
-                               │ Engine (3 AI)   │
-                               └─────────────────┘
+                                ┌───────────────────────┼───────────────────────┐
+                                ▼                       ▼                       ▼
+                       ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+                       │ Traditional     │    │ 4-Plugin        │    │ Logic           │
+                       │ Factories       │    │ Processing      │    │ Processors      │
+                       │ (Port 8181)     │    │ Engine (8182)   │    │ (Independent)   │
+                       │                 │    │                 │    │                 │
+                       │ • Warren        │    │ • HVAC Control  │    │ • Location A    │
+                       │ • Huntington    │    │ • Predictive    │    │ • Location B    │
+                       │ • Hopebridge    │    │   Maintenance   │    │ • Location C    │
+                       │ • Element       │    │ • Energy        │    │ • Location D    │
+                       │ • FirstChurch   │    │   Optimization  │    │ • Custom Logic  │
+                       │ • NE Realty     │    │ • Alert Engine  │    │ • Equipment     │
+                       └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### Enhanced Data Flow
+### Enhanced Hybrid Data Flow
 1. **User Interface** → Equipment controls via React PWA
 2. **Command Processing** → BullMQ queue → Enhanced Equipment Worker
 3. **Database Writes** → UIControlCommands, NeuralControlCommands, EquipmentConfig
-4. **Equipment Logic** → Independent location processors execute equipment-specific algorithms
-5. **Multi-Plugin Processing Engine** → **Three AI engines** respond to sensor data automatically:
+4. **Traditional Equipment Logic** → Independent location processors execute equipment-specific algorithms (30s-5min intervals)
+5. **Legacy Factory System** → Warren, Huntington, Hopebridge, Element, FirstChurch, NE Realty factories (Port 8181)
+6. **4-Plugin Processing Engine** → **Four AI engines** respond to sensor data automatically (Port 8182):
    - **🔧 HVAC Control** - Real-time equipment automation
    - **🔍 Predictive Maintenance** - Health monitoring and failure prediction
    - **⚡ Energy Optimization** - Cost reduction and efficiency analysis
-6. **Real-time Updates** → Redis state management for cross-user synchronization
+   - **🚨 Alert Engine** - Multi-channel notifications and alerting
+7. **Real-time Updates** → Redis state management for cross-user synchronization
 
 ## 🚀 Quick Start
 
@@ -566,15 +587,16 @@ pm2 restart location-processor-1
 pm2 logs enhanced-equipment-worker
 ```
 
-### Enhanced Process Architecture
+### Enhanced Multi-Layer Process Architecture
 
-| Process | Purpose | Resources |
-|---------|---------|-----------|
-| `nexus-app` | Next.js PWA application | ~70MB |
-| `monitoring-service` | System alerts and monitoring | ~90MB |
-| `enhanced-equipment-worker` | UI command processing (2 instances) | ~80MB each |
-| `location-processor-*` | Independent location equipment logic | ~80-100MB each |
-| `influxdb3-4-plugin-engine` | **Four AI-driven plugins** (HVAC + Predictive + Energy + Alerts) | ~140MB |
+| Process Layer | Purpose | Resources | Intervals |
+|---------------|---------|-----------|-----------|
+| `nexus-app` | Next.js PWA application | ~70MB | Real-time |
+| `monitoring-service` | System alerts and monitoring | ~90MB | Continuous |
+| `enhanced-equipment-worker` | UI command processing (2 instances) | ~80MB each | Event-driven |
+| **Traditional Factories** | **Production equipment control (6 locations)** | **~80MB each** | **30-60s intervals** |
+| **Location Processors** | **Custom equipment logic (4 locations)** | **~80-100MB each** | **Variable intervals** |
+| `influxdb3-4-plugin-engine` | **Four AI-driven plugins** (HVAC + Predictive + Energy + Alerts) | ~140MB | **Sub-second** |
 
 ### Independent Location Processors + Multi-Plugin Engine
 
@@ -1220,23 +1242,28 @@ tail -f /var/log/influxdb3_plugins.log | grep -E "(HVAC|Predictive|Energy)"
 - **Connection Management** - Zero leaks with Multi-Plugin Processing Engine vs 400+ with traditional factories
 - **AI Processing** - Real-time health scoring and energy analysis with <100ms latency
 
-### Enhanced Optimization Features
-- **Event-Driven Multi-Plugin Processing** - Process equipment with 3 AI engines simultaneously
-- **Intelligent Multi-Plugin Processing** - Only process when needed across all plugins
-- **Batch Database Writes** - Efficient InfluxDB operations for all plugin data
+### Multi-Layer Performance Benefits
+- **Traditional Factories** - Proven, stable equipment control for 6 locations
+- **Custom Location Processors** - Tailored equipment logic for specific site requirements
+- **4-Plugin AI Enhancement** - Real-time intelligence layer across all equipment
+- **Event-Driven Processing** - Process equipment only when sensor data changes
+- **Intelligent Processing** - Only process equipment when needed across all layers
+- **Batch Database Writes** - Efficient InfluxDB operations across all systems
 - **Redis Caching** - Fast state retrieval for UI including AI insights
-- **Independent Scaling** - Scale location processors independently
+- **Independent Scaling** - Scale factories, processors, and plugins independently
 - **Connection Pooling** - Prevent connection leaks in traditional processors
 - **AI Model Optimization** - Predictive algorithms optimized for real-time performance
 - **Energy Data Caching** - Fast access to energy optimization recommendations
 
-### Multi-Plugin Processing Engine Advantages
-- **Real-time AI Response** - Equipment responds immediately with AI insights
-- **Resource Efficiency** - Lower memory and CPU usage compared to polling across 3 plugins
-- **Scalability** - Handle unlimited equipment without performance degradation
-- **Reliability** - Automatic failover and error recovery across all plugins
+### Multi-Layer Processing Engine Advantages
+- **Triple-Layer Processing** - Traditional factories + custom processors + AI plugins
+- **Real-time AI Response** - Equipment responds immediately with AI insights across all layers
+- **Resource Efficiency** - Optimized performance across traditional and AI systems
+- **Maximum Coverage** - Every piece of equipment covered by multiple processing layers
+- **Reliability** - Automatic failover and error recovery across all systems
 - **AI-Enhanced Decision Making** - Equipment control enhanced with predictive and energy insights
-- **Cost Optimization** - 15-30% energy savings through real-time optimization
+- **Cost Optimization** - 15-30% energy savings through multi-layer optimization
+- **Legacy Integration** - Seamless integration with existing factory systems
 
 ## 📈 Multi-Plugin Performance Benefits
 
