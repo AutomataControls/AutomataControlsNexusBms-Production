@@ -2,9 +2,9 @@
 const nodemailer = require("nodemailer");
 
 async function testNodemailer() {
-  const email = "automatacontrols@gmail.com";
-  const password = "xtdi wtth ytgg rkcv"; // Replace with your app password
-  const recipient = "andrew.jewellsr@gmail.com";
+  const email = "ayouremail";
+  const password = "apppassword"; // Replace with your app password
+  const recipient = "your-email";
   
   const configurations = [
     {
