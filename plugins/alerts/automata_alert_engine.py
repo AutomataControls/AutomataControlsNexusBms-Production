@@ -139,20 +139,31 @@ def process_equipment_alerts(influxdb3_local, row: Dict, alert_config: Dict) -> 
         equipment_id = row.get("equipmentId")
         location_id = row.get("location_id")
         
+        influxdb3_local.info(f"[Alert Engine] Processing equipment: {equipment_id}, location: {location_id}")
+        influxdb3_local.info(f"[Alert Engine] Row data: {row}")
+        
         if not equipment_id or not location_id:
+            influxdb3_local.info(f"[Alert Engine] Missing equipment_id or location_id")
             return None
         
         # Determine equipment type
         equipment_type = determine_equipment_type(equipment_id)
         thresholds = EQUIPMENT_ALERT_THRESHOLDS.get(equipment_type, {})
         
+        influxdb3_local.info(f"[Alert Engine] Equipment type: {equipment_type}, thresholds: {thresholds}")
+        
         # Check for critical conditions
         alerts = []
         
         # Temperature alerts
         temperature = row.get("temperature", row.get("Water_Temp", row.get("Supply_Temp", 0)))
+        influxdb3_local.info(f"[Alert Engine] Temperature found: {temperature}")
+        
         if temperature and isinstance(temperature, (int, float)):
+            influxdb3_local.info(f"[Alert Engine] Checking temperature {temperature} against thresholds")
+            
             if temperature > thresholds.get("critical_temp", 999):
+                influxdb3_local.info(f"[Alert Engine] CRITICAL TEMPERATURE ALERT: {temperature} > {thresholds.get('critical_temp')}")
                 alerts.append({
                     "severity": "CRITICAL",
                     "type": "HIGH_TEMPERATURE",
@@ -161,6 +172,7 @@ def process_equipment_alerts(influxdb3_local, row: Dict, alert_config: Dict) -> 
                     "threshold": thresholds["critical_temp"]
                 })
             elif temperature > thresholds.get("high_temp", 999):
+                influxdb3_local.info(f"[Alert Engine] HIGH TEMPERATURE WARNING: {temperature} > {thresholds.get('high_temp')}")
                 alerts.append({
                     "severity": "WARNING", 
                     "type": "HIGH_TEMPERATURE",
@@ -168,26 +180,8 @@ def process_equipment_alerts(influxdb3_local, row: Dict, alert_config: Dict) -> 
                     "value": temperature,
                     "threshold": thresholds["high_temp"]
                 })
-        
-        # Pressure alerts
-        pressure = row.get("pressure", row.get("Pressure", 0))
-        if pressure and isinstance(pressure, (int, float)):
-            if equipment_type == "boiler" and pressure > thresholds.get("high_pressure", 999):
-                alerts.append({
-                    "severity": "CRITICAL",
-                    "type": "HIGH_PRESSURE", 
-                    "message": f"CRITICAL: {equipment_type} {equipment_id} pressure {pressure} PSI exceeds safe threshold {thresholds['high_pressure']} PSI",
-                    "value": pressure,
-                    "threshold": thresholds["high_pressure"]
-                })
-            elif equipment_type == "pump" and pressure < thresholds.get("low_pressure", 0):
-                alerts.append({
-                    "severity": "WARNING",
-                    "type": "LOW_PRESSURE",
-                    "message": f"WARNING: {equipment_type} {equipment_id} pressure {pressure} PSI below minimum threshold {thresholds['low_pressure']} PSI",
-                    "value": pressure,
-                    "threshold": thresholds["low_pressure"]
-                })
+        else:
+            influxdb3_local.info(f"[Alert Engine] No valid temperature found in data")
         
         # Return the most severe alert if any
         if alerts:
@@ -203,8 +197,10 @@ def process_equipment_alerts(influxdb3_local, row: Dict, alert_config: Dict) -> 
                 "source": "equipment_monitoring"
             })
             
+            influxdb3_local.info(f"[Alert Engine] Generated alert: {alert}")
             return alert
         
+        influxdb3_local.info(f"[Alert Engine] No alerts generated for equipment {equipment_id}")
         return None
         
     except Exception as e:
@@ -584,15 +580,20 @@ def write_alert_history(influxdb3_local, alert: Dict, alert_config: Dict):
         influxdb3_local.error(f"[Alert Engine] Alert history write error: {e}")
 
 # Helper functions
-def parse_alert_arguments(args: str) -> Dict:
+def parse_alert_arguments(args) -> Dict:
     """Parse alert configuration arguments"""
     config = {}
     
     if args:
-        for arg in args.split(","):
-            if "=" in arg:
-                key, value = arg.split("=", 1)
-                config[key.strip()] = value.strip()
+        # If args is already a dictionary (from trigger arguments), use it directly
+        if isinstance(args, dict):
+            return args
+        # If args is a string, parse it
+        elif isinstance(args, str):
+            for arg in args.split(","):
+                if "=" in arg:
+                    key, value = arg.split("=", 1)
+                    config[key.strip()] = value.strip()
     
     return config
 
