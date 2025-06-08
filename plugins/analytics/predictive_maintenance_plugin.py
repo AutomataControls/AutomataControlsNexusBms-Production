@@ -1,96 +1,29 @@
-# ===============================================================================
 # Automata Controls Nexus InfluxDB3 Predictive Maintenance Plugin
-# ===============================================================================
-#
-# PLUGIN INFORMATION:
-# Name: Automata Controls Predictive Maintenance Engine
 # Version: 1.1.2
-# Author: Juelz @ Automata Controls
+# Author: Juelz Automata Controls NeuralBms DevOps
 # Created: May 25, 2025
 # Updated: June 6, 2025
 #
 # CHANGELOG:
-# v1.0.0 (May 25, 2025) - Initial release with basic health monitoring
-# v1.1.0 (May 30, 2025) - Added failure prediction algorithms and MTBF analysis
-# v1.1.1 (June 3, 2025) - Enhanced maintenance scheduling optimization
-# v1.1.2 (June 6, 2025) - Improved alert system and cost estimation accuracy
+# v1.0.0 (May 25, 2025) Initial release with basic health monitoring
+# v1.1.0 (May 30, 2025) Added failure prediction algorithms and MTBF analysis
+# v1.1.1 (June 3, 2025) Enhanced maintenance scheduling optimization
+# v1.1.2 (June 6, 2025) Improved alert system and cost estimation accuracy
 #
 # PURPOSE:
 # Advanced predictive maintenance system that analyzes equipment performance
 # data in real-time to predict failures, optimize maintenance schedules, and
 # prevent costly equipment breakdowns before they occur.
 #
-# SYSTEM ARCHITECTURE:
-# ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-# │   Equipment     │───►│  InfluxDB3      │───►│  Predictive     │
-# │   Sensors       │    │  Metrics        │    │  Maintenance    │
-# │   (Real-time)   │    │  Database       │    │  Engine         │
-# └─────────────────┘    └─────────────────┘    └─────────────────┘
-#                                                        │
-#                                                        ▼
-# ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-# │   Maintenance   │◄───│  Alerts &       │◄───│  Health Score   │
-# │   Schedule      │    │  Notifications  │    │  Analysis       │
-# │   Optimization  │    │                 │    │                 │
-# └─────────────────┘    └─────────────────┘    └─────────────────┘
-#
 # FEATURES:
-# • Real-time equipment health monitoring
-# • Failure prediction algorithms (MTBF/MTTR analysis)
-# • Maintenance scheduling optimization
-# • Performance trend analysis
-# • Alert generation for critical conditions
-# • Equipment efficiency tracking
-# • Maintenance cost optimization
-# • Historical failure pattern analysis
-#
-# SUPPORTED EQUIPMENT:
-# • Boilers - Temperature, pressure, efficiency monitoring
-# • Chillers - Refrigerant analysis, compressor health
-# • Air Handlers - Fan bearing analysis, filter monitoring
-# • Pumps - Vibration analysis, cavitation detection
-# • Fan Coils - Motor health, valve performance
-# • Heat Exchangers - Fouling detection, efficiency loss
-#
-# PERFORMANCE:
-# • Processing Speed: <100ms per equipment analysis
-# • Memory Usage: ~80MB baseline
-# • Concurrent Equipment: 500+ pieces simultaneously
-# • Prediction Accuracy: 85-95% (varies by equipment type)
-# • Alert Response Time: Sub-second
-#
-# DATABASES:
-# Input: Locations.metrics (sensor data)
-# Output: MaintenanceAnalytics.equipment_health
-#         MaintenanceAnalytics.failure_predictions
-#         MaintenanceAnalytics.maintenance_schedule
-#
-# DEPENDENCIES:
-# • InfluxDB3 Processing Engine
-# • Python 3.8+
-# • NumPy equivalent operations (manual implementation)
-# • Statistical analysis functions
-#
-# TRIGGER CONFIGURATION:
-# influxdb3 create trigger \
-#   --trigger-spec "table:metrics" \
-#   --plugin-filename "analytics/predictive_maintenance_plugin.py" \
-#   --database Locations \
-#   predictive_maintenance_engine
-#
-# SAFETY FEATURES:
-# • Error handling and graceful degradation
-# • Data validation and sanitization
-# • Resource usage monitoring
-# • Automatic failover mechanisms
-# • Audit trail and logging
-#
-# CONTACT:
-# Support: Juelz @ Automata Controls
-# Documentation: https://docs.automatacontrols.com/plugins/predictive-maintenance
-# License: Proprietary - Automata Controls Enterprise
-#
-# ===============================================================================
+# Real-time equipment health monitoring
+# Failure prediction algorithms (MTBF/MTTR analysis)
+# Maintenance scheduling optimization
+# Performance trend analysis
+# Alert generation for critical conditions
+# Equipment efficiency tracking
+# Maintenance cost optimization
+# Historical failure pattern analysis
 
 import json
 import time
@@ -481,8 +414,6 @@ def generate_maintenance_alert(influxdb3_local, equipment_id: str, location_id: 
 # Helper functions for analysis calculations
 def determine_equipment_type(equipment_id: str) -> str:
     """Determine equipment type from equipment ID"""
-    # This would use the same mapping as your HVAC plugin
-    # Simplified version for now
     if "boiler" in equipment_id.lower():
         return "boiler"
     elif "chiller" in equipment_id.lower():
@@ -523,19 +454,16 @@ def calculate_temperature_health(metrics: Dict, critical_metrics: List[str], max
 def calculate_efficiency_health(metrics: Dict, baseline_efficiency: float) -> float:
     """Calculate health score based on equipment efficiency"""
     # Simplified efficiency calculation
-    # In real implementation, this would be more sophisticated
     return 80.0  # Placeholder
 
 def calculate_trend_health(equipment_id: str, metrics: Dict) -> float:
     """Calculate health score based on historical trends"""
     # Simplified trend analysis
-    # In real implementation, this would analyze historical data
     return 75.0  # Placeholder
 
 def calculate_operational_health(metrics: Dict, equipment_type: str) -> float:
     """Calculate health score based on operational parameters"""
     # Simplified operational health
-    # In real implementation, this would be equipment-specific
     return 80.0  # Placeholder
 
 def get_health_status(health_score: float) -> str:
