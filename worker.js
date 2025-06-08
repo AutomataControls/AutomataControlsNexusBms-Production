@@ -10,7 +10,7 @@ const equipmentWorker = new Worker('equipment-logic', async job => {
     // Use the API endpoint to process the equipment
     const equipmentId = job.data.equipmentId;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const secretKey = process.env.SERVER_ACTION_SECRET_KEY || "Invertedskynet2";
+    const secretKey = process.env.SERVER_ACTION_SECRET_KEY || "yoursecretkey";
     
     console.log(`Calling API to process equipment ${equipmentId}`);
     
