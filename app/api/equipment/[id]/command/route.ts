@@ -25,6 +25,94 @@ const equipmentQueue = new Queue('equipment-controls', {
   }
 })
 
+// Helper function to write UICommands to both databases (8181 and 8182)
+async function writeUICommandsToBothDatabases(
+  equipmentId: string, 
+  command: string, 
+  settings: any, 
+  userId: string, 
+  userName: string,
+  locationId: string,
+  equipmentType: string
+) {
+  // Check if this is a setpoint command that should be written to UICommands
+  const setpointCommands = [
+    'supplyTempSetpoint',
+    'temperatureSetpoint', 
+    'mixedAirSetpoint',
+    'setpointAdjustment',
+    'targetTemperature',
+    'APPLY_CONTROL_SETTINGS' // This seems to be your main command type
+  ];
+
+  const isSetpointCommand = setpointCommands.some(cmd => 
+    command.includes(cmd) || 
+    (settings && Object.keys(settings).some(key => 
+      key.includes('Setpoint') || key.includes('setpoint') || key.includes('Temp')
+    ))
+  );
+
+  if (!isSetpointCommand) {
+    console.log(`Command ${command} is not a setpoint command, skipping UICommands write`);
+    return;
+  }
+
+  const timestamp = Date.now() * 1000000; // Convert to nanoseconds for InfluxDB
+  
+  // Prepare line protocol data for UICommands
+  const lineProtocolData = `UICommands,equipmentId=${equipmentId},locationId=${locationId},userId=${userId},command=${command},equipmentType=${equipmentType} userName="${userName}",priority="normal",${Object.entries(settings).map(([key, value]) => {
+    if (typeof value === 'string') {
+      return `${key}="${value}"`;
+    } else {
+      return `${key}=${value}`;
+    }
+  }).join(',')} ${timestamp}`;
+
+  const writePromises = [];
+
+  // Write to main database (8181) - UICommands
+  const write8181Promise = fetch('http://localhost:8181/api/v3/write_lp?db=UICommands&precision=nanosecond', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain',
+    },
+    body: lineProtocolData
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error(`Failed to write to 8181 UICommands: ${response.statusText}`);
+    }
+    console.log(`Successfully wrote UICommands to 8181 for equipment ${equipmentId}`);
+  }).catch(error => {
+    console.error('Error writing to 8181 UICommands:', error);
+  });
+
+  // Write to Processing Engine database (8182) - UICommands  
+  const write8182Promise = fetch('http://localhost:8182/api/v3/write_lp?db=UICommands&precision=nanosecond', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain',
+    },
+    body: lineProtocolData
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error(`Failed to write to 8182 UICommands: ${response.statusText}`);
+    }
+    console.log(`Successfully wrote UICommands to 8182 for equipment ${equipmentId}`);
+  }).catch(error => {
+    console.error('Error writing to 8182 UICommands:', error);
+  });
+
+  writePromises.push(write8181Promise, write8182Promise);
+
+  // Execute both writes concurrently
+  try {
+    await Promise.allSettled(writePromises);
+    console.log(`UICommands dual write completed for equipment ${equipmentId} - Processing Engine has immediate access to user setpoints`);
+  } catch (error) {
+    console.error('Error in dual UICommands write:', error);
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -42,7 +130,21 @@ export async function POST(
       )
     }
 
-    // Prepare job data
+    // Write setpoint commands to UICommands on both databases (8181 and 8182)
+    // THIS IS IMMEDIATE - NOT QUEUED - Processing Engine needs real-time access
+    if (body.settings && (body.locationId || body.equipmentType)) {
+      await writeUICommandsToBothDatabases(
+        equipmentId,
+        body.command,
+        body.settings,
+        body.userId || 'unknown',
+        body.userName || 'Unknown User',
+        body.locationId || 'unknown',
+        body.equipmentType || 'unknown'
+      );
+    }
+
+    // Prepare job data for BullMQ (SEPARATE from UICommands write)
     const jobData = {
       equipmentId,
       equipmentName: body.equipmentName,
@@ -59,44 +161,4 @@ export async function POST(
 
     // Set job priority
     const priority = body.priority === 'high' ? 1 :
-                    body.command === 'EMERGENCY_SHUTDOWN' ? 1 : 10
-
-    // Add job to queue
-    const job = await equipmentQueue.add(
-      `${body.command}-${equipmentId}`,
-      jobData,
-      {
-        priority,
-        delay: body.delay || 0,
-        jobId: `${equipmentId}-${body.command}-${Date.now()}`
-      }
-    )
-
-    // Also save current state to Redis for immediate UI feedback
-    if (body.settings) {
-      const stateKey = `equipment:${equipmentId}:state`
-      const stateData = {
-        ...body.settings,
-        lastModified: new Date().toISOString(),
-        modifiedBy: body.userId,
-        modifiedByName: body.userName
-      }
-      await connection.setex(stateKey, 86400, JSON.stringify(stateData))
-    }
-
-    return NextResponse.json({
-      success: true,
-      jobId: job.id,
-      command: body.command,
-      equipmentId,
-      timestamp: new Date().toISOString(),
-      message: 'Command queued successfully'
-    })
-  } catch (error) {
-    console.error('Error queueing equipment command:', error)
-    return NextResponse.json(
-      { error: 'Failed to queue equipment command' },
-      { status: 500 }
-    )
-  }
-}
+                    body.command === 'EMERGENCY_SHUTDOWN' ? 1
