@@ -612,16 +612,17 @@ def call_javascript_logic(influxdb3_local, js_logic_path: str, equipment_id: str
             mapped_metrics["Outdoor"] = metrics["Outdoor_Air"]
             mapped_metrics["outdoorTemperature"] = metrics["Outdoor_Air"]
 
-       # Steam bundle field mappings for steam bundle equipment
+        # Steam bundle field mappings for steam bundle equipment
+        # FIXED: Corrected the indentation of this block
         if equipment_type.startswith("steambundle"):
-        if "primaryValvePosition" in metrics:
-            mapped_metrics["primaryValvePosition"] = metrics["primaryValvePosition"]
-        if "secondaryValvePosition" in metrics:
-            mapped_metrics["secondaryValvePosition"] = metrics["secondaryValvePosition"]
-        if "pumpStatus" in metrics:
-            mapped_metrics["pumpStatus"] = metrics["pumpStatus"]
-        if "safetyStatus" in metrics:
-            mapped_metrics["safetyStatus"] = metrics["safetyStatus"]
+            if "primaryValvePosition" in metrics:
+                mapped_metrics["primaryValvePosition"] = metrics["primaryValvePosition"]
+            if "secondaryValvePosition" in metrics:
+                mapped_metrics["secondaryValvePosition"] = metrics["secondaryValvePosition"]
+            if "pumpStatus" in metrics:
+                mapped_metrics["pumpStatus"] = metrics["pumpStatus"]
+            if "safetyStatus" in metrics:
+                mapped_metrics["safetyStatus"] = metrics["safetyStatus"]
 
         # Complete space temperature field mappings - check actual field names from database
         if "Space" in metrics:
@@ -872,7 +873,12 @@ def convert_js_result_to_commands(js_result: Dict, equipment_type: str) -> List[
             "isOccupied": ("isOccupied", "boolean"),
             "controlSource": ("controlSource", "string"),
             "temperatureSource": ("temperatureSource", "string"),
-            "safetyTripped": ("safetyTripped", "string")
+            "safetyTripped": ("safetyTripped", "string"),
+            # FIXED: Added steam bundle command mappings
+            "primaryValvePosition": ("primaryValvePosition", "number"),
+            "secondaryValvePosition": ("secondaryValvePosition", "number"),
+            "pumpStatus": ("pumpStatus", "boolean"),
+            "safetyStatus": ("safetyStatus", "string")
         }
 
         # Add derived commands based on Warren logic
@@ -972,9 +978,12 @@ def write_commands_to_database(influxdb3_local, equipment_id: str, commands: Lis
                 line.tag("source", "javascript-logic")
                 line.tag("status", "active")
                 line.field("value", command["value"])
+                
+                # FIXED: Call .build() to get the line protocol string to write
+                line_protocol_string = line.build()
 
                 # Write to database
-                influxdb3_local.write(line)
+                influxdb3_local.write(line_protocol_string)
 
             except Exception as e:
                 influxdb3_local.error(f"[JavaScript HVAC] Error writing command {command['command_type']}: {e}")
