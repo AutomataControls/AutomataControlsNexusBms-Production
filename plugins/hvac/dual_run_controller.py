@@ -612,6 +612,17 @@ def call_javascript_logic(influxdb3_local, js_logic_path: str, equipment_id: str
             mapped_metrics["Outdoor"] = metrics["Outdoor_Air"]
             mapped_metrics["outdoorTemperature"] = metrics["Outdoor_Air"]
 
+       # Steam bundle field mappings for steam bundle equipment
+        if equipment_type.startswith("steambundle"):
+        if "primaryValvePosition" in metrics:
+            mapped_metrics["primaryValvePosition"] = metrics["primaryValvePosition"]
+        if "secondaryValvePosition" in metrics:
+            mapped_metrics["secondaryValvePosition"] = metrics["secondaryValvePosition"]
+        if "pumpStatus" in metrics:
+            mapped_metrics["pumpStatus"] = metrics["pumpStatus"]
+        if "safetyStatus" in metrics:
+            mapped_metrics["safetyStatus"] = metrics["safetyStatus"]
+
         # Complete space temperature field mappings - check actual field names from database
         if "Space" in metrics:
             space_temp_value = metrics["Space"]
